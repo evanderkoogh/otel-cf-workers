@@ -1,0 +1,26 @@
+{
+	"name": "@microlabs/otel-cf-workers",
+	"version": "0.0.1",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"scripts": {
+		"build": "rimraf ./dist && tsc",
+		"prepublishOnly": "pnpm build",
+		"watch": "tsc --watch"
+	},
+	"dependencies": {
+		"@opentelemetry/api": "^1.4.1",
+		"@opentelemetry/core": "^1.11.0",
+		"@opentelemetry/exporter-trace-otlp-http": "^0.36.1",
+		"@opentelemetry/otlp-exporter-base": "^0.36.1",
+		"@opentelemetry/otlp-transformer": "^0.36.1",
+		"@opentelemetry/resources": "^1.11.0",
+		"@opentelemetry/sdk-trace-base": "^1.11.0",
+		"@opentelemetry/semantic-conventions": "^1.11.0"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-types": "^4.20230321.0",
+		"rimraf": "^4.4.1",
+		"typescript": "^5.0.3"
+	}
+}
