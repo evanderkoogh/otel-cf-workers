@@ -158,7 +158,12 @@ const proxyFetchHandler = <E, C>(fetchHandler: FetchHandler<E, C>, config: Worke
 	})
 }
 
-const proxyQueueMessage = <Q>(msg: Message<Q>, queueName: string, _config: WorkerTraceConfig): Message<Q> => {
+const proxyQueueMessage = <Q>(
+	msg: Message<Q>,
+	batch: MessageBatch<Q>,
+	queueName: string,
+	_config: WorkerTraceConfig
+): Message<Q> => {
 	return new Proxy(msg, {
 		get: (target, prop, receiver) => {
 			const tracer = trace.getTracer('fetch')
@@ -172,11 +177,11 @@ const proxyQueueMessage = <Q>(msg: Message<Q>, queueName: string, _config: Worke
 			} else if (prop === 'ack') {
 				const ackFn = Reflect.get(target, prop, receiver)
 				return new Proxy(ackFn, {
-					apply: (fnTarget, thisArg, argArray) => {
+					apply: (fnTarget, _thisArg, argArray) => {
 						const span = trace.getActiveSpan()
 						span?.setAttribute('ack', true)
 						//TODO: handle errors
-						const result = Reflect.apply(fnTarget, thisArg, argArray)
+						const result = Reflect.apply(fnTarget, batch, argArray)
 						span?.end()
 						return result
 					},
@@ -184,11 +189,11 @@ const proxyQueueMessage = <Q>(msg: Message<Q>, queueName: string, _config: Worke
 			} else if (prop === 'retry') {
 				const retryFn = Reflect.get(target, prop, receiver)
 				return new Proxy(retryFn, {
-					apply: (fnTarget, thisArg, argArray) => {
+					apply: (fnTarget, _thisArg, argArray) => {
 						const span = trace.getActiveSpan()
 						span?.setAttribute('ack', false)
 						//TODO: handle errors
-						const result = Reflect.apply(fnTarget, thisArg, argArray)
+						const result = Reflect.apply(fnTarget, batch, argArray)
 						span?.end()
 						return result
 					},
@@ -206,7 +211,7 @@ const proxyQueueHandler = <E, Q>(queue: QueueHandler<E, Q>, config: WorkerTraceC
 			init(config)
 			argArray[1] = instrumentEnv(env, config)
 			const batch: MessageBatch = argArray[0]
-			const messages = batch.messages.map((msg) => proxyQueueMessage(msg, batch.queue, config))
+			const messages = batch.messages.map((msg) => proxyQueueMessage(msg, batch, batch.queue, config))
 			const newBatch = { messages }
 			argArray[0] = newBatch
 			return Reflect.apply(target, thisArg, argArray)
