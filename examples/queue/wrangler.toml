@@ -1,0 +1,18 @@
+name = "queues-example"
+main = "src/index.ts"
+compatibility_date = "2023-04-02"
+compatibility_flags = [ "nodejs_compat" ]
+
+# Worker defines a binding, named "QUEUE", which gives it a capability
+# to send messages to a Queue, named "my-queue".
+[[queues.producers]]
+  queue = "queues-example"
+  binding = "QUEUE"
+
+# Worker also receives messages from the Queue, named "my-queue".
+[[queues.consumers]]
+  queue = "queues-example"
+  max_batch_size = 100   # Max messages per batch
+  max_batch_timeout = 10 # Max seconds to wait before batch is full
+  max_retries = 3        # Max retries per batch
+  max_concurrency = 1    # Max concurrent consumers
