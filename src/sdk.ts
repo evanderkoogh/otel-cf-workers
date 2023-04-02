@@ -18,6 +18,7 @@ export interface WorkerTraceConfig {
 }
 
 type FetchHandler<E, C> = ExportedHandlerFetchHandler<E, C>
+type QueueHandler<E, Q> = ExportedHandlerQueueHandler<E, Q>
 
 const sanitiseURL = (url: string): string => {
 	const u = new URL(url)
@@ -157,20 +158,74 @@ const proxyFetchHandler = <E, C>(fetchHandler: FetchHandler<E, C>, config: Worke
 	})
 }
 
+const proxyQueueMessage = <Q>(msg: Message<Q>, queueName: string, _config: WorkerTraceConfig): Message<Q> => {
+	return new Proxy(msg, {
+		get: (target, prop, receiver) => {
+			const tracer = trace.getTracer('fetch')
+			const options: SpanOptions = { kind: SpanKind.CONSUMER }
+			if (prop === 'body') {
+				tracer.startActiveSpan(`queue: ${queueName}-${target.id}`, options, (span) => {
+					span.setAttribute('messageId', msg.id)
+					span.setAttribute('messageTimestamp', msg.timestamp.getTime())
+					return Reflect.get(target, prop, receiver)
+				})
+			} else if (prop === 'ack') {
+				const ackFn = Reflect.get(target, prop, receiver)
+				return new Proxy(ackFn, {
+					apply: (fnTarget, thisArg, argArray) => {
+						const span = trace.getActiveSpan()
+						span?.setAttribute('ack', true)
+						//TODO: handle errors
+						const result = Reflect.apply(fnTarget, thisArg, argArray)
+						span?.end()
+						return result
+					},
+				})
+			} else if (prop === 'retry') {
+				const retryFn = Reflect.get(target, prop, receiver)
+				return new Proxy(retryFn, {
+					apply: (fnTarget, thisArg, argArray) => {
+						const span = trace.getActiveSpan()
+						span?.setAttribute('ack', false)
+						//TODO: handle errors
+						const result = Reflect.apply(fnTarget, thisArg, argArray)
+						span?.end()
+						return result
+					},
+				})
+			}
+		},
+	})
+}
+
+const proxyQueueHandler = <E, Q>(queue: QueueHandler<E, Q>, config: WorkerTraceConfig): QueueHandler<E, Q> => {
+	return new Proxy(queue, {
+		apply: (target, thisArg, argArray) => {
+			const env = argArray[1] as Record<string, unknown>
+			extractConfigFromEnv(config, env)
+			init(config)
+			argArray[1] = instrumentEnv(env, config)
+			const batch: MessageBatch = argArray[0]
+			//@ts-ignore
+			batch.messages = batch.messages.map((msg) => proxyQueueMessage(msg, batch.queue, config))
+			return Reflect.apply(target, thisArg, argArray)
+		},
+	})
+}
+
 const instrumentGlobalFetch = (): void => {
 	if (!globalThis.orig_fetch) {
 		globalThis.orig_fetch = globalThis.fetch
 		const new_fetch = new Proxy(globalThis.fetch, {
 			apply: (target, thisArg, argArray): ReturnType<typeof fetch> => {
 				const tracer = trace.getTracer('fetch')
-				const options: SpanOptions = {
-					kind: SpanKind.CLIENT,
-				}
+				const options: SpanOptions = { kind: SpanKind.CLIENT }
+
 				const request = new Request(argArray[0], argArray[1])
-				propagation.inject(context.active(), request.headers, {
-					set: (h, k, v) => h.set(k, typeof v === 'string' ? v : String(v)),
-				})
 				const promise = tracer.startActiveSpan(`fetch: ${request.url}`, options, async (span) => {
+					propagation.inject(context.active(), request.headers, {
+						set: (h, k, v) => h.set(k, typeof v === 'string' ? v : String(v)),
+					})
 					span.setAttributes(gatherRequestAttributes(request))
 					if (request.cf) span.setAttributes(gatherOutgoingCfAttributes(request.cf))
 					const response: Response = await Reflect.apply(target, thisArg, [request])
@@ -193,6 +248,9 @@ const instrument = <E, Q, C>(
 	instrumentGlobalFetch()
 	if (handler.fetch) {
 		handler.fetch = proxyFetchHandler(handler.fetch, config)
+	}
+	if (handler.queue) {
+		handler.queue = proxyQueueHandler(handler.queue, config)
 	}
 	return handler
 }
