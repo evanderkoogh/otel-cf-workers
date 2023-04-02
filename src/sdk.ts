@@ -206,8 +206,9 @@ const proxyQueueHandler = <E, Q>(queue: QueueHandler<E, Q>, config: WorkerTraceC
 			init(config)
 			argArray[1] = instrumentEnv(env, config)
 			const batch: MessageBatch = argArray[0]
-			//@ts-ignore
-			batch.messages = batch.messages.map((msg) => proxyQueueMessage(msg, batch.queue, config))
+			const messages = batch.messages.map((msg) => proxyQueueMessage(msg, batch.queue, config))
+			const newBatch = { messages }
+			argArray[0] = newBatch
 			return Reflect.apply(target, thisArg, argArray)
 		},
 	})
