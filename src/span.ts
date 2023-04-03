@@ -16,6 +16,7 @@ import {
 	InstrumentationLibrary,
 	isAttributeKey,
 	isAttributeValue,
+	isTimeInput,
 	sanitizeAttributes,
 } from '@opentelemetry/core'
 import { IResource } from '@opentelemetry/resources'
@@ -127,9 +128,13 @@ export class Span implements api.Span, ReadableSpan {
 	}
 
 	addEvent(name: string, attributesOrStartTime?: Attributes | TimeInput, startTime?: TimeInput): this {
-		const attributes: Attributes = !!startTime ? (attributesOrStartTime as Attributes) : {}
-		const timestamp: TimeInput = !!startTime ? startTime : (attributesOrStartTime as TimeInput) || Date.now()
-		const time = getHrTime(timestamp)
+		if (isTimeInput(attributesOrStartTime)) {
+			startTime = attributesOrStartTime
+			attributesOrStartTime = undefined
+		}
+
+		const attributes = sanitizeAttributes(attributesOrStartTime)
+		const time = getHrTime(startTime)
 		this.events.push({ name, attributes, time })
 		return this
 	}
