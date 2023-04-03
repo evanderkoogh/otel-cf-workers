@@ -1,4 +1,4 @@
-import { trace, SpanOptions, SpanKind, propagation, context, Attributes, Exception } from '@opentelemetry/api'
+import { trace, SpanOptions, SpanKind, propagation, context, Attributes, Exception, Context } from '@opentelemetry/api'
 import { SemanticAttributes } from '@opentelemetry/semantic-conventions'
 import { extractConfigFromEnv, init } from '../config'
 import { WorkerTraceConfig } from '../config'
@@ -58,6 +58,17 @@ const gatherResponseAttributes = (response: Response): Attributes => {
 	return attrs
 }
 
+const getCurrentSpanContext = (headers: Headers): Context => {
+	return propagation.extract(context.active(), headers, {
+		get(headers, key) {
+			return headers.get(key) || undefined
+		},
+		keys(headers) {
+			return [...headers.keys()]
+		},
+	})
+}
+
 let cold_start = true
 const instrumentFetchHandler = <E, C>(
 	fetchHandler: FetchHandler<E, C>,
@@ -71,21 +82,12 @@ const instrumentFetchHandler = <E, C>(
 			init(config)
 			argArray[1] = instrumentEnv(env, config)
 
-			const ctx = propagation.extract(context.active(), request.headers, {
-				get(headers, key) {
-					return headers.get(key) || undefined
-				},
-				keys(headers) {
-					return [...headers.keys()]
-				},
-			})
+			const spanContext = getCurrentSpanContext(request.headers)
 
 			const tracer = trace.getTracer('fetchHandler')
-			const options: SpanOptions = {
-				kind: SpanKind.SERVER,
-			}
+			const options: SpanOptions = { kind: SpanKind.SERVER }
 
-			const promise = tracer.startActiveSpan('fetchHandler', options, ctx, async (span) => {
+			const promise = tracer.startActiveSpan('fetchHandler', options, spanContext, async (span) => {
 				span.setAttribute(SemanticAttributes.FAAS_TRIGGER, 'http')
 				span.setAttribute(SemanticAttributes.FAAS_COLDSTART, cold_start)
 				cold_start = false
