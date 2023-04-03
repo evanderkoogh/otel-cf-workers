@@ -7,7 +7,7 @@ export interface Env {
 	QUEUE: Queue<QueueData>
 }
 
-const handler = {
+const handler: ExportedHandler<Env, QueueData> = {
 	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
 		const url = new URL(request.url)
 		await env.QUEUE.send({ pathname: url.pathname })
