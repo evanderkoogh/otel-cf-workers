@@ -34,12 +34,77 @@ Any other headers that you need to send through can be configured in either the 
 
 ## Auto-instrumentation
 
-Currently only the fetch handler, outgoing `fetch` and KV bindings are auto-instrumented. The plan is to add support for all handlers (such as cron triggers or queue messages) and binding types (such as Durable Objects)
+While the plan is to support all types of triggers (such as `fetch`, cron trigger and queues) and bindings (such as Durable Objects and KV), the currently supported components are:
+
+Triggers:
+
+- [x] HTTP (`handler.fetch`)
+- [x] Queue (`handler.queue`)
+- [ ] Cron (`handler.scheduled`)
+- [ ] Durable Objects
+- [ ] waitUntil (`ctx.waitUntil`)
+- [ ] Trace (`handler.trace`)
+
+Globals:
+
+- [x] Fetch
+- [ ] Cache
+
+Bindings:
+
+- [x] KV
+- [x] Queue
+- [ ] Durable Objects
+- [ ] R2
+- [ ] D1
+- [ ] Worker Bindings
+- [ ] Workers for Platform Dispatch
+
+## Creating custom spans
+
+While auto-instrumenting should take care of a lot of the information that you would want to add, there will always be application data you want to send along.
+
+You can get the current active span by doing:
+
+```typescript
+import {trace} from '@opentelemetry/api'
+
+const handler = {
+	async fetch(request: Request) {
+		const span = trace.getActiveSpan()
+		if(span) span.setAttributes('name', 'value')
+		....
+	}
+}
+```
+
+Or if you want to create a new span:
+
+```typescript
+import { trace } from '@opentelemetry/api'
+
+const handler = {
+	async fetch(request: Request) {
+		const tracer = trace.getTracer('my_own_tracer')
+		return tracer.startActiveSpan('name', (span) => {
+			const response = await doSomethingAwesome
+			span.end()
+			return response
+		})
+	},
+}
+```
 
 ## Distributed Tracing
 
 One of the advantages of using Open Telemetry is that it makes it easier to do distributed tracing through multiple different services. This library will automatically inject the W3C Trace Context headers when making outbound fetch calls.
 
-## Sampling
+Once we add support for Durable Object and other Worker bindings, we will also be adding them to those calls.
 
-Sampling is currently not supported.
+## Limitations
+
+As the library is still in alpha, there are some important limitations, including, but not limited to:
+
+- Not everything is auto-instrumented yet. See the lists above for what is and isn't.
+- Traces are sent before the Response is returned, potentially leading to longer response times for clients
+- It is not possible yet to do any sampling or turn off auto-instrumenting. So every span is send to your tracing backend/provider.
