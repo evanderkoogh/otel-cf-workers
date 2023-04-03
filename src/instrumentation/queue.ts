@@ -121,7 +121,7 @@ const proxyMessageBatch = <E, Q>(batch: MessageBatch, count: MessageStatusCount,
 	})
 }
 
-const proxyQueueHandler = <E, Q>(queue: QueueHandler<E, Q>, config: WorkerTraceConfig): QueueHandler<E, Q> => {
+const instrumentQueueHandler = <E, Q>(queue: QueueHandler<E, Q>, config: WorkerTraceConfig): QueueHandler<E, Q> => {
 	return new Proxy(queue, {
 		apply: (target, thisArg, argArray) => {
 			const env = argArray[1] as Record<string, unknown>
@@ -155,4 +155,37 @@ const proxyQueueHandler = <E, Q>(queue: QueueHandler<E, Q>, config: WorkerTraceC
 	})
 }
 
-export { proxyQueueHandler }
+const instrumentQueueSender = (queue: Queue, name: string, config: WorkerTraceConfig) => {
+	const tracer = trace.getTracer('queueSender')
+	return new Proxy(queue, {
+		get: (target, prop) => {
+			if (prop === 'send') {
+				const sendFn = Reflect.get(target, prop)
+				return new Proxy(sendFn, {
+					apply: (target, _thisArg, argArray) => {
+						return tracer.startActiveSpan(`queueSend: ${name}`, async (span) => {
+							span.setAttribute('queue.operation', 'send')
+							await Reflect.apply(target, queue, argArray)
+							span.end()
+						})
+					},
+				})
+			} else if (prop === 'sendBatch') {
+				const sendFn = Reflect.get(target, prop)
+				return new Proxy(sendFn, {
+					apply: (target, _thisArg, argArray) => {
+						return tracer.startActiveSpan(`queueSendBatch: ${name}`, async (span) => {
+							span.setAttribute('queue.operation', 'sendBatch')
+							await Reflect.apply(target, queue, argArray)
+							span.end()
+						})
+					},
+				})
+			} else {
+				return Reflect.get(target, prop)
+			}
+		},
+	})
+}
+
+export { instrumentQueueHandler, instrumentQueueSender }

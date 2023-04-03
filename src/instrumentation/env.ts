@@ -1,5 +1,6 @@
 import { SpanKind, SpanOptions, trace } from '@opentelemetry/api'
 import { WorkerTraceConfig } from '../config'
+import { instrumentQueueSender } from './queue'
 
 const instrumentKV = (kv: KVNamespace, name: string, _config: WorkerTraceConfig): KVNamespace => {
 	const tracer = trace.getTracer('KV')
@@ -35,12 +36,18 @@ const isKVNamespace = (item: unknown): item is KVNamespace => {
 	return !!(item as KVNamespace).getWithMetadata
 }
 
+const isQueue = (item: unknown): item is Queue => {
+	return !!(item as Queue).sendBatch
+}
+
 const instrumentEnv = (env: Record<string, unknown>, config: WorkerTraceConfig): Record<string, unknown> => {
 	return new Proxy(env, {
 		get: (target, prop, receiver) => {
 			const item = Reflect.get(target, prop, receiver)
 			if (isKVNamespace(item)) {
 				return instrumentKV(item, prop as string, config)
+			} else if (isQueue(item)) {
+				return instrumentQueueSender(item, String(prop), config)
 			}
 			return item
 		},
