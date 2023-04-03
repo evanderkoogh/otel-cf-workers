@@ -1,5 +1,5 @@
 import { SpanKind, SpanOptions, trace } from '@opentelemetry/api'
-import { WorkerTraceConfig } from './sdk'
+import { WorkerTraceConfig } from '../sdk'
 
 const instrumentKV = (kv: KVNamespace, name: string, _config: WorkerTraceConfig): KVNamespace => {
 	const tracer = trace.getTracer('KV')
