@@ -59,7 +59,10 @@ const gatherResponseAttributes = (response: Response): Attributes => {
 }
 
 let cold_start = true
-const proxyFetchHandler = <E, C>(fetchHandler: FetchHandler<E, C>, config: WorkerTraceConfig): FetchHandler<E, C> => {
+const instrumentFetchHandler = <E, C>(
+	fetchHandler: FetchHandler<E, C>,
+	config: WorkerTraceConfig
+): FetchHandler<E, C> => {
 	return new Proxy(fetchHandler, {
 		apply: (target, thisArg, argArray): Promise<Response> => {
 			const request = argArray[0] as Request
@@ -135,4 +138,4 @@ const instrumentGlobalFetch = (): void => {
 	}
 }
 
-export { instrumentGlobalFetch, proxyFetchHandler }
+export { instrumentGlobalFetch, instrumentFetchHandler }
