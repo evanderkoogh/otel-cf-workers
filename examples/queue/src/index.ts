@@ -1,4 +1,4 @@
-import { instrument, WorkerTraceConfig } from '@microlabs/otel-cf-workers'
+import { instrument, WorkerTraceConfig } from '../../../src/index'
 
 interface QueueData {
 	pathname: string
