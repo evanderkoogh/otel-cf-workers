@@ -1,20 +1,62 @@
-import { trace, SpanOptions, SpanKind } from '@opentelemetry/api'
+import { trace, SpanOptions, SpanKind, Attributes, Exception } from '@opentelemetry/api'
 import { WorkerTraceConfig, extractConfigFromEnv, init } from '../config'
 import { instrumentEnv } from './env'
 
 type QueueHandler<E, Q> = ExportedHandlerQueueHandler<E, Q>
 
-const proxyQueueMessage = <Q>(msg: Message<Q>, _config: WorkerTraceConfig): Message<Q> => {
+class MessageStatusCount {
+	succeeded = 0
+	failed = 0
+	readonly total: number
+	constructor(total: number) {
+		this.total = total
+	}
+
+	ack() {
+		this.succeeded = this.succeeded + 1
+	}
+
+	ackRemaining() {
+		this.succeeded = this.total - this.failed
+	}
+
+	retry() {
+		this.failed = this.failed + 1
+	}
+
+	retryRemaining() {
+		this.failed = this.total - this.succeeded
+	}
+
+	toAttributes(): Attributes {
+		return {
+			'queue.messages_count': this.total,
+			'queue.messages_success': this.succeeded,
+			'queue.messages_failed': this.failed,
+			'queue.batch_success': this.succeeded === this.total,
+		}
+	}
+}
+
+const addEvent = (name: string, msg?: Message) => {
+	const attrs: Attributes = {}
+	if (msg) {
+		attrs['queue.message_id'] = msg.id
+		attrs['queue.message_timestamp'] = msg.timestamp.getTime()
+	}
+	trace.getActiveSpan()?.addEvent(name, attrs)
+}
+
+const proxyQueueMessage = <Q>(msg: Message<Q>, count: MessageStatusCount, _config: WorkerTraceConfig): Message<Q> => {
 	return new Proxy(msg, {
 		get: (target, prop) => {
 			if (prop === 'ack') {
 				const ackFn = Reflect.get(target, prop)
 				return new Proxy(ackFn, {
 					apply: (fnTarget) => {
-						trace.getActiveSpan()?.addEvent('messageAck', {
-							messageId: msg.id,
-							messageTimestamp: msg.timestamp.getTime(),
-						})
+						addEvent('messageAck', msg)
+						count.ack()
+
 						//TODO: handle errors
 						Reflect.apply(fnTarget, msg, [])
 					},
@@ -23,11 +65,10 @@ const proxyQueueMessage = <Q>(msg: Message<Q>, _config: WorkerTraceConfig): Mess
 				const retryFn = Reflect.get(target, prop)
 				return new Proxy(retryFn, {
 					apply: (fnTarget) => {
-						const span = trace.getActiveSpan()
-						span?.setAttribute('ack', false)
+						addEvent('messageRetry', msg)
+						count.retry()
 						//TODO: handle errors
 						const result = Reflect.apply(fnTarget, msg, [])
-						span?.end()
 						return result
 					},
 				})
@@ -38,7 +79,7 @@ const proxyQueueMessage = <Q>(msg: Message<Q>, _config: WorkerTraceConfig): Mess
 	})
 }
 
-const proxyMessageBatch = <E, Q>(batch: MessageBatch, config: WorkerTraceConfig) => {
+const proxyMessageBatch = <E, Q>(batch: MessageBatch, count: MessageStatusCount, config: WorkerTraceConfig) => {
 	return new Proxy(batch, {
 		get: (target, prop) => {
 			if (prop === 'messages') {
@@ -47,15 +88,35 @@ const proxyMessageBatch = <E, Q>(batch: MessageBatch, config: WorkerTraceConfig)
 					get: (target, prop) => {
 						if (typeof prop === 'string' && !isNaN(parseInt(prop))) {
 							const message = Reflect.get(target, prop)
-							return proxyQueueMessage(message, config)
+							return proxyQueueMessage(message, count, config)
 						} else {
 							return Reflect.get(target, prop)
 						}
 					},
 				})
-			} else {
-				return Reflect.get(target, prop)
+			} else if (prop === 'ackAll') {
+				const ackFn = Reflect.get(target, prop)
+				return new Proxy(ackFn, {
+					apply: (fnTarget) => {
+						addEvent('ackAll')
+						count.ackRemaining()
+						//TODO: handle errors
+						Reflect.apply(fnTarget, batch, [])
+					},
+				})
+			} else if (prop === 'retryAll') {
+				const retryFn = Reflect.get(target, prop)
+				return new Proxy(retryFn, {
+					apply: (fnTarget) => {
+						addEvent('retryAll')
+						count.retryRemaining()
+						//TODO: handle errors
+						Reflect.apply(fnTarget, batch, [])
+					},
+				})
 			}
+
+			return Reflect.get(target, prop)
 		},
 	})
 }
@@ -68,15 +129,26 @@ const proxyQueueHandler = <E, Q>(queue: QueueHandler<E, Q>, config: WorkerTraceC
 			init(config)
 			argArray[1] = instrumentEnv(env, config)
 			const batch: MessageBatch = argArray[0]
-			argArray[0] = proxyMessageBatch(batch, config)
+			const count = new MessageStatusCount(batch.messages.length)
+			argArray[0] = proxyMessageBatch(batch, count, config)
 			const tracer = trace.getTracer('queueHandler')
 			const options: SpanOptions = { kind: SpanKind.CONSUMER }
 			const promise = tracer.startActiveSpan(`queueHandler:${batch.queue}`, options, async (span) => {
-				span.setAttribute('message.count', batch.messages.length)
 				span.setAttribute('queue.name', batch.queue)
-				const result = await Reflect.apply(target, thisArg, argArray)
-				span.end()
-				return result
+				try {
+					const result = await Reflect.apply(target, thisArg, argArray)
+					span.setAttribute('queue.implicitly_acked', count.total - count.succeeded - count.failed)
+					count.ackRemaining()
+					span.setAttributes(count.toAttributes())
+
+					span.end()
+					return result
+				} catch (error) {
+					span.recordException(error as Exception)
+					span.setAttribute('queue.implicitly_retried', count.total - count.succeeded - count.failed)
+					count.retryRemaining()
+					span.end()
+				}
 			})
 			return promise
 		},
