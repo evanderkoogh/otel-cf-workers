@@ -42,7 +42,7 @@ const addEvent = (name: string, msg?: Message) => {
 	const attrs: Attributes = {}
 	if (msg) {
 		attrs['queue.message_id'] = msg.id
-		attrs['queue.message_timestamp'] = msg.timestamp.getTime()
+		attrs['queue.message_timestamp'] = msg.timestamp.toISOString()
 	}
 	trace.getActiveSpan()?.addEvent(name, attrs)
 }
