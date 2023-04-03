@@ -150,6 +150,9 @@ export class Span implements api.Span, ReadableSpan {
 	}
 
 	end(endTime?: TimeInput): void {
+		if (this._ended) {
+			return
+		}
 		this._ended = true
 		this.endTime = getHrTime(endTime)
 		this._duration = hrTimeDuration(this.startTime, this.endTime)
