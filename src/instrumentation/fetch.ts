@@ -58,7 +58,7 @@ const gatherResponseAttributes = (response: Response): Attributes => {
 	return attrs
 }
 
-const getCurrentSpanContext = (headers: Headers): Context => {
+const getParentContextFromHeaders = (headers: Headers): Context => {
 	return propagation.extract(context.active(), headers, {
 		get(headers, key) {
 			return headers.get(key) || undefined
@@ -66,6 +66,14 @@ const getCurrentSpanContext = (headers: Headers): Context => {
 		keys(headers) {
 			return [...headers.keys()]
 		},
+	})
+}
+
+export function waitUntilTrace(fn: () => Promise<any>): Promise<void> {
+	const tracer = trace.getTracer('waitUntil')
+	return tracer.startActiveSpan('waitUntil', async (span) => {
+		await fn()
+		span.end()
 	})
 }
 
@@ -82,7 +90,7 @@ const instrumentFetchHandler = <E, C>(
 			init(config)
 			argArray[1] = instrumentEnv(env, config)
 
-			const spanContext = getCurrentSpanContext(request.headers)
+			const spanContext = getParentContextFromHeaders(request.headers)
 
 			const tracer = trace.getTracer('fetchHandler')
 			const options: SpanOptions = { kind: SpanKind.SERVER }

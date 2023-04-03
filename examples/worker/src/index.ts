@@ -1,5 +1,5 @@
 import { trace } from '@opentelemetry/api'
-import { instrument, WorkerTraceConfig } from '../../../src/index'
+import { instrument, waitUntilTrace, WorkerTraceConfig } from '../../../src/index'
 
 export interface Env {
 	OTEL_TEST: KVNamespace
@@ -11,6 +11,7 @@ const handler = {
 		await env.OTEL_TEST.get('non-existant')
 		const greeting = "G'day World"
 		trace.getActiveSpan()?.setAttribute('greeting', greeting)
+		ctx.waitUntil(waitUntilTrace(() => fetch('https://workers.dev')))
 		return new Response(`${greeting}!`)
 	},
 }
