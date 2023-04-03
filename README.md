@@ -42,7 +42,7 @@ Triggers:
 - [x] Queue (`handler.queue`)
 - [ ] Cron (`handler.scheduled`)
 - [ ] Durable Objects
-- [ ] waitUntil (`ctx.waitUntil`)
+- [x] waitUntil (`ctx.waitUntil`)[^1]
 - [ ] Trace (`handler.trace`)
 
 Globals:
@@ -59,6 +59,8 @@ Bindings:
 - [ ] D1
 - [ ] Worker Bindings
 - [ ] Workers for Platform Dispatch
+
+[^1]: `waitUntil` can't be completely auto-instrumented and requires wrapping the promise in a `waitUntilTrace()` function.
 
 ## Creating custom spans
 
@@ -105,6 +107,7 @@ Once we add support for Durable Object and other Worker bindings, we will also b
 
 As the library is still in alpha, there are some important limitations, including, but not limited to:
 
+- The worker runtime does not expose accurate timing information to protect against side-channel attacks and will only update the clock on IO, so any CPU heavy processing will look like it takes 0 milliseconds.
 - Not everything is auto-instrumented yet. See the lists above for what is and isn't.
 - Traces are sent before the Response is returned, potentially leading to longer response times for clients
 - It is not possible yet to do any sampling or turn off auto-instrumenting. So every span is send to your tracing backend/provider.
