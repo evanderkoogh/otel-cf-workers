@@ -109,5 +109,5 @@ As the library is still in alpha, there are some important limitations, includin
 
 - The worker runtime does not expose accurate timing information to protect against side-channel attacks and will only update the clock on IO, so any CPU heavy processing will look like it takes 0 milliseconds.
 - Not everything is auto-instrumented yet. See the lists above for what is and isn't.
-- Traces are sent before the Response is returned, potentially leading to longer response times for clients
+- ~~Traces are sent before the Response is returned, potentially leading to longer response times for clients~~
 - It is not possible yet to do any sampling or turn off auto-instrumenting. So every span is send to your tracing backend/provider.
