@@ -14,7 +14,6 @@ export class FlushOnlySpanProcessor implements SpanProcessor {
 		return new Promise((resolve, reject) => {
 			const spliced = this.readableSpans.splice(0)
 			if (spliced.length > 0) {
-				console.log(`Flushing ${spliced.length} spans.`)
 				this.exporter.export(spliced, (result) => {
 					if (result.code === ExportResultCode.SUCCESS) {
 						resolve()
