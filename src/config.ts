@@ -1,10 +1,11 @@
 import { propagation } from '@opentelemetry/api'
 import { W3CTraceContextPropagator } from '@opentelemetry/core'
 import { Resource } from '@opentelemetry/resources'
-import { SimpleSpanProcessor } from '@opentelemetry/sdk-trace-base'
+import { SpanProcessor } from '@opentelemetry/sdk-trace-base'
 import { SemanticResourceAttributes } from '@opentelemetry/semantic-conventions'
 import { OTLPFetchTraceExporter } from './exporter'
 import { WorkerTracerProvider } from './provider'
+import { FlushOnlySpanProcessor } from './spanprocessor'
 
 export interface WorkerTraceConfig {
 	exporter: {
@@ -36,12 +37,14 @@ const createResource = (config: WorkerTraceConfig): Resource => {
 	return resource.merge(serviceResource)
 }
 
-const init = (config: WorkerTraceConfig) => {
+const init = (config: WorkerTraceConfig): SpanProcessor => {
 	propagation.setGlobalPropagator(new W3CTraceContextPropagator())
 	const resource = createResource(config)
 	const exporter = new OTLPFetchTraceExporter(config.exporter)
-	const provider = new WorkerTracerProvider(new SimpleSpanProcessor(exporter), resource)
+	const spanProcessor = new FlushOnlySpanProcessor(exporter)
+	const provider = new WorkerTracerProvider(spanProcessor, resource)
 	provider.register()
+	return spanProcessor
 }
 
 const extractConfigFromEnv = (config: WorkerTraceConfig, env: Record<string, unknown>) => {

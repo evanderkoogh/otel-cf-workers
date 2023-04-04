@@ -1,4 +1,5 @@
 import { trace, SpanOptions, SpanKind, propagation, context, Attributes, Exception, Context } from '@opentelemetry/api'
+import { SpanProcessor } from '@opentelemetry/sdk-trace-base'
 import { SemanticAttributes } from '@opentelemetry/semantic-conventions'
 import { extractConfigFromEnv, init } from '../config'
 import { WorkerTraceConfig } from '../config'
@@ -77,6 +78,48 @@ export function waitUntilTrace(fn: () => Promise<any>): Promise<void> {
 	})
 }
 
+class PromiseTracker {
+	_outstandingPromises: Promise<unknown>[] = []
+
+	get outstandingPromiseCount() {
+		return this._outstandingPromises.length
+	}
+
+	track(promise: Promise<unknown>): void {
+		this._outstandingPromises.push(promise)
+	}
+
+	async wait() {
+		await Promise.all(this._outstandingPromises)
+	}
+}
+
+type ContextAndTracker = { ctx: ExecutionContext; tracker: PromiseTracker }
+
+const proxyExecutionContext = (context: ExecutionContext): ContextAndTracker => {
+	const tracker = new PromiseTracker()
+	const ctx = new Proxy(context, {
+		get(target, prop) {
+			if (prop === 'waitUntil') {
+				const fn = Reflect.get(target, prop)
+				return new Proxy(fn, {
+					apply(target, thisArg, argArray) {
+						tracker.track(argArray[0])
+						return Reflect.apply(target, context, argArray)
+					},
+				})
+			}
+		},
+	})
+	return { ctx, tracker }
+}
+
+const exportSpans = async (tracker: PromiseTracker, spanProcessor: SpanProcessor) => {
+	await scheduler.wait(1)
+	await tracker.wait()
+	await spanProcessor.forceFlush()
+}
+
 let cold_start = true
 const instrumentFetchHandler = <E, C>(
 	fetchHandler: FetchHandler<E, C>,
@@ -87,8 +130,11 @@ const instrumentFetchHandler = <E, C>(
 			const request = argArray[0] as Request
 			const env = argArray[1] as Record<string, unknown>
 			extractConfigFromEnv(config, env)
-			init(config)
+			const spanProcessor = init(config)
 			argArray[1] = instrumentEnv(env, config)
+			const originalCtx = argArray[2] as ExecutionContext
+			const { ctx, tracker } = proxyExecutionContext(originalCtx)
+			argArray[2] = ctx
 
 			const spanContext = getParentContextFromHeaders(request.headers)
 
@@ -112,7 +158,9 @@ const instrumentFetchHandler = <E, C>(
 				} catch (error) {
 					span.recordException(error as Exception)
 					span.end()
-					return new Response('Server error.', { status: 500 })
+					throw error
+				} finally {
+					originalCtx.waitUntil(exportSpans(tracker, spanProcessor))
 				}
 			})
 			return promise
