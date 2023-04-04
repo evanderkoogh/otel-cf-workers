@@ -12,9 +12,11 @@ export interface WorkerTraceConfig {
 		url: string
 		headers?: Record<string, string>
 	}
-	serviceName: string
-	serviceNamespace?: string
-	serviceVersion?: string
+	service: {
+		name: string
+		namespace?: string
+		version: string
+	}
 }
 
 const createResource = (config: WorkerTraceConfig): Resource => {
@@ -29,9 +31,9 @@ const createResource = (config: WorkerTraceConfig): Resource => {
 		[SemanticResourceAttributes.TELEMETRY_SDK_NAME]: '@microlabs/otel-workers-sdk',
 	}
 	const serviceResource = new Resource({
-		[SemanticResourceAttributes.SERVICE_NAME]: config.serviceName,
-		[SemanticResourceAttributes.SERVICE_NAMESPACE]: config.serviceNamespace,
-		[SemanticResourceAttributes.SERVICE_VERSION]: config.serviceVersion,
+		[SemanticResourceAttributes.SERVICE_NAME]: config.service.name,
+		[SemanticResourceAttributes.SERVICE_NAMESPACE]: config.service.namespace,
+		[SemanticResourceAttributes.SERVICE_VERSION]: config.service.version,
 	})
 	const resource = new Resource(workerResourceAttrs)
 	return resource.merge(serviceResource)

@@ -20,8 +20,10 @@ const handler = {
 
 const config: WorkerTraceConfig = {
 	exporter: { url: 'https://api.honeycomb.io/v1/traces' },
-	serviceName: 'greetings',
-	serviceVersion: '0.1',
+	service: {
+		name: 'greetings',
+		version: '0.1',
+	},
 }
 
 export default instrument(handler, config)

@@ -24,8 +24,10 @@ const handler: ExportedHandler<Env, QueueData> = {
 
 const config: WorkerTraceConfig = {
 	exporter: { url: 'https://api.honeycomb.io/v1/traces' },
-	serviceName: 'queueGreetings',
-	serviceVersion: '0.1',
+	service: {
+		name: 'queueGreetings',
+		version: '0.1',
+	},
 }
 
 export default instrument(handler, config)
