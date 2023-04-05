@@ -9,6 +9,8 @@ const handler = {
 	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
 		await fetch('https://cloudflare.com')
 		await env.OTEL_TEST.get('non-existant')
+		const cache = await caches.open('stuff')
+		const noexist = await cache.match(new Request('https://no-exist.com'))
 		const greeting = "G'day World"
 		trace.getActiveSpan()?.setAttribute('greeting', greeting)
 		ctx.waitUntil(waitUntilTrace(() => fetch('https://workers.dev')))
