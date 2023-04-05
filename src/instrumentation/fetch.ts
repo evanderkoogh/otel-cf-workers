@@ -4,14 +4,9 @@ import { SemanticAttributes } from '@opentelemetry/semantic-conventions'
 import { extractConfigFromEnv, init } from '../config'
 import { WorkerTraceConfig } from '../config'
 import { instrumentEnv } from './env'
-import { wrap } from './common'
+import { sanitiseURL, wrap } from './common'
 
 type FetchHandler<E, C> = ExportedHandlerFetchHandler<E, C>
-
-const sanitiseURL = (url: string): string => {
-	const u = new URL(url)
-	return `${u.protocol}//${u.host}${u.pathname}${u.search}`
-}
 
 const gatherRequestAttributes = (request: Request): Attributes => {
 	const attrs: Record<string, string | number> = {}

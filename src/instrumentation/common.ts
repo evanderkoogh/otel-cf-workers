@@ -1,5 +1,10 @@
 const unwrapSymbol = Symbol('unwrap')
 
+export function sanitiseURL(url: string): string {
+	const u = new URL(url)
+	return `${u.protocol}//${u.host}${u.pathname}${u.search}`
+}
+
 type Wrapped<T> = { [unwrapSymbol]: T } & T
 
 function isWrapped<T>(item: T): item is Wrapped<T> {
