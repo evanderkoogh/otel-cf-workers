@@ -164,7 +164,7 @@ const instrumentFetchHandler = <E, C>(
 	})
 }
 
-const instrumentGlobalFetch = (): void => {
+const instrumentGlobalFetch = (_config: WorkerTraceConfig): void => {
 	const handler: ProxyHandler<typeof fetch> = {
 		apply: (target, thisArg, argArray): ReturnType<typeof fetch> => {
 			const tracer = trace.getTracer('fetch')
