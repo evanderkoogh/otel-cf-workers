@@ -7,15 +7,17 @@ export function sanitiseURL(url: string): string {
 
 type Wrapped<T> = { [unwrapSymbol]: T } & T
 
-function isWrapped<T>(item: T): item is Wrapped<T> {
+export function isWrapped<T>(item: T): item is Wrapped<T> {
 	return !!(item as Wrapped<T>)[unwrapSymbol]
 }
 
 export function wrap<T extends object>(item: T, handler: ProxyHandler<T>): T {
+	if (isWrapped(item)) {
+		throw new Error("Can't wrap an object twice")
+	}
 	const proxyHandler = Object.assign({}, handler)
 	proxyHandler.get = (target, prop, receiver) => {
 		if (prop === unwrapSymbol) {
-			console.log('Unwrapping!')
 			return item
 		} else {
 			if (handler.get) {
