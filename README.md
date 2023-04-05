@@ -50,7 +50,7 @@ Triggers:
 Globals:
 
 - [x] Fetch
-- [ ] Cache
+- [x] Caches
 
 Bindings:
 
