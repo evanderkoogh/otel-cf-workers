@@ -4,6 +4,7 @@ import { SemanticAttributes } from '@opentelemetry/semantic-conventions'
 import { extractConfigFromEnv, init } from '../config'
 import { WorkerTraceConfig } from '../config'
 import { instrumentEnv } from './env'
+import { wrap } from './common'
 
 type FetchHandler<E, C> = ExportedHandlerFetchHandler<E, C>
 
@@ -169,31 +170,28 @@ const instrumentFetchHandler = <E, C>(
 }
 
 const instrumentGlobalFetch = (): void => {
-	if (!globalThis.orig_fetch) {
-		globalThis.orig_fetch = globalThis.fetch
-		const new_fetch = new Proxy(globalThis.fetch, {
-			apply: (target, thisArg, argArray): ReturnType<typeof fetch> => {
-				const tracer = trace.getTracer('fetch')
-				const options: SpanOptions = { kind: SpanKind.CLIENT }
+	const handler: ProxyHandler<typeof fetch> = {
+		apply: (target, thisArg, argArray): ReturnType<typeof fetch> => {
+			const tracer = trace.getTracer('fetch')
+			const options: SpanOptions = { kind: SpanKind.CLIENT }
 
-				const request = new Request(argArray[0], argArray[1])
-				const host = new URL(request.url).host
-				const promise = tracer.startActiveSpan(`fetch: ${host}`, options, async (span) => {
-					propagation.inject(context.active(), request.headers, {
-						set: (h, k, v) => h.set(k, typeof v === 'string' ? v : String(v)),
-					})
-					span.setAttributes(gatherRequestAttributes(request))
-					if (request.cf) span.setAttributes(gatherOutgoingCfAttributes(request.cf))
-					const response: Response = await Reflect.apply(target, thisArg, [request])
-					span.setAttributes(gatherResponseAttributes(response))
-					span.end()
-					return response
+			const request = new Request(argArray[0], argArray[1])
+			const host = new URL(request.url).host
+			const promise = tracer.startActiveSpan(`fetch: ${host}`, options, async (span) => {
+				propagation.inject(context.active(), request.headers, {
+					set: (h, k, v) => h.set(k, typeof v === 'string' ? v : String(v)),
 				})
-				return promise
-			},
-		})
-		globalThis.fetch = new_fetch
+				span.setAttributes(gatherRequestAttributes(request))
+				if (request.cf) span.setAttributes(gatherOutgoingCfAttributes(request.cf))
+				const response: Response = await Reflect.apply(target, thisArg, [request])
+				span.setAttributes(gatherResponseAttributes(response))
+				span.end()
+				return response
+			})
+			return promise
+		},
 	}
+	globalThis.fetch = wrap(fetch, handler)
 }
 
 export { instrumentGlobalFetch, instrumentFetchHandler }

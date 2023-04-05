@@ -1,6 +1,6 @@
 import { createExportTraceServiceRequest } from '@opentelemetry/otlp-transformer'
-
 import { OTLPExporterBase, OTLPExporterConfigBase, OTLPExporterError } from '@opentelemetry/otlp-exporter-base'
+import { unwrap } from './instrumentation/common'
 
 const defaultHeaders: Record<string, string> = {
 	accept: 'application/json',
@@ -28,7 +28,7 @@ export class OTLPFetchTraceExporter extends OTLPExporterBase<any, any, any> {
 			body,
 		}
 
-		globalThis.orig_fetch!(this.url, params)
+		unwrap(fetch)(this.url, params)
 			.then((response) => {
 				if (response.ok) {
 					onSuccess()
