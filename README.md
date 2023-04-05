@@ -113,3 +113,4 @@ As the library is still in alpha, there are some important limitations, includin
 - Not everything is auto-instrumented yet. See the lists above for what is and isn't.
 - ~~Traces are sent before the Response is returned, potentially leading to longer response times for clients~~
 - It is not possible yet to do any sampling or turn off auto-instrumenting. So every span is send to your tracing backend/provider.
+- There is currently no way to sanitise or change how things are sampled, so if you have sensitive data, you should check what is and isn't send to your tracing endpoint. We won't automatically send values retrieved from databases or HTTP endpoints, but there could be sensitive data in keys or URLs.
