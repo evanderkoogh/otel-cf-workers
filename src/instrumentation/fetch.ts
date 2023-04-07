@@ -1,7 +1,7 @@
 import { trace, SpanOptions, SpanKind, propagation, context, Attributes, Exception, Context } from '@opentelemetry/api'
 import { SpanProcessor } from '@opentelemetry/sdk-trace-base'
 import { SemanticAttributes } from '@opentelemetry/semantic-conventions'
-import { extractConfigFromEnv, init } from '../config'
+import { loadConfig, init, PartialTraceConfig } from '../config'
 import { WorkerTraceConfig } from '../config'
 import { instrumentEnv } from './env'
 import { sanitiseURL, wrap } from './common'
@@ -119,13 +119,13 @@ const exportSpans = async (tracker: PromiseTracker, spanProcessor: SpanProcessor
 let cold_start = true
 const instrumentFetchHandler = <E, C>(
 	fetchHandler: FetchHandler<E, C>,
-	config: WorkerTraceConfig
+	conf: PartialTraceConfig
 ): FetchHandler<E, C> => {
 	return new Proxy(fetchHandler, {
 		apply: (target, thisArg, argArray): Promise<Response> => {
 			const request = argArray[0] as Request
 			const env = argArray[1] as Record<string, unknown>
-			extractConfigFromEnv(config, env)
+			const config = loadConfig(conf, env)
 			const spanProcessor = init(config)
 			argArray[1] = instrumentEnv(env, config)
 			const originalCtx = argArray[2] as ExecutionContext
@@ -164,7 +164,7 @@ const instrumentFetchHandler = <E, C>(
 	})
 }
 
-const instrumentGlobalFetch = (_config: WorkerTraceConfig): void => {
+const instrumentGlobalFetch = (_config: PartialTraceConfig): void => {
 	const handler: ProxyHandler<typeof fetch> = {
 		apply: (target, thisArg, argArray): ReturnType<typeof fetch> => {
 			const tracer = trace.getTracer('fetch')

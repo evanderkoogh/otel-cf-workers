@@ -3,6 +3,7 @@
 	"version": "0.2.2",
 	"main": "./dist/index.js",
 	"types": "./dist/index.d.ts",
+	"type": "module",
 	"scripts": {
 		"build": "rimraf ./dist && tsc",
 		"prepublishOnly": "pnpm build",
@@ -16,7 +17,9 @@
 		"@opentelemetry/otlp-transformer": "^0.36.1",
 		"@opentelemetry/resources": "^1.11.0",
 		"@opentelemetry/sdk-trace-base": "^1.11.0",
-		"@opentelemetry/semantic-conventions": "^1.11.0"
+		"@opentelemetry/semantic-conventions": "^1.11.0",
+		"deepmerge": "^4.3.1",
+		"zod": "^3.21.4"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20230321.0",

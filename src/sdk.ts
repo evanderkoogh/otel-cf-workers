@@ -1,11 +1,11 @@
-import { WorkerTraceConfig } from './config'
+import { PartialTraceConfig } from './config'
 import { instrumentGlobalCache } from './instrumentation/cache'
 import { instrumentGlobalFetch, instrumentFetchHandler } from './instrumentation/fetch'
 import { instrumentQueueHandler } from './instrumentation/queue'
 
 const instrument = <E, Q, C>(
 	handler: ExportedHandler<E, Q, C>,
-	config: WorkerTraceConfig
+	config: PartialTraceConfig
 ): ExportedHandler<E, Q, C> => {
 	instrumentGlobalFetch(config)
 	instrumentGlobalCache(config)
