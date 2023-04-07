@@ -63,12 +63,10 @@ const init = (config: WorkerTraceConfig): SpanProcessor => {
 function ObjectifyEnv(env: Record<string, unknown>) {
 	const filtered = Object.keys(env).filter((key) => key.toLowerCase().startsWith('otel.'))
 	const paths = filtered.map((key) => ({ key, path: key.substring(5).split('.') }))
-	console.log({ paths })
 	const obj: any = {}
 	paths.forEach((entry) => {
 		let node = obj
 		entry.path.forEach((path, index, array) => {
-			console.log({ path, index, length: array.length })
 			if (index === array.length - 1) {
 				node[path] = env[entry.key]
 			} else {
