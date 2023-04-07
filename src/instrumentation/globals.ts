@@ -1,12 +1,14 @@
 import { Attributes, context, propagation, SpanKind, SpanOptions, trace } from '@opentelemetry/api'
-import { PartialTraceConfig } from '../config'
+import { GlobalsConfig, PartialTraceConfig } from '../config'
 import { gatherRequestAttributes, gatherResponseAttributes, sanitiseURL, wrap } from './common'
 
 type CacheFns = Cache[keyof Cache]
+type CacheConfig = GlobalsConfig['caches']
+type FetchConfig = GlobalsConfig['fetch']
 
 const tracer = trace.getTracer('cache instrumentation')
 
-function instrumentFunction<T extends CacheFns>(fn: T, cacheName: string, op: string, _config: PartialTraceConfig): T {
+function instrumentFunction<T extends CacheFns>(fn: T, cacheName: string, op: string, config: CacheConfig): T {
 	const handler: ProxyHandler<typeof fn> = {
 		apply(target, thisArg, argArray) {
 			return tracer.startActiveSpan(`cache:${cacheName}:${op}`, async (span) => {
@@ -23,7 +25,7 @@ function instrumentFunction<T extends CacheFns>(fn: T, cacheName: string, op: st
 	return wrap(fn, handler)
 }
 
-function instrumentCache(cache: Cache, cacheName: string, config: PartialTraceConfig): Cache {
+function instrumentCache(cache: Cache, cacheName: string, config: CacheConfig): Cache {
 	const handler: ProxyHandler<typeof cache> = {
 		get(target, prop) {
 			if (prop === 'delete' || prop === 'match' || prop === 'put') {
@@ -37,7 +39,7 @@ function instrumentCache(cache: Cache, cacheName: string, config: PartialTraceCo
 	return wrap(cache, handler)
 }
 
-function instrumentOpen(openFn: CacheStorage['open'], config: PartialTraceConfig): CacheStorage['open'] {
+function instrumentOpen(openFn: CacheStorage['open'], config: CacheConfig): CacheStorage['open'] {
 	const handler: ProxyHandler<typeof openFn> = {
 		async apply(target, thisArg, argArray) {
 			const cacheName = argArray[0]
@@ -48,7 +50,7 @@ function instrumentOpen(openFn: CacheStorage['open'], config: PartialTraceConfig
 	return wrap(openFn, handler)
 }
 
-export function instrumentGlobalCache(config: PartialTraceConfig) {
+function _instrumentGlobalCache(config: CacheConfig) {
 	const handler: ProxyHandler<typeof caches> = {
 		get(target, prop) {
 			if (prop === 'default') {
@@ -66,6 +68,12 @@ export function instrumentGlobalCache(config: PartialTraceConfig) {
 	globalThis.caches = wrap(caches, handler)
 }
 
+export function instrumentGlobalCache(config: CacheConfig) {
+	if (config) {
+		return _instrumentGlobalCache(config)
+	}
+}
+
 const gatherOutgoingCfAttributes = (cf: RequestInitCfProperties): Attributes => {
 	const attrs: Record<string, string | number> = {}
 	Object.keys(cf).forEach((key) => {
@@ -79,7 +87,7 @@ const gatherOutgoingCfAttributes = (cf: RequestInitCfProperties): Attributes => 
 	return attrs
 }
 
-export function instrumentGlobalFetch(_config: PartialTraceConfig): void {
+function _instrumentGlobalFetch(config: FetchConfig): void {
 	const handler: ProxyHandler<typeof fetch> = {
 		apply: (target, thisArg, argArray): ReturnType<typeof fetch> => {
 			const tracer = trace.getTracer('fetch')
@@ -88,9 +96,11 @@ export function instrumentGlobalFetch(_config: PartialTraceConfig): void {
 			const request = new Request(argArray[0], argArray[1])
 			const host = new URL(request.url).host
 			const promise = tracer.startActiveSpan(`fetch: ${host}`, options, async (span) => {
-				propagation.inject(context.active(), request.headers, {
-					set: (h, k, v) => h.set(k, typeof v === 'string' ? v : String(v)),
-				})
+				if (config && config.includeTraceContext) {
+					propagation.inject(context.active(), request.headers, {
+						set: (h, k, v) => h.set(k, typeof v === 'string' ? v : String(v)),
+					})
+				}
 				span.setAttributes(gatherRequestAttributes(request))
 				if (request.cf) span.setAttributes(gatherOutgoingCfAttributes(request.cf))
 				const response: Response = await Reflect.apply(target, thisArg, [request])
@@ -102,4 +112,10 @@ export function instrumentGlobalFetch(_config: PartialTraceConfig): void {
 		},
 	}
 	globalThis.fetch = wrap(fetch, handler)
+}
+
+export function instrumentGlobalFetch(config: FetchConfig): void {
+	if (config) {
+		return _instrumentGlobalFetch(config)
+	}
 }
