@@ -20,15 +20,30 @@ const service = z.object({
 	version: z.string(),
 })
 
+const globals = z
+	.object({
+		caches: z.boolean().default(true),
+		fetch: z.literal(false).or(
+			z
+				.object({
+					includeTraceContext: z.boolean().default(true),
+				})
+				.default({})
+		),
+	})
+	.default({})
+
 const configSchema = z.object({
 	exporter,
 	service,
+	globals,
 })
 
 const deepPartialSchema = configSchema.deepPartial()
 
-export type WorkerTraceConfig = z.infer<typeof configSchema>
-export type PartialTraceConfig = z.infer<typeof deepPartialSchema>
+export type WorkerTraceConfig = z.output<typeof configSchema>
+export type PartialTraceConfig = z.input<typeof deepPartialSchema>
+export type GlobalsConfig = z.output<typeof globals>
 
 const createResource = (config: WorkerTraceConfig): Resource => {
 	const workerResourceAttrs = {
@@ -78,6 +93,10 @@ function ObjectifyEnv(env: Record<string, unknown>) {
 		})
 	})
 	return obj
+}
+
+export function loadGlobalsConfig(supplied: PartialTraceConfig): GlobalsConfig {
+	return globals.parse(supplied.globals)
 }
 
 export function loadConfig(supplied: PartialTraceConfig, env: Record<string, unknown>): WorkerTraceConfig {
