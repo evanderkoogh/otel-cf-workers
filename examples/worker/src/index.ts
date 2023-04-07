@@ -1,5 +1,5 @@
 import { trace } from '@opentelemetry/api'
-import { instrument, waitUntilTrace, WorkerTraceConfig } from '../../../src/index'
+import { instrument, PartialTraceConfig, waitUntilTrace, WorkerTraceConfig } from '../../../src/index'
 
 export interface Env {
 	OTEL_TEST: KVNamespace
@@ -20,7 +20,7 @@ const handler = {
 	},
 }
 
-const config: WorkerTraceConfig = {
+const config: PartialTraceConfig = {
 	exporter: { url: 'https://api.honeycomb.io/v1/traces' },
 	service: {
 		name: 'greetings',

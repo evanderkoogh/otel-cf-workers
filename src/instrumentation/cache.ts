@@ -1,12 +1,12 @@
 import { trace } from '@opentelemetry/api'
-import { WorkerTraceConfig } from '../config'
-import { isWrapped, sanitiseURL, unwrap, wrap } from './common'
+import { PartialTraceConfig } from '../config'
+import { sanitiseURL, wrap } from './common'
 
 type CacheFns = Cache[keyof Cache]
 
 const tracer = trace.getTracer('cache instrumentation')
 
-function instrumentFunction<T extends CacheFns>(fn: T, cacheName: string, op: string, _config: WorkerTraceConfig): T {
+function instrumentFunction<T extends CacheFns>(fn: T, cacheName: string, op: string, _config: PartialTraceConfig): T {
 	const handler: ProxyHandler<typeof fn> = {
 		apply(target, thisArg, argArray) {
 			return tracer.startActiveSpan(`cache:${cacheName}:${op}`, async (span) => {
@@ -23,7 +23,7 @@ function instrumentFunction<T extends CacheFns>(fn: T, cacheName: string, op: st
 	return wrap(fn, handler)
 }
 
-function instrumentCache(cache: Cache, cacheName: string, config: WorkerTraceConfig): Cache {
+function instrumentCache(cache: Cache, cacheName: string, config: PartialTraceConfig): Cache {
 	const handler: ProxyHandler<typeof cache> = {
 		get(target, prop) {
 			if (prop === 'delete' || prop === 'match' || prop === 'put') {
@@ -37,7 +37,7 @@ function instrumentCache(cache: Cache, cacheName: string, config: WorkerTraceCon
 	return wrap(cache, handler)
 }
 
-function instrumentOpen(openFn: CacheStorage['open'], config: WorkerTraceConfig): CacheStorage['open'] {
+function instrumentOpen(openFn: CacheStorage['open'], config: PartialTraceConfig): CacheStorage['open'] {
 	const handler: ProxyHandler<typeof openFn> = {
 		async apply(target, thisArg, argArray) {
 			const cacheName = argArray[0]
@@ -48,7 +48,7 @@ function instrumentOpen(openFn: CacheStorage['open'], config: WorkerTraceConfig)
 	return wrap(openFn, handler)
 }
 
-export function instrumentGlobalCache(config: WorkerTraceConfig) {
+export function instrumentGlobalCache(config: PartialTraceConfig) {
 	const handler: ProxyHandler<typeof caches> = {
 		get(target, prop) {
 			if (prop === 'default') {

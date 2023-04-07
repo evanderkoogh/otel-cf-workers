@@ -1,5 +1,5 @@
 import { trace, SpanOptions, SpanKind, Attributes, Exception } from '@opentelemetry/api'
-import { WorkerTraceConfig, extractConfigFromEnv, init } from '../config'
+import { WorkerTraceConfig, loadConfig, init, PartialTraceConfig } from '../config'
 import { instrumentEnv } from './env'
 
 type QueueHandler<E, Q> = ExportedHandlerQueueHandler<E, Q>
@@ -121,11 +121,11 @@ const proxyMessageBatch = <E, Q>(batch: MessageBatch, count: MessageStatusCount,
 	})
 }
 
-const instrumentQueueHandler = <E, Q>(queue: QueueHandler<E, Q>, config: WorkerTraceConfig): QueueHandler<E, Q> => {
+const instrumentQueueHandler = <E, Q>(queue: QueueHandler<E, Q>, conf: PartialTraceConfig): QueueHandler<E, Q> => {
 	return new Proxy(queue, {
 		apply: (target, thisArg, argArray) => {
 			const env = argArray[1] as Record<string, unknown>
-			extractConfigFromEnv(config, env)
+			const config = loadConfig(conf, env)
 			init(config)
 			argArray[1] = instrumentEnv(env, config)
 			const batch: MessageBatch = argArray[0]
