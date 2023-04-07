@@ -1,6 +1,6 @@
 import { PartialTraceConfig } from './config'
-import { instrumentGlobalCache } from './instrumentation/cache'
-import { instrumentGlobalFetch, instrumentFetchHandler } from './instrumentation/fetch'
+import { instrumentFetchHandler } from './instrumentation/fetch'
+import { instrumentGlobalCache, instrumentGlobalFetch } from './instrumentation/globals'
 import { instrumentQueueHandler } from './instrumentation/queue'
 
 const instrument = <E, Q, C>(

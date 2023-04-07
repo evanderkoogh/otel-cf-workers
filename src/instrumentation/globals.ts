@@ -1,6 +1,6 @@
-import { trace } from '@opentelemetry/api'
+import { Attributes, context, propagation, SpanKind, SpanOptions, trace } from '@opentelemetry/api'
 import { PartialTraceConfig } from '../config'
-import { sanitiseURL, wrap } from './common'
+import { gatherRequestAttributes, gatherResponseAttributes, sanitiseURL, wrap } from './common'
 
 type CacheFns = Cache[keyof Cache]
 
@@ -64,4 +64,42 @@ export function instrumentGlobalCache(config: PartialTraceConfig) {
 	}
 	//@ts-ignore
 	globalThis.caches = wrap(caches, handler)
+}
+
+const gatherOutgoingCfAttributes = (cf: RequestInitCfProperties): Attributes => {
+	const attrs: Record<string, string | number> = {}
+	Object.keys(cf).forEach((key) => {
+		const value = cf[key]
+		if (typeof value === 'string' || typeof value === 'number') {
+			attrs[`cf.${key}`] = value
+		} else {
+			attrs[`cf.${key}`] = JSON.stringify(value)
+		}
+	})
+	return attrs
+}
+
+export function instrumentGlobalFetch(_config: PartialTraceConfig): void {
+	const handler: ProxyHandler<typeof fetch> = {
+		apply: (target, thisArg, argArray): ReturnType<typeof fetch> => {
+			const tracer = trace.getTracer('fetch')
+			const options: SpanOptions = { kind: SpanKind.CLIENT }
+
+			const request = new Request(argArray[0], argArray[1])
+			const host = new URL(request.url).host
+			const promise = tracer.startActiveSpan(`fetch: ${host}`, options, async (span) => {
+				propagation.inject(context.active(), request.headers, {
+					set: (h, k, v) => h.set(k, typeof v === 'string' ? v : String(v)),
+				})
+				span.setAttributes(gatherRequestAttributes(request))
+				if (request.cf) span.setAttributes(gatherOutgoingCfAttributes(request.cf))
+				const response: Response = await Reflect.apply(target, thisArg, [request])
+				span.setAttributes(gatherResponseAttributes(response))
+				span.end()
+				return response
+			})
+			return promise
+		},
+	}
+	globalThis.fetch = wrap(fetch, handler)
 }
