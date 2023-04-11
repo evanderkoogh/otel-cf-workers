@@ -69,13 +69,16 @@ const createResource = (config: WorkerTraceConfig): Resource => {
 	return resource.merge(serviceResource)
 }
 
+let spanProcessor: SpanProcessor
 const init = (config: WorkerTraceConfig): SpanProcessor => {
-	propagation.setGlobalPropagator(new W3CTraceContextPropagator())
-	const resource = createResource(config)
-	const exporter = new OTLPFetchTraceExporter(config.exporter)
-	const spanProcessor = new FlushOnlySpanProcessor(exporter)
-	const provider = new WorkerTracerProvider(spanProcessor, resource)
-	provider.register()
+	if (!spanProcessor) {
+		propagation.setGlobalPropagator(new W3CTraceContextPropagator())
+		const resource = createResource(config)
+		const exporter = new OTLPFetchTraceExporter(config.exporter)
+		spanProcessor = new FlushOnlySpanProcessor(exporter)
+		const provider = new WorkerTracerProvider(spanProcessor, resource)
+		provider.register()
+	}
 	return spanProcessor
 }
 
