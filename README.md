@@ -37,9 +37,9 @@ const config: PartialTraceConfig = {
 export default instrument(handler, config)
 ```
 
-If you need to send an API token to your Open Telemetry provider of your choice, you can either add a `headers` object in the exporter part of the configuration (not recommended), or set it was an environment secret in the form: `otel.headers.<header_name>` with the API token as the value.
+If you need to send an API token to your Open Telemetry provider of your choice, you can either add a `headers` object in the exporter part of the configuration (not recommended), or set it was an environment secret in the form: `otel.exporter.headers.<header_name>` with the API token as the value.
 
-So for Honeycomb for example, the environment variable would be: `otel.headers.x-honeycomb-team`.
+So for Honeycomb for example, the environment variable would be: `otel.exporter.headers.x-honeycomb-team`.
 Any other headers that you need to send through can be configured in either the config object or through environment variables.
 
 ## Auto-instrumentation
