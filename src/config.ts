@@ -20,20 +20,24 @@ const service = z.object({
 	version: z.string(),
 })
 
+const sanitiseKeyOpts = z.object({ namespace: z.string(), key: z.string() })
+const sanitiseKeys = z.function(z.tuple([sanitiseKeyOpts]), z.string()).optional()
+
+const kv = z.literal(false).or(z.object({ sanitiseKeys })).default({})
+
+const bindings = z.object({ kv }).default({})
+
+const globalFetch = z.object({ includeTraceContext: z.boolean().default(true) })
+
 const globals = z
 	.object({
 		caches: z.boolean().default(true),
-		fetch: z.literal(false).or(
-			z
-				.object({
-					includeTraceContext: z.boolean().default(true),
-				})
-				.default({})
-		),
+		fetch: z.literal(false).or(globalFetch).default({}),
 	})
 	.default({})
 
 const configSchema = z.object({
+	bindings,
 	exporter,
 	service,
 	globals,
