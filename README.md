@@ -9,16 +9,24 @@ An OpenTelemetry compatible library for instrumenting and exporting traces from 
 
 ```typescript
 import { trace } from '@opentelemetry/api'
-import { instrument, WorkerTraceConfig } from '@microlabs/otel-cf-worker'
+import { instrument, PartialTraceConfig, waitUntilTrace } from '../../../src/index'
+
+export interface Env {
+	OTEL_TEST: KVNamespace
+}
 
 const handler = {
 	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+		await fetch('https://cloudflare.com')
+
+		const greeting = "G'day World"
 		trace.getActiveSpan()?.setAttribute('greeting', greeting)
-		return new Response(`G'day World!`)
+		ctx.waitUntil(waitUntilTrace(() => fetch('https://workers.dev')))
+		return new Response(`${greeting}!`)
 	},
 }
 
-const config: WorkerTraceConfig = {
+const config: PartialTraceConfig = {
 	exporter: { url: 'https://api.honeycomb.io/v1/traces' },
 	service: {
 		name: 'greetings',

@@ -1,6 +1,8 @@
 import { trace, SpanOptions, SpanKind, Attributes, Exception } from '@opentelemetry/api'
-import { WorkerTraceConfig, loadConfig, init, PartialTraceConfig } from '../config'
+import { loadConfig, init, PartialTraceConfig } from '../config'
 import { instrumentEnv } from './env'
+
+type QueueConfig = {}
 
 type QueueHandler<E, Q> = ExportedHandlerQueueHandler<E, Q>
 
@@ -47,7 +49,7 @@ const addEvent = (name: string, msg?: Message) => {
 	trace.getActiveSpan()?.addEvent(name, attrs)
 }
 
-const proxyQueueMessage = <Q>(msg: Message<Q>, count: MessageStatusCount, _config: WorkerTraceConfig): Message<Q> => {
+const proxyQueueMessage = <Q>(msg: Message<Q>, count: MessageStatusCount, _config: QueueConfig): Message<Q> => {
 	return new Proxy(msg, {
 		get: (target, prop) => {
 			if (prop === 'ack') {
@@ -79,7 +81,7 @@ const proxyQueueMessage = <Q>(msg: Message<Q>, count: MessageStatusCount, _confi
 	})
 }
 
-const proxyMessageBatch = <E, Q>(batch: MessageBatch, count: MessageStatusCount, config: WorkerTraceConfig) => {
+const proxyMessageBatch = <E, Q>(batch: MessageBatch, count: MessageStatusCount, config: QueueConfig) => {
 	return new Proxy(batch, {
 		get: (target, prop) => {
 			if (prop === 'messages') {
@@ -127,7 +129,7 @@ const instrumentQueueHandler = <E, Q>(queue: QueueHandler<E, Q>, conf: PartialTr
 			const env = argArray[1] as Record<string, unknown>
 			const config = loadConfig(conf, env)
 			init(config)
-			argArray[1] = instrumentEnv(env, config)
+			argArray[1] = instrumentEnv(env, config.bindings)
 			const batch: MessageBatch = argArray[0]
 			const count = new MessageStatusCount(batch.messages.length)
 			argArray[0] = proxyMessageBatch(batch, count, config)
@@ -155,7 +157,7 @@ const instrumentQueueHandler = <E, Q>(queue: QueueHandler<E, Q>, conf: PartialTr
 	})
 }
 
-const instrumentQueueSender = (queue: Queue, name: string, config: WorkerTraceConfig) => {
+const instrumentQueueSender = (queue: Queue, name: string, config: QueueConfig) => {
 	const tracer = trace.getTracer('queueSender')
 	return new Proxy(queue, {
 		get: (target, prop) => {
