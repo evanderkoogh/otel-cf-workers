@@ -1,5 +1,5 @@
 import { trace } from '@opentelemetry/api'
-import { instrument, PartialTraceConfig, waitUntilTrace, WorkerTraceConfig } from '../../../src/index'
+import { instrument, PartialTraceConfig, waitUntilTrace } from '../../../src/index'
 
 export interface Env {
 	OTEL_TEST: KVNamespace
@@ -25,6 +25,13 @@ const config: PartialTraceConfig = {
 	service: {
 		name: 'greetings',
 		version: '0.1',
+	},
+	bindings: {
+		kv: {
+			sanitiseKeys({ key }) {
+				return key.toUpperCase()
+			},
+		},
 	},
 }
 
