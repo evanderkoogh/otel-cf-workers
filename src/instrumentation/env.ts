@@ -1,4 +1,5 @@
 import { WorkerTraceConfig } from '../config'
+import { instrumentDurableObject } from './do'
 import { instrumentKV } from './kv'
 import { instrumentQueueSender } from './queue'
 
@@ -12,6 +13,10 @@ const isQueue = (item: unknown): item is Queue => {
 	return !!(item as Queue).sendBatch
 }
 
+const isDurableObject = (item: unknown): item is DurableObjectNamespace => {
+	return !!(item as DurableObjectNamespace).idFromName
+}
+
 const instrumentEnv = (env: Record<string, unknown>, config: BindingsConfig): Record<string, unknown> => {
 	return new Proxy(env, {
 		get: (target, prop, receiver) => {
@@ -22,6 +27,8 @@ const instrumentEnv = (env: Record<string, unknown>, config: BindingsConfig): Re
 				}
 			} else if (isQueue(item)) {
 				return instrumentQueueSender(item, String(prop), {})
+			} else if (isDurableObject(item)) {
+				return instrumentDurableObject(item, String(prop), {})
 			}
 			return item
 		},
