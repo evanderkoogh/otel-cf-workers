@@ -64,7 +64,7 @@ Bindings:
 
 - [x] KV
 - [x] Queue
-- [ ] Durable Objects
+- [x] Durable Objects
 - [ ] R2
 - [ ] D1
 - [ ] Worker Bindings
