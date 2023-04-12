@@ -3,20 +3,39 @@ import { instrument, PartialTraceConfig, waitUntilTrace } from '../../../src/ind
 
 export interface Env {
 	OTEL_TEST: KVNamespace
+	Test_Otel_DO: DurableObjectNamespace
+}
+
+const handleDO = async (request: Request, env: Env): Promise<Response> => {
+	const ns = env.Test_Otel_DO
+	const id = ns.idFromName('testing')
+	console.log({ id })
+	const stub = ns.get(id)
+	console.log({ stub })
+	return await stub.fetch('https://does-not-exist.com/blah')
+}
+
+const handleRest = async (request: Request, env: Env, ctx: ExecutionContext): Promise<Response> => {
+	await fetch('https://cloudflare.com')
+
+	const cache = await caches.open('stuff')
+	const promises = [env.OTEL_TEST.get('non-existant'), cache.match(new Request('https://no-exist.com'))]
+	await Promise.all(promises)
+
+	const greeting = "G'day World"
+	trace.getActiveSpan()?.setAttribute('greeting', greeting)
+	ctx.waitUntil(waitUntilTrace(() => fetch('https://workers.dev')))
+	return new Response(`${greeting}!`)
 }
 
 const handler = {
 	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-		await fetch('https://cloudflare.com')
-
-		const cache = await caches.open('stuff')
-		const promises = [env.OTEL_TEST.get('non-existant'), cache.match(new Request('https://no-exist.com'))]
-		await Promise.all(promises)
-
-		const greeting = "G'day World"
-		trace.getActiveSpan()?.setAttribute('greeting', greeting)
-		ctx.waitUntil(waitUntilTrace(() => fetch('https://workers.dev')))
-		return new Response(`${greeting}!`)
+		const pathname = new URL(request.url).pathname
+		if (pathname === '/do') {
+			return handleDO(request, env)
+		} else {
+			return handleRest(request, env, ctx)
+		}
 	},
 }
 
@@ -33,6 +52,15 @@ const config: PartialTraceConfig = {
 			},
 		},
 	},
+}
+
+export class TestOtelDO implements DurableObject {
+	async fetch(request: Request): Promise<Response> {
+		return new Response('Hello World!')
+	}
+	async alarm(): Promise<void> {
+		throw new Error('Method not implemented.')
+	}
 }
 
 export default instrument(handler, config)
