@@ -1,6 +1,7 @@
 import { Attributes, context, propagation, SpanKind, SpanOptions, trace } from '@opentelemetry/api'
+import { isWrapped } from '@opentelemetry/core'
 import { GlobalsConfig, PartialTraceConfig } from '../config'
-import { gatherRequestAttributes, gatherResponseAttributes, sanitiseURL, wrap } from './common'
+import { gatherRequestAttributes, gatherResponseAttributes, sanitiseURL, unwrap, wrap } from './common'
 
 type CacheFns = Cache[keyof Cache]
 type CacheConfig = GlobalsConfig['caches']
@@ -87,15 +88,23 @@ const gatherOutgoingCfAttributes = (cf: RequestInitCfProperties): Attributes => 
 	return attrs
 }
 
-function _instrumentGlobalFetch(config: FetchConfig): void {
+export function instrumentFetcher(
+	config: FetchConfig,
+	fetcher: Fetcher['fetch'],
+	attrs?: Attributes
+): Fetcher['fetch'] {
 	const handler: ProxyHandler<typeof fetch> = {
 		apply: (target, thisArg, argArray): ReturnType<typeof fetch> => {
-			const tracer = trace.getTracer('fetch')
-			const options: SpanOptions = { kind: SpanKind.CLIENT }
+			if (isWrapped(thisArg)) {
+				thisArg = unwrap(thisArg)
+			}
+			const tracer = trace.getTracer('fetcher')
+			const options: SpanOptions = { kind: SpanKind.CLIENT, attributes: attrs }
 
 			const request = new Request(argArray[0], argArray[1])
 			const host = new URL(request.url).host
-			const promise = tracer.startActiveSpan(`fetch: ${host}`, options, async (span) => {
+			const spanName = typeof attrs?.['name'] === 'string' ? attrs?.['name'] : `fetch: ${host}`
+			const promise = tracer.startActiveSpan(spanName, options, async (span) => {
 				if (config && config.includeTraceContext) {
 					propagation.inject(context.active(), request.headers, {
 						set: (h, k, v) => h.set(k, typeof v === 'string' ? v : String(v)),
@@ -111,11 +120,11 @@ function _instrumentGlobalFetch(config: FetchConfig): void {
 			return promise
 		},
 	}
-	globalThis.fetch = wrap(fetch, handler)
+	return wrap(fetcher, handler)
 }
 
 export function instrumentGlobalFetch(config: FetchConfig): void {
 	if (config) {
-		return _instrumentGlobalFetch(config)
+		globalThis.fetch = instrumentFetcher(config, fetch)
 	}
 }
