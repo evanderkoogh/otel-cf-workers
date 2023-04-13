@@ -7,7 +7,7 @@ import { instrumentEnv } from './env'
 
 type FetchHandler<E, C> = ExportedHandlerFetchHandler<E, C>
 
-const gatherIncomingCfAttributes = (request: Request): Attributes => {
+export function gatherIncomingCfAttributes(request: Request): Attributes {
 	const attrs: Record<string, string | number> = {}
 	attrs[SemanticAttributes.HTTP_SCHEME] = request.cf?.httpProtocol as string
 	attrs['net.colo'] = request.cf?.colo as string
@@ -20,7 +20,7 @@ const gatherIncomingCfAttributes = (request: Request): Attributes => {
 	return attrs
 }
 
-const getParentContextFromHeaders = (headers: Headers): Context => {
+export function getParentContextFromHeaders(headers: Headers): Context {
 	return propagation.extract(context.active(), headers, {
 		get(headers, key) {
 			return headers.get(key) || undefined
