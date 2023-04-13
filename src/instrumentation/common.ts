@@ -16,7 +16,7 @@ export function isWrapped<T>(item: T): item is Wrapped<T> {
 
 export function wrap<T extends object>(item: T, handler: ProxyHandler<T>): T {
 	if (isWrapped(item)) {
-		throw new Error("Can't wrap an object twice")
+		return item
 	}
 	const proxyHandler = Object.assign({}, handler)
 	proxyHandler.get = (target, prop, receiver) => {

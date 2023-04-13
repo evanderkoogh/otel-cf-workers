@@ -1,5 +1,5 @@
 import { trace } from '@opentelemetry/api'
-import { instrument, PartialTraceConfig, waitUntilTrace } from '../../../src/index'
+import { instrument, instrumentDO, PartialTraceConfig, waitUntilTrace } from '../../../src/index'
 
 export interface Env {
 	OTEL_TEST: KVNamespace
@@ -54,7 +54,7 @@ const config: PartialTraceConfig = {
 	},
 }
 
-export class TestOtelDO implements DurableObject {
+class OtelDO implements DurableObject {
 	async fetch(request: Request): Promise<Response> {
 		return new Response('Hello World!')
 	}
@@ -63,4 +63,7 @@ export class TestOtelDO implements DurableObject {
 	}
 }
 
+const TestOtelDO = instrumentDO(OtelDO, config)
+
 export default instrument(handler, config)
+export { TestOtelDO }
