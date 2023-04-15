@@ -9,9 +9,7 @@ export interface Env {
 const handleDO = async (request: Request, env: Env): Promise<Response> => {
 	const ns = env.Test_Otel_DO
 	const id = ns.idFromName('testing')
-	console.log({ id })
 	const stub = ns.get(id)
-	console.log({ stub })
 	return await stub.fetch('https://does-not-exist.com/blah')
 }
 
@@ -39,7 +37,7 @@ const handler = {
 	},
 }
 
-const config: PartialTraceConfig = {
+const workerConfig: PartialTraceConfig = {
 	exporter: { url: 'https://api.honeycomb.io/v1/traces' },
 	service: {
 		name: 'greetings',
@@ -54,8 +52,16 @@ const config: PartialTraceConfig = {
 	},
 }
 
+const doConfig: PartialTraceConfig = {
+	exporter: { url: 'https://api.honeycomb.io/v1/traces' },
+	service: { name: 'greetings-do' },
+}
+
 class OtelDO implements DurableObject {
+	constructor(protected state: DurableObjectState, protected env: Env) {}
 	async fetch(request: Request): Promise<Response> {
+		await fetch('https://cloudflare.com')
+		await this.env.OTEL_TEST.put('something', 'else')
 		return new Response('Hello World!')
 	}
 	async alarm(): Promise<void> {
@@ -63,7 +69,8 @@ class OtelDO implements DurableObject {
 	}
 }
 
-const TestOtelDO = instrumentDO(OtelDO, config)
+const TestOtelDO = instrumentDO(OtelDO, doConfig)
 
-export default instrument(handler, config)
+export default instrument(handler, workerConfig)
+
 export { TestOtelDO }
