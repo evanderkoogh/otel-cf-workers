@@ -17,7 +17,7 @@ const exporter = z.object({
 const service = z.object({
 	name: z.string(),
 	namespace: z.string().optional(),
-	version: z.string(),
+	version: z.string().optional(),
 })
 
 const sanitiseKeyOpts = z.object({ namespace: z.string(), key: z.string() })
