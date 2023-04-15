@@ -2,9 +2,7 @@ import { loadGlobalsConfig, PartialTraceConfig } from './config'
 import { instrumentFetchHandler } from './instrumentation/fetch'
 import { instrumentGlobalCache, instrumentGlobalFetch } from './instrumentation/globals'
 import { instrumentQueueHandler } from './instrumentation/queue'
-import { instrumentDO as instrDO } from './instrumentation/do'
-
-type DOClass = { new (state: DurableObjectState, env: Record<string, any>): DurableObject }
+import { DOClass, instrumentDO as instrDO } from './instrumentation/do'
 
 const instrument = <E, Q, C>(
 	handler: ExportedHandler<E, Q, C>,

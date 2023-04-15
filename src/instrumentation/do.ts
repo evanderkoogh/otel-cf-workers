@@ -67,7 +67,7 @@ function instrumentState(state: DurableObjectState, config: {}) {
 }
 
 let cold_start = true
-type DOClass = { new (state: DurableObjectState, env: Record<string, any>): DurableObject }
+export type DOClass = { new (state: DurableObjectState, env: any): DurableObject }
 export function instrumentDO(doClass: DOClass, config: PartialTraceConfig): DOClass {
 	const classHandler: ProxyHandler<DOClass> = {
 		construct(target, argArray: ConstructorParameters<DOClass>) {
