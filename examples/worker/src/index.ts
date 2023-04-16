@@ -31,6 +31,8 @@ const handler = {
 		const pathname = new URL(request.url).pathname
 		if (pathname === '/do') {
 			return handleDO(request, env)
+		} else if (pathname === '/error') {
+			throw new Error('You asked for it!')
 		} else {
 			return handleRest(request, env, ctx)
 		}

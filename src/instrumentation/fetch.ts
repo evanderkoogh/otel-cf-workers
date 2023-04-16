@@ -1,4 +1,14 @@
-import { trace, SpanOptions, SpanKind, propagation, context, Attributes, Exception, Context } from '@opentelemetry/api'
+import {
+	trace,
+	SpanOptions,
+	SpanKind,
+	propagation,
+	context,
+	Attributes,
+	Exception,
+	Context,
+	SpanStatusCode,
+} from '@opentelemetry/api'
 import { SpanProcessor } from '@opentelemetry/sdk-trace-base'
 import { SemanticAttributes } from '@opentelemetry/semantic-conventions'
 import { loadConfig, init, PartialTraceConfig } from '../config'
@@ -112,12 +122,16 @@ const instrumentFetchHandler = <E, C>(
 
 				try {
 					const response: Response = await Reflect.apply(target, thisArg, argArray)
+					if (response.ok) {
+						span.setStatus({ code: SpanStatusCode.OK })
+					}
 					span.setAttributes(gatherResponseAttributes(response))
 					span.end()
 
 					return response
 				} catch (error) {
 					span.recordException(error as Exception)
+					span.setStatus({ code: SpanStatusCode.ERROR })
 					span.end()
 					throw error
 				} finally {
