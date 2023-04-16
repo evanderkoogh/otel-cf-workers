@@ -3,7 +3,7 @@
 An OpenTelemetry compatible library for instrumenting and exporting traces from Cloudflare Workers.
 
 > **Warning**
-> This package is still in alpha. It has not been tested extensively, optimisations have not yet been made, and the API interface and the configuration options are subject to change.
+> This package is still in beta. It is relatively new, but used in production in a few applications already. Most of the core parts of the Worker platform are auto-instrumented already. The biggest feature that is still missing is sampling, so that you don't have to send every single trace to your tracing backend.
 
 ## Getting started
 
