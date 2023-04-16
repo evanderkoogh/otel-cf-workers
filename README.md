@@ -9,7 +9,7 @@ An OpenTelemetry compatible library for instrumenting and exporting traces from 
 
 ```typescript
 import { trace } from '@opentelemetry/api'
-import { instrument, PartialTraceConfig, waitUntilTrace } from '../../../src/index'
+import { instrument, PartialTraceConfig, waitUntilTrace } from '@microlabs/otel-cf-workers'
 
 export interface Env {
 	OTEL_TEST: KVNamespace
@@ -28,10 +28,7 @@ const handler = {
 
 const config: PartialTraceConfig = {
 	exporter: { url: 'https://api.honeycomb.io/v1/traces' },
-	service: {
-		name: 'greetings',
-		version: '0.1',
-	},
+	service: { name: 'greetings' },
 }
 
 export default instrument(handler, config)
@@ -44,6 +41,69 @@ Any other headers that you need to send through can be configured in either the 
 
 ## Auto-instrumentation
 
+### Workers
+
+Wrapping your exporter handler with the `instrument` function is all you need to do to automatically have not just the functions of you handler auto-instrumented, but also the global `fetch` and `caches` and all of the supported bindings in your environment such as KV.
+
+```typescript
+import { instrument, PartialTraceConfig } from '@microlabs/otel-cf-workers'
+
+const handler = {
+	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+		return new Response("G'day world!")
+	},
+}
+
+const config: PartialTraceConfig = {
+	exporter: { url: 'https://api.honeycomb.io/v1/traces' },
+	service: { name: 'greetings' },
+}
+
+export default instrument(handler, config)
+```
+
+#### WaitUntil
+
+In Cloudflare Workers it is possible to keep the Worker running after the `Response` has been returned to the client. This can be very useful to asynchrously handle things after returning a `Response`. (This is how we send the traces to the exporter without slowing down your Worker.)
+
+If you want to trace any logic in here, you need to wrap your `Promise` that you pass into `ctx.waitUntil` with a `waitUntilTrace`.
+
+```typescript
+import { instrument, PartialTraceConfig, waitUntilTrace } from '@microlabs/otel-cf-workers'
+
+const handler = {
+	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+		ctx.waitUntil(waitUntilTrace(() => fetch('https://workers.dev')))
+		return new Response("G'day world!")
+	},
+}
+```
+
+### Durable Objects
+
+Instrumenting Durable Objects work very similar to the regular Worker auto-instrumentation. Instead of wrapping the handler in an `instrument` call, you wrap the Durable Object class with the `instrumentDO` function.
+
+```typescript
+import { instrumentDO, PartialTraceConfig } from '@microlabs/otel-cf-workers'
+
+const doConfig: PartialTraceConfig = {
+	exporter: { url: 'https://api.honeycomb.io/v1/traces' },
+	service: { name: 'greetings-do' },
+}
+
+class OtelDO implements DurableObject {
+	async fetch(request: Request): Promise<Response> {
+		return new Response('Hello World!')
+	}
+}
+
+const TestOtelDO = instrumentDO(OtelDO, doConfig)
+
+export { TestOtelDO }
+```
+
+## Supported triggers/globals/bindings
+
 While the plan is to support all types of triggers (such as `fetch`, cron trigger and queues) and bindings (such as Durable Objects and KV), the currently supported components are:
 
 Triggers:
@@ -51,14 +111,15 @@ Triggers:
 - [x] HTTP (`handler.fetch`)
 - [x] Queue (`handler.queue`)
 - [ ] Cron (`handler.scheduled`)
-- [ ] Durable Objects
-- [x] waitUntil (`ctx.waitUntil`)[^1]
+- [x] Durable Objects (currently only `fetch` calls)
+- [x] waitUntil (`ctx.waitUntil`)
 - [ ] Trace (`handler.trace`)
 
-Globals:
+Globals/built-ins:
 
 - [x] Fetch
 - [x] Caches
+- [ ] Durable Object Storage & Alarms
 
 Bindings:
 
@@ -69,8 +130,6 @@ Bindings:
 - [ ] D1
 - [ ] Worker Bindings
 - [ ] Workers for Platform Dispatch
-
-[^1]: `waitUntil` can't be completely auto-instrumented and requires wrapping the promise in a `waitUntilTrace()` function.
 
 ## Creating custom spans
 
