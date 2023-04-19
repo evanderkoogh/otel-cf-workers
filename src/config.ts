@@ -9,38 +9,50 @@ import { OTLPFetchTraceExporter } from './exporter'
 import { WorkerTracerProvider } from './provider'
 import { FlushOnlySpanProcessor } from './spanprocessor'
 
-const exporter = z.object({
-	url: z.string().url(),
-	headers: z.record(z.string()),
-})
+export type Trigger = Request | MessageBatch
+export type Initialiser = (env: Record<string, unknown>, trigger: Trigger) => WorkerTraceConfig
 
-const service = z.object({
-	name: z.string(),
-	namespace: z.string().optional(),
-	version: z.string().optional(),
-})
+function createBindings() {
+	const sanitiseKeyOpts = z.object({ namespace: z.string(), key: z.string() })
+	const sanitiseKeys = z.function(z.tuple([sanitiseKeyOpts]), z.string()).optional()
+	const kv = z.literal(false).or(z.object({ sanitiseKeys })).default({})
 
-const sanitiseKeyOpts = z.object({ namespace: z.string(), key: z.string() })
-const sanitiseKeys = z.function(z.tuple([sanitiseKeyOpts]), z.string()).optional()
+	return z.object({ kv }).default({})
+}
 
-const kv = z.literal(false).or(z.object({ sanitiseKeys })).default({})
-
-const bindings = z.object({ kv }).default({})
-
-const globalFetch = z.object({ includeTraceContext: z.boolean().default(true) })
-
-const globals = z
-	.object({
-		caches: z.boolean().default(true),
-		fetch: z.literal(false).or(globalFetch).default({}),
+function createExporter() {
+	return z.object({
+		url: z.string().url(),
+		headers: z.record(z.string()).default({}),
 	})
-	.default({})
+}
+
+function createGlobals() {
+	const globalFetch = z.object({ includeTraceContext: z.boolean().default(true) })
+
+	return z
+		.object({
+			caches: z.boolean().default(true),
+			fetch: z.literal(false).or(globalFetch).default({}),
+		})
+		.default({})
+}
+
+function createService() {
+	return z.object({
+		name: z.string(),
+		namespace: z.string().optional(),
+		version: z.string().optional(),
+	})
+}
+
+const globals = createGlobals()
 
 const configSchema = z.object({
-	bindings,
-	exporter,
-	service,
-	globals,
+	bindings: createBindings(),
+	exporter: createExporter(),
+	globals: createGlobals(),
+	service: createService(),
 })
 
 const deepPartialSchema = configSchema.deepPartial()
@@ -110,7 +122,12 @@ export function loadConfig(supplied: PartialTraceConfig, env: Record<string, unk
 	const parsedSupplied = deepPartialSchema.parse(supplied)
 	const parsedEnv = deepPartialSchema.parse(ObjectifyEnv(env))
 	const merged = merge(parsedSupplied, parsedEnv)
-	const config = configSchema.parse(merged)
+	const result = configSchema.safeParse(merged)
+	if (!result.success) {
+		console.log(result.error)
+		throw result.error
+	}
+	const config = result.data
 
 	const check = deepPartialSchema.strict().safeParse(supplied)
 	if (!check.success) {
