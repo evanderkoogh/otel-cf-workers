@@ -7,12 +7,16 @@ import { SpanProcessor, RandomIdGenerator } from '@opentelemetry/sdk-trace-base'
 import { Span } from './span'
 
 export class WorkerTracer implements Tracer {
-	private readonly spanProcessor: SpanProcessor
+	private readonly _spanProcessor: SpanProcessor
 	private readonly resource: Resource
 	private readonly idGenerator: RandomIdGenerator = new RandomIdGenerator()
 	constructor(spanProcessor: SpanProcessor, resource: Resource) {
-		this.spanProcessor = spanProcessor
+		this._spanProcessor = spanProcessor
 		this.resource = resource
+	}
+
+	get spanProcessor() {
+		return this._spanProcessor
 	}
 
 	addToResource(extra: Resource) {
