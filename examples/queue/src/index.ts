@@ -1,4 +1,4 @@
-import { instrument, WorkerTraceConfig } from '../../../src/index'
+import { instrument, PartialTraceConfig } from '../../../src/index'
 
 interface QueueData {
 	pathname: string
@@ -22,7 +22,7 @@ const handler: ExportedHandler<Env, QueueData> = {
 	},
 }
 
-const config: WorkerTraceConfig = {
+const config: PartialTraceConfig = {
 	exporter: { url: 'https://api.honeycomb.io/v1/traces' },
 	service: {
 		name: 'queueGreetings',
