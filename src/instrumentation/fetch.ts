@@ -11,7 +11,8 @@ import {
 } from '@opentelemetry/api'
 import { SpanProcessor } from '@opentelemetry/sdk-trace-base'
 import { SemanticAttributes } from '@opentelemetry/semantic-conventions'
-import { loadConfig, init, PartialTraceConfig } from '../config'
+import { loadConfig, init, PartialTraceConfig, Initialiser } from '../config'
+import { WorkerTracer } from '../tracer'
 import { gatherRequestAttributes, gatherResponseAttributes } from './common'
 import { instrumentEnv } from './env'
 
@@ -85,23 +86,27 @@ const proxyExecutionContext = (context: ExecutionContext): ContextAndTracker => 
 	return { ctx, tracker }
 }
 
-const exportSpans = async (tracker: PromiseTracker, spanProcessor: SpanProcessor) => {
-	await scheduler.wait(1)
-	await tracker.wait()
-	await spanProcessor.forceFlush()
+const exportSpans = async (tracker: PromiseTracker) => {
+	const tracer = trace.getTracer('export')
+	if (tracer instanceof WorkerTracer) {
+		await scheduler.wait(1)
+		await tracker.wait()
+		await tracer.spanProcessor.forceFlush()
+	} else {
+		console.error('The global tracer is not of type WorkerTracer and can not export spans')
+	}
 }
 
 let cold_start = true
 const instrumentFetchHandler = <E, C>(
 	fetchHandler: FetchHandler<E, C>,
-	conf: PartialTraceConfig
+	initialiser: Initialiser
 ): FetchHandler<E, C> => {
 	return new Proxy(fetchHandler, {
 		apply: (target, thisArg, argArray): Promise<Response> => {
 			const request = argArray[0] as Request
 			const env = argArray[1] as Record<string, unknown>
-			const config = loadConfig(conf, env)
-			const spanProcessor = init(config)
+			const config = initialiser(env, request)
 			argArray[1] = instrumentEnv(env, config.bindings)
 			const originalCtx = argArray[2] as ExecutionContext
 			const { ctx, tracker } = proxyExecutionContext(originalCtx)
@@ -135,7 +140,7 @@ const instrumentFetchHandler = <E, C>(
 					span.end()
 					throw error
 				} finally {
-					originalCtx.waitUntil(exportSpans(tracker, spanProcessor))
+					originalCtx.waitUntil(exportSpans(tracker))
 				}
 			})
 			return promise
