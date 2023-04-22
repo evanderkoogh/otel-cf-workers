@@ -1,5 +1,5 @@
 import { trace, SpanOptions, SpanKind, Attributes, Exception } from '@opentelemetry/api'
-import { loadConfig, init, PartialTraceConfig, Initialiser } from '../config'
+import { Initialiser } from '../config'
 import { WorkerTracer } from '../tracer'
 import { wrap } from './common'
 import { instrumentEnv } from './env'
