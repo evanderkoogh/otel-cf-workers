@@ -95,7 +95,7 @@ export function instrumentDO(doClass: DOClass, config: PartialTraceConfig): DOCl
 			const env = argArray[1]
 			const conf = loadConfig(config, env)
 			init(conf)
-			argArray[1] = instrumentEnv(env, conf.bindings)
+			argArray[1] = instrumentEnv(env)
 			const doObj = new target(...argArray)
 			const objHandler: ProxyHandler<DurableObject> = {
 				get(target, prop) {
