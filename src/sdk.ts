@@ -1,6 +1,6 @@
 import { PartialTraceConfig, Initialiser, loadConfig, withConfig, WorkerTraceConfig } from './config'
-import { executeFetchHandler, FetchHandlerArgs } from './instrumentation/fetch'
-import { instrumentGlobalCache, instrumentGlobalFetch } from './instrumentation/globals'
+import { executeFetchHandler, FetchHandlerArgs, instrumentGlobalFetch } from './instrumentation/fetch'
+import { instrumentGlobalCache } from './instrumentation/globals'
 import { executeQueueHandler, QueueHandlerArgs } from './instrumentation/queue'
 import { DOClass, executeDOFetch, instrumentState } from './instrumentation/do'
 import { propagation, trace } from '@opentelemetry/api'

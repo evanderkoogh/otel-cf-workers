@@ -10,13 +10,29 @@ import {
 	SpanStatusCode,
 } from '@opentelemetry/api'
 import { SemanticAttributes } from '@opentelemetry/semantic-conventions'
+import { WorkerTraceConfig, getActiveConfig } from '../config'
+import { wrap } from './common'
 
+type FetchConfig = WorkerTraceConfig['globals']['fetch']
 type FetchHandler = ExportedHandlerFetchHandler<unknown, unknown>
 export type FetchHandlerArgs = Parameters<FetchHandler>
 
 export function sanitiseURL(url: string): string {
 	const u = new URL(url)
 	return `${u.protocol}//${u.host}${u.pathname}${u.search}`
+}
+
+const gatherOutgoingCfAttributes = (cf: RequestInitCfProperties): Attributes => {
+	const attrs: Record<string, string | number> = {}
+	Object.keys(cf).forEach((key) => {
+		const value = cf[key]
+		if (typeof value === 'string' || typeof value === 'number') {
+			attrs[`cf.${key}`] = value
+		} else {
+			attrs[`cf.${key}`] = JSON.stringify(value)
+		}
+	})
+	return attrs
 }
 
 export function gatherRequestAttributes(request: Request): Attributes {
@@ -104,4 +120,47 @@ export function executeFetchHandler(fetchFn: FetchHandler, [request, env, ctx]: 
 		}
 	})
 	return promise
+}
+
+type getFetchConfig = (config: WorkerTraceConfig) => FetchConfig
+export function instrumentFetcher(
+	fetchFn: Fetcher['fetch'],
+	configFn: getFetchConfig,
+	attrs?: Attributes
+): Fetcher['fetch'] {
+	const handler: ProxyHandler<typeof fetch> = {
+		apply: (target, thisArg, argArray): ReturnType<typeof fetch> => {
+			const workerConfig = getActiveConfig()
+			const config = !!workerConfig ? configFn(workerConfig) : undefined
+			const request = new Request(argArray[0], argArray[1])
+			if (!config) {
+				return Reflect.apply(target, thisArg, [request])
+			}
+
+			const tracer = trace.getTracer('fetcher')
+			const options: SpanOptions = { kind: SpanKind.CLIENT, attributes: attrs }
+
+			const host = new URL(request.url).host
+			const spanName = typeof attrs?.['name'] === 'string' ? attrs?.['name'] : `fetch: ${host}`
+			const promise = tracer.startActiveSpan(spanName, options, async (span) => {
+				if (config && config.includeTraceContext) {
+					propagation.inject(context.active(), request.headers, {
+						set: (h, k, v) => h.set(k, typeof v === 'string' ? v : String(v)),
+					})
+				}
+				span.setAttributes(gatherRequestAttributes(request))
+				if (request.cf) span.setAttributes(gatherOutgoingCfAttributes(request.cf))
+				const response: Response = await Reflect.apply(target, thisArg, [request])
+				span.setAttributes(gatherResponseAttributes(response))
+				span.end()
+				return response
+			})
+			return promise
+		},
+	}
+	return wrap(fetchFn, handler)
+}
+
+export function instrumentGlobalFetch(): void {
+	globalThis.fetch = instrumentFetcher(fetch, (config) => config.globals.fetch)
 }
