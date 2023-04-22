@@ -6,7 +6,8 @@ import { instrumentEnv } from './env'
 
 type QueueConfig = {}
 
-type QueueHandler<E, Q> = ExportedHandlerQueueHandler<E, Q>
+type QueueHandler = ExportedHandlerQueueHandler<unknown, unknown>
+export type QueueHandlerArgs = Parameters<QueueHandler>
 
 class MessageStatusCount {
 	succeeded = 0
@@ -51,7 +52,7 @@ const addEvent = (name: string, msg?: Message) => {
 	trace.getActiveSpan()?.addEvent(name, attrs)
 }
 
-const proxyQueueMessage = <Q>(msg: Message<Q>, count: MessageStatusCount, _config: QueueConfig): Message<Q> => {
+const proxyQueueMessage = <Q>(msg: Message<Q>, count: MessageStatusCount): Message<Q> => {
 	const msgHandler: ProxyHandler<Message<Q>> = {
 		get: (target, prop) => {
 			if (prop === 'ack') {
@@ -84,7 +85,7 @@ const proxyQueueMessage = <Q>(msg: Message<Q>, count: MessageStatusCount, _confi
 	return wrap(msg, msgHandler)
 }
 
-const proxyMessageBatch = <E, Q>(batch: MessageBatch, count: MessageStatusCount, config: QueueConfig) => {
+const proxyMessageBatch = <E, Q>(batch: MessageBatch, count: MessageStatusCount) => {
 	const batchHandler: ProxyHandler<MessageBatch> = {
 		get: (target, prop) => {
 			if (prop === 'messages') {
@@ -93,7 +94,7 @@ const proxyMessageBatch = <E, Q>(batch: MessageBatch, count: MessageStatusCount,
 					get: (target, prop) => {
 						if (typeof prop === 'string' && !isNaN(parseInt(prop))) {
 							const message = Reflect.get(target, prop)
-							return proxyQueueMessage(message, count, config)
+							return proxyQueueMessage(message, count)
 						} else {
 							return Reflect.get(target, prop)
 						}
@@ -128,45 +129,70 @@ const proxyMessageBatch = <E, Q>(batch: MessageBatch, count: MessageStatusCount,
 	return wrap(batch, batchHandler)
 }
 
-const instrumentQueueHandler = <E, Q>(queue: QueueHandler<E, Q>, initialiser: Initialiser): QueueHandler<E, Q> => {
-	const queueHandler: ProxyHandler<QueueHandler<E, Q>> = {
-		apply: (target, thisArg, argArray) => {
-			const batch: MessageBatch = argArray[0]
-			const env = argArray[1] as Record<string, unknown>
-			const config = initialiser(env, batch)
-			argArray[1] = instrumentEnv(env, config.bindings)
-			const count = new MessageStatusCount(batch.messages.length)
-			argArray[0] = proxyMessageBatch(batch, count, config)
-			const tracer = trace.getTracer('queueHandler')
-			const options: SpanOptions = { kind: SpanKind.CONSUMER }
-			const promise = tracer.startActiveSpan(`queueHandler:${batch.queue}`, options, async (span) => {
-				span.setAttribute('queue.name', batch.queue)
-				try {
-					const result = await Reflect.apply(target, thisArg, argArray)
-					span.setAttribute('queue.implicitly_acked', count.total - count.succeeded - count.failed)
-					count.ackRemaining()
-					span.setAttributes(count.toAttributes())
-
-					return result
-				} catch (error) {
-					span.recordException(error as Exception)
-					span.setAttribute('queue.implicitly_retried', count.total - count.succeeded - count.failed)
-					count.retryRemaining()
-				} finally {
-					span.end()
-					const tracer = trace.getTracer('export')
-					if (tracer instanceof WorkerTracer) {
-						await tracer.spanProcessor.forceFlush()
-					}
-				}
-			})
-			return promise
-		},
-	}
-	return wrap(queue, queueHandler)
+export function executeQueueHandler(queueFn: QueueHandler, [batch, env, ctx]: QueueHandlerArgs): Promise<void> {
+	const count = new MessageStatusCount(batch.messages.length)
+	batch = proxyMessageBatch(batch, count)
+	const tracer = trace.getTracer('queueHandler')
+	const options: SpanOptions = { kind: SpanKind.CONSUMER }
+	const promise = tracer.startActiveSpan(`queueHandler:${batch.queue}`, options, async (span) => {
+		span.setAttribute('queue.name', batch.queue)
+		try {
+			const result = queueFn(batch, env, ctx)
+			await span.setAttribute('queue.implicitly_acked', count.total - count.succeeded - count.failed)
+			count.ackRemaining()
+			span.setAttributes(count.toAttributes())
+			span.end()
+			return result
+		} catch (error) {
+			span.recordException(error as Exception)
+			span.setAttribute('queue.implicitly_retried', count.total - count.succeeded - count.failed)
+			count.retryRemaining()
+			span.end()
+			throw error
+		}
+	})
+	return promise
 }
 
-const instrumentQueueSender = (queue: Queue, name: string, config: QueueConfig) => {
+// const instrumentQueueHandler = <E, Q>(queue: QueueHandler, initialiser: Initialiser): QueueHandler => {
+// 	const queueHandler: ProxyHandler<QueueHandler> = {
+// 		apply: (target, thisArg, argArray) => {
+// 			const batch: MessageBatch = argArray[0]
+// 			const env = argArray[1] as Record<string, unknown>
+// 			const config = initialiser(env, batch)
+// 			argArray[1] = instrumentEnv(env)
+// 			const count = new MessageStatusCount(batch.messages.length)
+// 			argArray[0] = proxyMessageBatch(batch, count)
+// 			const tracer = trace.getTracer('queueHandler')
+// 			const options: SpanOptions = { kind: SpanKind.CONSUMER }
+// 			const promise = tracer.startActiveSpan(`queueHandler:${batch.queue}`, options, async (span) => {
+// 				span.setAttribute('queue.name', batch.queue)
+// 				try {
+// 					const result = await Reflect.apply(target, thisArg, argArray)
+// 					span.setAttribute('queue.implicitly_acked', count.total - count.succeeded - count.failed)
+// 					count.ackRemaining()
+// 					span.setAttributes(count.toAttributes())
+
+// 					return result
+// 				} catch (error) {
+// 					span.recordException(error as Exception)
+// 					span.setAttribute('queue.implicitly_retried', count.total - count.succeeded - count.failed)
+// 					count.retryRemaining()
+// 				} finally {
+// 					span.end()
+// 					const tracer = trace.getTracer('export')
+// 					if (tracer instanceof WorkerTracer) {
+// 						await tracer.spanProcessor.forceFlush()
+// 					}
+// 				}
+// 			})
+// 			return promise
+// 		},
+// 	}
+// 	return wrap(queue, queueHandler)
+// }
+
+export function instrumentQueueSender(queue: Queue, name: string) {
 	const tracer = trace.getTracer('queueSender')
 	const queueHandler: ProxyHandler<Queue> = {
 		get: (target, prop) => {
@@ -199,5 +225,3 @@ const instrumentQueueSender = (queue: Queue, name: string, config: QueueConfig) 
 	}
 	return wrap(queue, queueHandler)
 }
-
-export { instrumentQueueHandler, instrumentQueueSender }

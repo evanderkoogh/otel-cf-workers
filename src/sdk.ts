@@ -1,7 +1,7 @@
 import { PartialTraceConfig, Initialiser, loadConfig, withConfig, WorkerTraceConfig } from './config'
-import { executeFetchHandler } from './instrumentation/fetch'
+import { executeFetchHandler, FetchHandlerArgs } from './instrumentation/fetch'
 import { instrumentGlobalCache, instrumentGlobalFetch } from './instrumentation/globals'
-import { instrumentQueueHandler } from './instrumentation/queue'
+import { executeQueueHandler, QueueHandlerArgs } from './instrumentation/queue'
 import { DOClass, instrumentDO as instrDO } from './instrumentation/do'
 import { propagation, trace } from '@opentelemetry/api'
 import { instrumentEnv } from './instrumentation/env'
@@ -113,13 +113,12 @@ const instrument = <E, Q, C>(
 			apply: async (target, _thisArg, argArray: Parameters<ExportedHandlerFetchHandler>): Promise<Response> => {
 				const [request, orig_env, orig_ctx] = argArray
 				const config = initialiser(orig_env as Record<string, unknown>, request)
-				const env = instrumentEnv(orig_env as Record<string, unknown>, config.bindings)
+				const env = instrumentEnv(orig_env as Record<string, unknown>)
 				const { ctx, tracker } = proxyExecutionContext(orig_ctx)
 
 				try {
-					const args = { request, env, ctx }
-					const response = await withConfig(config, executeFetchHandler, undefined, target, args, config)
-					return response
+					const args: FetchHandlerArgs = [request, env, ctx]
+					return await withConfig(config, executeFetchHandler, undefined, target, args, config)
 				} catch (error) {
 					throw error
 				} finally {
@@ -130,7 +129,24 @@ const instrument = <E, Q, C>(
 		handler.fetch = wrap(handler.fetch, fetchHandler)
 	}
 	if (handler.queue) {
-		handler.queue = instrumentQueueHandler(handler.queue, initialiser)
+		const queueHandler: ProxyHandler<ExportedHandlerQueueHandler> = {
+			async apply(target, _thisArg, argArray: Parameters<ExportedHandlerQueueHandler>): Promise<void> {
+				const [batch, orig_env, orig_ctx] = argArray
+				const config = initialiser(orig_env as Record<string, unknown>, batch)
+				const env = instrumentEnv(orig_env as Record<string, unknown>)
+				const { ctx, tracker } = proxyExecutionContext(orig_ctx)
+
+				try {
+					const args: QueueHandlerArgs = [batch, env, ctx]
+					return await withConfig(config, executeQueueHandler, undefined, target, args, config)
+				} catch (error) {
+					throw error
+				} finally {
+					orig_ctx.waitUntil(exportSpans(tracker))
+				}
+			},
+		}
+		handler.queue = wrap(handler.queue, queueHandler)
 	}
 	return handler
 }
