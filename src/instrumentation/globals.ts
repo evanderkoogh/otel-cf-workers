@@ -1,17 +1,21 @@
 import { Attributes, context, propagation, SpanKind, SpanOptions, trace } from '@opentelemetry/api'
-import { isWrapped } from '@opentelemetry/core'
-import { GlobalsConfig, PartialTraceConfig } from '../config'
-import { gatherRequestAttributes, gatherResponseAttributes, sanitiseURL, unwrap, wrap } from './common'
+import { getActiveConfig, WorkerTraceConfig } from '../config'
+import { wrap } from './common'
+import { sanitiseURL, gatherRequestAttributes, gatherResponseAttributes } from './fetch'
 
 type CacheFns = Cache[keyof Cache]
-type CacheConfig = GlobalsConfig['caches']
-type FetchConfig = GlobalsConfig['fetch']
+type FetchConfig = WorkerTraceConfig['globals']['fetch']
 
 const tracer = trace.getTracer('cache instrumentation')
 
-function instrumentFunction<T extends CacheFns>(fn: T, cacheName: string, op: string, config: CacheConfig): T {
+function instrumentFunction<T extends CacheFns>(fn: T, cacheName: string, op: string): T {
 	const handler: ProxyHandler<typeof fn> = {
-		apply(target, thisArg, argArray) {
+		async apply(target, thisArg, argArray) {
+			const config = getActiveConfig()
+			if (!config?.globals.caches) {
+				return await Reflect.apply(target, thisArg, argArray)
+			}
+
 			return tracer.startActiveSpan(`cache:${cacheName}:${op}`, async (span) => {
 				span.setAttribute('cache.name', cacheName)
 				if (argArray[0].url) {
@@ -26,12 +30,12 @@ function instrumentFunction<T extends CacheFns>(fn: T, cacheName: string, op: st
 	return wrap(fn, handler)
 }
 
-function instrumentCache(cache: Cache, cacheName: string, config: CacheConfig): Cache {
+function instrumentCache(cache: Cache, cacheName: string): Cache {
 	const handler: ProxyHandler<typeof cache> = {
 		get(target, prop) {
 			if (prop === 'delete' || prop === 'match' || prop === 'put') {
 				const fn = Reflect.get(target, prop).bind(target)
-				return instrumentFunction(fn, cacheName, prop, config)
+				return instrumentFunction(fn, cacheName, prop)
 			} else {
 				return Reflect.get(target, prop)
 			}
@@ -40,26 +44,26 @@ function instrumentCache(cache: Cache, cacheName: string, config: CacheConfig): 
 	return wrap(cache, handler)
 }
 
-function instrumentOpen(openFn: CacheStorage['open'], config: CacheConfig): CacheStorage['open'] {
+function instrumentOpen(openFn: CacheStorage['open']): CacheStorage['open'] {
 	const handler: ProxyHandler<typeof openFn> = {
 		async apply(target, thisArg, argArray) {
 			const cacheName = argArray[0]
 			const cache = await Reflect.apply(target, thisArg, argArray)
-			return instrumentCache(cache, cacheName, config)
+			return instrumentCache(cache, cacheName)
 		},
 	}
 	return wrap(openFn, handler)
 }
 
-function _instrumentGlobalCache(config: CacheConfig) {
+function _instrumentGlobalCache() {
 	const handler: ProxyHandler<typeof caches> = {
 		get(target, prop) {
 			if (prop === 'default') {
 				const cache = target.default
-				return instrumentCache(cache, 'default', config)
+				return instrumentCache(cache, 'default')
 			} else if (prop === 'open') {
 				const openFn = Reflect.get(target, prop).bind(target)
-				return instrumentOpen(openFn, config)
+				return instrumentOpen(openFn)
 			} else {
 				return Reflect.get(target, prop)
 			}
@@ -69,9 +73,10 @@ function _instrumentGlobalCache(config: CacheConfig) {
 	globalThis.caches = wrap(caches, handler)
 }
 
-export function instrumentGlobalCache(config: CacheConfig) {
-	if (config) {
-		return _instrumentGlobalCache(config)
+export function instrumentGlobalCache() {
+	const config = getActiveConfig()
+	if (config?.globals.caches) {
+		return _instrumentGlobalCache()
 	}
 }
 
@@ -88,20 +93,24 @@ const gatherOutgoingCfAttributes = (cf: RequestInitCfProperties): Attributes => 
 	return attrs
 }
 
+type getFetchConfig = (config: WorkerTraceConfig) => FetchConfig
 export function instrumentFetcher(
-	config: FetchConfig,
-	fetcher: Fetcher['fetch'],
+	fetchFn: Fetcher['fetch'],
+	configFn: getFetchConfig,
 	attrs?: Attributes
 ): Fetcher['fetch'] {
 	const handler: ProxyHandler<typeof fetch> = {
 		apply: (target, thisArg, argArray): ReturnType<typeof fetch> => {
-			if (isWrapped(thisArg)) {
-				thisArg = unwrap(thisArg)
+			const workerConfig = getActiveConfig()
+			const config = !!workerConfig ? configFn(workerConfig) : undefined
+			const request = new Request(argArray[0], argArray[1])
+			if (!config) {
+				return Reflect.apply(target, thisArg, [request])
 			}
+
 			const tracer = trace.getTracer('fetcher')
 			const options: SpanOptions = { kind: SpanKind.CLIENT, attributes: attrs }
 
-			const request = new Request(argArray[0], argArray[1])
 			const host = new URL(request.url).host
 			const spanName = typeof attrs?.['name'] === 'string' ? attrs?.['name'] : `fetch: ${host}`
 			const promise = tracer.startActiveSpan(spanName, options, async (span) => {
@@ -120,11 +129,9 @@ export function instrumentFetcher(
 			return promise
 		},
 	}
-	return wrap(fetcher, handler)
+	return wrap(fetchFn, handler)
 }
 
-export function instrumentGlobalFetch(config: FetchConfig): void {
-	if (config) {
-		globalThis.fetch = instrumentFetcher(config, fetch)
-	}
+export function instrumentGlobalFetch(): void {
+	globalThis.fetch = instrumentFetcher(fetch, (config) => config.globals.fetch)
 }

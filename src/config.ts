@@ -1,13 +1,8 @@
 import { z } from 'zod'
 import merge from 'deepmerge'
-import { propagation } from '@opentelemetry/api'
-import { W3CTraceContextPropagator } from '@opentelemetry/core'
-import { Resource } from '@opentelemetry/resources'
-import { SpanProcessor } from '@opentelemetry/sdk-trace-base'
-import { SemanticResourceAttributes } from '@opentelemetry/semantic-conventions'
-import { OTLPFetchTraceExporter } from './exporter'
-import { WorkerTracerProvider } from './provider'
-import { FlushOnlySpanProcessor } from './spanprocessor'
+import { context } from '@opentelemetry/api'
+
+const configSymbol = Symbol('Otel Workers Tracing Configuration')
 
 export type Trigger = Request | MessageBatch
 export type Initialiser = (env: Record<string, unknown>, trigger: Trigger) => WorkerTraceConfig
@@ -46,8 +41,6 @@ function createService() {
 	})
 }
 
-const globals = createGlobals()
-
 const configSchema = z.object({
 	bindings: createBindings(),
 	exporter: createExporter(),
@@ -59,40 +52,6 @@ const deepPartialSchema = configSchema.deepPartial()
 
 export type WorkerTraceConfig = z.output<typeof configSchema>
 export type PartialTraceConfig = z.input<typeof deepPartialSchema>
-export type GlobalsConfig = z.output<typeof globals>
-
-const createResource = (config: WorkerTraceConfig): Resource => {
-	const workerResourceAttrs = {
-		[SemanticResourceAttributes.CLOUD_PROVIDER]: 'cloudflare',
-		[SemanticResourceAttributes.CLOUD_PLATFORM]: 'cloudflare.workers',
-		[SemanticResourceAttributes.CLOUD_REGION]: 'earth',
-		// [SemanticResourceAttributes.FAAS_NAME]: '//TODO',
-		// [SemanticResourceAttributes.FAAS_VERSION]: '//TODO',
-		[SemanticResourceAttributes.FAAS_MAX_MEMORY]: 128,
-		[SemanticResourceAttributes.TELEMETRY_SDK_LANGUAGE]: 'JavaScript',
-		[SemanticResourceAttributes.TELEMETRY_SDK_NAME]: '@microlabs/otel-workers-sdk',
-	}
-	const serviceResource = new Resource({
-		[SemanticResourceAttributes.SERVICE_NAME]: config.service.name,
-		[SemanticResourceAttributes.SERVICE_NAMESPACE]: config.service.namespace,
-		[SemanticResourceAttributes.SERVICE_VERSION]: config.service.version,
-	})
-	const resource = new Resource(workerResourceAttrs)
-	return resource.merge(serviceResource)
-}
-
-let spanProcessor: SpanProcessor
-const init = (config: WorkerTraceConfig): SpanProcessor => {
-	if (!spanProcessor) {
-		propagation.setGlobalPropagator(new W3CTraceContextPropagator())
-		const resource = createResource(config)
-		const exporter = new OTLPFetchTraceExporter(config.exporter)
-		spanProcessor = new FlushOnlySpanProcessor(exporter)
-		const provider = new WorkerTracerProvider(spanProcessor, resource)
-		provider.register()
-	}
-	return spanProcessor
-}
 
 function ObjectifyEnv(env: Record<string, unknown>) {
 	const filtered = Object.keys(env).filter((key) => key.toLowerCase().startsWith('otel.'))
@@ -114,17 +73,13 @@ function ObjectifyEnv(env: Record<string, unknown>) {
 	return obj
 }
 
-export function loadGlobalsConfig(supplied: PartialTraceConfig): GlobalsConfig {
-	return globals.parse(supplied.globals)
-}
-
 export function loadConfig(supplied: PartialTraceConfig, env: Record<string, unknown>): WorkerTraceConfig {
 	const parsedSupplied = deepPartialSchema.parse(supplied)
 	const parsedEnv = deepPartialSchema.parse(ObjectifyEnv(env))
 	const merged = merge(parsedSupplied, parsedEnv)
 	const result = configSchema.safeParse(merged)
 	if (!result.success) {
-		console.log(result.error)
+		console.error(result.error)
 		throw result.error
 	}
 	const config = result.data
@@ -137,4 +92,17 @@ export function loadConfig(supplied: PartialTraceConfig, env: Record<string, unk
 	return config
 }
 
-export { init }
+export function withConfig<A extends unknown[], F extends (...args: A) => ReturnType<F>>(
+	config: WorkerTraceConfig,
+	fn: F,
+	thisArg?: ThisParameterType<F>,
+	...args: A
+): ReturnType<F> {
+	const new_context = context.active().setValue(configSymbol, config)
+	return context.with(new_context, fn, thisArg, ...args)
+}
+
+export function getActiveConfig(): WorkerTraceConfig | undefined {
+	const config = context.active().getValue(configSymbol)
+	return !!config ? (config as WorkerTraceConfig) : undefined
+}
