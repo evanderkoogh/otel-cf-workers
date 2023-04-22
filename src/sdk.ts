@@ -2,7 +2,7 @@ import { PartialTraceConfig, Initialiser, loadConfig, withConfig, WorkerTraceCon
 import { executeFetchHandler, FetchHandlerArgs } from './instrumentation/fetch'
 import { instrumentGlobalCache, instrumentGlobalFetch } from './instrumentation/globals'
 import { executeQueueHandler, QueueHandlerArgs } from './instrumentation/queue'
-import { DOClass, instrumentDO as instrDO } from './instrumentation/do'
+import { DOClass, executeDOFetch, instrumentState } from './instrumentation/do'
 import { propagation, trace } from '@opentelemetry/api'
 import { instrumentEnv } from './instrumentation/env'
 import { wrap } from './instrumentation/common'
@@ -87,21 +87,23 @@ const proxyExecutionContext = (context: ExecutionContext): ContextAndTracker => 
 	return { ctx, tracker }
 }
 
-const exportSpans = async (tracker: PromiseTracker) => {
+const exportSpans = async (tracker?: PromiseTracker) => {
 	const tracer = trace.getTracer('export')
 	if (tracer instanceof WorkerTracer) {
 		await scheduler.wait(1)
-		await tracker.wait()
+		if (tracker) {
+			await tracker.wait()
+		}
 		await tracer.spanProcessor.forceFlush()
 	} else {
 		console.error('The global tracer is not of type WorkerTracer and can not export spans')
 	}
 }
 
-const instrument = <E, Q, C>(
+export function instrument<E, Q, C>(
 	handler: ExportedHandler<E, Q, C>,
 	config: PartialTraceConfig
-): ExportedHandler<E, Q, C> => {
+): ExportedHandler<E, Q, C> {
 	const initialiser: Initialiser = (env, _trigger) => {
 		const conf = loadConfig(config, env)
 		init(conf)
@@ -118,7 +120,7 @@ const instrument = <E, Q, C>(
 
 				try {
 					const args: FetchHandlerArgs = [request, env, ctx]
-					return await withConfig(config, executeFetchHandler, undefined, target, args, config)
+					return await withConfig(config, executeFetchHandler, undefined, target, args)
 				} catch (error) {
 					throw error
 				} finally {
@@ -138,7 +140,7 @@ const instrument = <E, Q, C>(
 
 				try {
 					const args: QueueHandlerArgs = [batch, env, ctx]
-					return await withConfig(config, executeQueueHandler, undefined, target, args, config)
+					return await withConfig(config, executeQueueHandler, undefined, target, args)
 				} catch (error) {
 					throw error
 				} finally {
@@ -151,8 +153,48 @@ const instrument = <E, Q, C>(
 	return handler
 }
 
-const instrumentDO = (doClass: DOClass, config: PartialTraceConfig) => {
-	return instrDO(doClass, config)
-}
+export function instrumentDO(doClass: DOClass, config: PartialTraceConfig) {
+	const initialiser: Initialiser = (env, _trigger) => {
+		const conf = loadConfig(config, env)
+		init(conf)
+		return conf
+	}
 
-export { instrument, instrumentDO }
+	const classHandler: ProxyHandler<DOClass> = {
+		construct(target, [orig_state, orig_env]: ConstructorParameters<DOClass>) {
+			const state = instrumentState(orig_state)
+			const env = instrumentEnv(orig_env)
+			const doObj = new target(state, env)
+			const objHandler: ProxyHandler<DurableObject> = {
+				get(target, prop) {
+					if (prop === 'fetch') {
+						const fetchFn = Reflect.get(target, prop)
+						const fetchHandler: ProxyHandler<DurableObject['fetch']> = {
+							async apply(target, thisArg, argArray: Parameters<DurableObject['fetch']>) {
+								const request = argArray[0]
+								const config = initialiser(orig_env, request)
+								try {
+									const bound = target.bind(doObj)
+									return await withConfig(config, executeDOFetch, undefined, bound, request, orig_state.id)
+								} catch (error) {
+									throw error
+								} finally {
+									exportSpans()
+								}
+							},
+						}
+						return wrap(fetchFn, fetchHandler)
+					} else {
+						const result = Reflect.get(target, prop)
+						if (typeof result === 'function') {
+							result.bind(doObj)
+						}
+						return result
+					}
+				},
+			}
+			return wrap(doObj, objHandler)
+		},
+	}
+	return wrap(doClass, classHandler)
+}
