@@ -1,10 +1,6 @@
-import { trace, SpanOptions, SpanKind, Exception } from '@opentelemetry/api'
+import { trace, SpanOptions, SpanKind, Exception, SpanStatusCode } from '@opentelemetry/api'
 import { SemanticAttributes } from '@opentelemetry/semantic-conventions'
-import { loadConfig, PartialTraceConfig } from '../config'
-import { init } from '../sdk'
-import { WorkerTracer } from '../tracer'
 import { wrap } from './common'
-import { instrumentEnv } from './env'
 import {
 	getParentContextFromHeaders,
 	gatherIncomingCfAttributes,
@@ -60,12 +56,12 @@ export function instrumentDurableObject(ns: DurableObjectNamespace, nsName: stri
 	return wrap(ns, nsHandler)
 }
 
-function instrumentState(state: DurableObjectState, config: {}) {
+export function instrumentState(state: DurableObjectState) {
 	const stateHandler: ProxyHandler<DurableObjectState> = {
 		get(target, prop) {
 			const result = Reflect.get(target, prop)
 			if (typeof result === 'function') {
-				result.bind(target)
+				return result.bind(target)
 			}
 			return result
 		},
@@ -73,81 +69,44 @@ function instrumentState(state: DurableObjectState, config: {}) {
 	return wrap(state, stateHandler)
 }
 
-async function flush() {
-	const tracer = trace.getTracer('export')
-	if (tracer instanceof WorkerTracer) {
-		await scheduler.wait(1)
-		await tracer.spanProcessor.forceFlush()
-	} else {
-		console.error('The global tracer is not of type WorkerTracer and can not export spans')
-	}
-}
-
 let cold_start = true
+type FetchFn = DurableObject['fetch']
 export type DOClass = { new (state: DurableObjectState, env: any): DurableObject }
-export function instrumentDO(doClass: DOClass, config: PartialTraceConfig): DOClass {
-	const classHandler: ProxyHandler<DOClass> = {
-		construct(target, argArray: ConstructorParameters<DOClass>) {
-			const state = instrumentState(argArray[0], {})
-			argArray[0] = state
-			const doId = state.id.toString()
-			const doName = state.id.name
-			const env = argArray[1]
-			const conf = loadConfig(config, env)
-			init(conf)
-			argArray[1] = instrumentEnv(env)
-			const doObj = new target(...argArray)
-			const objHandler: ProxyHandler<DurableObject> = {
-				get(target, prop) {
-					if (prop === 'fetch') {
-						const fetchHandler: ProxyHandler<DurableObject['fetch']> = {
-							apply(target, thisArg, argArray) {
-								const request = argArray[0]
-								const spanContext = getParentContextFromHeaders(request.headers)
+export function executeDOFetch(fetchFn: FetchFn, request: Request, id: DurableObjectId): Promise<Response> {
+	const spanContext = getParentContextFromHeaders(request.headers)
 
-								const tracer = trace.getTracer('do.fetch')
-								const options: SpanOptions = {
-									kind: SpanKind.SERVER,
-									attributes: {
-										'do.id': doId,
-										'do.name': doName,
-									},
-								}
-
-								const promise = tracer.startActiveSpan('do.fetch', options, spanContext, async (span) => {
-									span.setAttribute(SemanticAttributes.FAAS_TRIGGER, 'http')
-									span.setAttribute(SemanticAttributes.FAAS_COLDSTART, cold_start)
-									cold_start = false
-
-									span.setAttributes(gatherRequestAttributes(request))
-									span.setAttributes(gatherIncomingCfAttributes(request))
-
-									try {
-										const response: Response = await Reflect.apply(target, thisArg, argArray)
-										span.setAttributes(gatherResponseAttributes(response))
-										span.end()
-
-										return response
-									} catch (error) {
-										span.recordException(error as Exception)
-										span.end()
-										throw error
-									} finally {
-										flush()
-									}
-								})
-								return promise
-							},
-						}
-						const fn = Reflect.get(target, prop)
-						return wrap(fn, fetchHandler)
-					} else {
-						return Reflect.get(target, prop)
-					}
-				},
-			}
-			return wrap(doObj, objHandler)
+	const tracer = trace.getTracer('fetchHandler')
+	const options: SpanOptions = {
+		kind: SpanKind.SERVER,
+		attributes: {
+			'do.id': id.toString(),
+			'do.name': id.name,
 		},
 	}
-	return wrap(doClass, classHandler)
+
+	const promise = tracer.startActiveSpan('fetchHandler', options, spanContext, async (span) => {
+		span.setAttribute(SemanticAttributes.FAAS_TRIGGER, 'http')
+		span.setAttribute(SemanticAttributes.FAAS_COLDSTART, cold_start)
+		cold_start = false
+
+		span.setAttributes(gatherRequestAttributes(request))
+		span.setAttributes(gatherIncomingCfAttributes(request))
+
+		try {
+			const response: Response = await fetchFn(request)
+			if (response.ok) {
+				span.setStatus({ code: SpanStatusCode.OK })
+			}
+			span.setAttributes(gatherResponseAttributes(response))
+			span.end()
+
+			return response
+		} catch (error) {
+			span.recordException(error as Exception)
+			span.setStatus({ code: SpanStatusCode.ERROR })
+			span.end()
+			throw error
+		}
+	})
+	return promise
 }
