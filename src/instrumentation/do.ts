@@ -2,6 +2,7 @@ import { trace, SpanOptions, SpanKind, Exception } from '@opentelemetry/api'
 import { SemanticAttributes } from '@opentelemetry/semantic-conventions'
 import { loadConfig, PartialTraceConfig } from '../config'
 import { init } from '../sdk'
+import { WorkerTracer } from '../tracer'
 import { wrap } from './common'
 import { instrumentEnv } from './env'
 import {
@@ -72,6 +73,16 @@ function instrumentState(state: DurableObjectState, config: {}) {
 	return wrap(state, stateHandler)
 }
 
+async function flush() {
+	const tracer = trace.getTracer('export')
+	if (tracer instanceof WorkerTracer) {
+		await scheduler.wait(1)
+		await tracer.spanProcessor.forceFlush()
+	} else {
+		console.error('The global tracer is not of type WorkerTracer and can not export spans')
+	}
+}
+
 let cold_start = true
 export type DOClass = { new (state: DurableObjectState, env: any): DurableObject }
 export function instrumentDO(doClass: DOClass, config: PartialTraceConfig): DOClass {
@@ -83,7 +94,7 @@ export function instrumentDO(doClass: DOClass, config: PartialTraceConfig): DOCl
 			const doName = state.id.name
 			const env = argArray[1]
 			const conf = loadConfig(config, env)
-			const spanProcessor = init(conf)
+			init(conf)
 			argArray[1] = instrumentEnv(env, conf.bindings)
 			const doObj = new target(...argArray)
 			const objHandler: ProxyHandler<DurableObject> = {
@@ -122,7 +133,7 @@ export function instrumentDO(doClass: DOClass, config: PartialTraceConfig): DOCl
 										span.end()
 										throw error
 									} finally {
-										await spanProcessor.forceFlush()
+										flush()
 									}
 								})
 								return promise
