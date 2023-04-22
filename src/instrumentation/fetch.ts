@@ -9,14 +9,42 @@ import {
 	Context,
 	SpanStatusCode,
 } from '@opentelemetry/api'
-import { SpanProcessor } from '@opentelemetry/sdk-trace-base'
 import { SemanticAttributes } from '@opentelemetry/semantic-conventions'
-import { loadConfig, init, PartialTraceConfig, Initialiser } from '../config'
-import { WorkerTracer } from '../tracer'
-import { gatherRequestAttributes, gatherResponseAttributes } from './common'
-import { instrumentEnv } from './env'
+import { WorkerTraceConfig } from '../config'
+
+export interface FetchHandlerArgs {
+	request: Request<unknown, IncomingRequestCfProperties<unknown>>
+	env: any
+	ctx: ExecutionContext
+}
 
 type FetchHandler<E, C> = ExportedHandlerFetchHandler<E, C>
+
+export function sanitiseURL(url: string): string {
+	const u = new URL(url)
+	return `${u.protocol}//${u.host}${u.pathname}${u.search}`
+}
+
+export function gatherRequestAttributes(request: Request): Attributes {
+	const attrs: Record<string, string | number> = {}
+	const headers = request.headers
+	// attrs[SemanticAttributes.HTTP_CLIENT_IP] = '1.1.1.1'
+	attrs[SemanticAttributes.HTTP_METHOD] = request.method
+	attrs[SemanticAttributes.HTTP_URL] = sanitiseURL(request.url)
+	attrs[SemanticAttributes.HTTP_USER_AGENT] = headers.get('user-agent')!
+	attrs[SemanticAttributes.HTTP_REQUEST_CONTENT_LENGTH] = headers.get('content-length')!
+	attrs['http.request_content-type'] = headers.get('content-type')!
+	attrs['http.accepts'] = headers.get('accepts')!
+	return attrs
+}
+
+export function gatherResponseAttributes(response: Response): Attributes {
+	const attrs: Record<string, string | number> = {}
+	attrs[SemanticAttributes.HTTP_STATUS_CODE] = response.status
+	attrs[SemanticAttributes.HTTP_RESPONSE_CONTENT_LENGTH] = response.headers.get('content-length')!
+	attrs['http.response_content-type'] = response.headers.get('content-type')!
+	return attrs
+}
 
 export function gatherIncomingCfAttributes(request: Request): Attributes {
 	const attrs: Record<string, string | number> = {}
@@ -50,102 +78,40 @@ export function waitUntilTrace(fn: () => Promise<any>): Promise<void> {
 	})
 }
 
-class PromiseTracker {
-	_outstandingPromises: Promise<unknown>[] = []
-
-	get outstandingPromiseCount() {
-		return this._outstandingPromises.length
-	}
-
-	track(promise: Promise<unknown>): void {
-		this._outstandingPromises.push(promise)
-	}
-
-	async wait() {
-		await Promise.all(this._outstandingPromises)
-	}
-}
-
-type ContextAndTracker = { ctx: ExecutionContext; tracker: PromiseTracker }
-
-const proxyExecutionContext = (context: ExecutionContext): ContextAndTracker => {
-	const tracker = new PromiseTracker()
-	const ctx = new Proxy(context, {
-		get(target, prop) {
-			if (prop === 'waitUntil') {
-				const fn = Reflect.get(target, prop)
-				return new Proxy(fn, {
-					apply(target, thisArg, argArray) {
-						tracker.track(argArray[0])
-						return Reflect.apply(target, context, argArray)
-					},
-				})
-			}
-		},
-	})
-	return { ctx, tracker }
-}
-
-const exportSpans = async (tracker: PromiseTracker) => {
-	const tracer = trace.getTracer('export')
-	if (tracer instanceof WorkerTracer) {
-		await scheduler.wait(1)
-		await tracker.wait()
-		await tracer.spanProcessor.forceFlush()
-	} else {
-		console.error('The global tracer is not of type WorkerTracer and can not export spans')
-	}
-}
-
 let cold_start = true
-const instrumentFetchHandler = <E, C>(
-	fetchHandler: FetchHandler<E, C>,
-	initialiser: Initialiser
-): FetchHandler<E, C> => {
-	return new Proxy(fetchHandler, {
-		apply: (target, thisArg, argArray): Promise<Response> => {
-			const request = argArray[0] as Request
-			const env = argArray[1] as Record<string, unknown>
-			const config = initialiser(env, request)
-			argArray[1] = instrumentEnv(env, config.bindings)
-			const originalCtx = argArray[2] as ExecutionContext
-			const { ctx, tracker } = proxyExecutionContext(originalCtx)
-			argArray[2] = ctx
+export function executeFetchHandler(
+	fetchFn: FetchHandler<unknown, unknown>,
+	{ request, env, ctx }: FetchHandlerArgs,
+	config: WorkerTraceConfig
+): Promise<Response> {
+	const spanContext = getParentContextFromHeaders(request.headers)
 
-			const spanContext = getParentContextFromHeaders(request.headers)
+	const tracer = trace.getTracer('fetchHandler')
+	const options: SpanOptions = { kind: SpanKind.SERVER }
 
-			const tracer = trace.getTracer('fetchHandler')
-			const options: SpanOptions = { kind: SpanKind.SERVER }
+	const promise = tracer.startActiveSpan('fetchHandler', options, spanContext, async (span) => {
+		span.setAttribute(SemanticAttributes.FAAS_TRIGGER, 'http')
+		span.setAttribute(SemanticAttributes.FAAS_COLDSTART, cold_start)
+		cold_start = false
 
-			const promise = tracer.startActiveSpan('fetchHandler', options, spanContext, async (span) => {
-				span.setAttribute(SemanticAttributes.FAAS_TRIGGER, 'http')
-				span.setAttribute(SemanticAttributes.FAAS_COLDSTART, cold_start)
-				cold_start = false
+		span.setAttributes(gatherRequestAttributes(request))
+		span.setAttributes(gatherIncomingCfAttributes(request))
 
-				span.setAttributes(gatherRequestAttributes(request))
-				span.setAttributes(gatherIncomingCfAttributes(request))
+		try {
+			const response: Response = await fetchFn(request, env, ctx)
+			if (response.ok) {
+				span.setStatus({ code: SpanStatusCode.OK })
+			}
+			span.setAttributes(gatherResponseAttributes(response))
+			span.end()
 
-				try {
-					const response: Response = await Reflect.apply(target, thisArg, argArray)
-					if (response.ok) {
-						span.setStatus({ code: SpanStatusCode.OK })
-					}
-					span.setAttributes(gatherResponseAttributes(response))
-					span.end()
-
-					return response
-				} catch (error) {
-					span.recordException(error as Exception)
-					span.setStatus({ code: SpanStatusCode.ERROR })
-					span.end()
-					throw error
-				} finally {
-					originalCtx.waitUntil(exportSpans(tracker))
-				}
-			})
-			return promise
-		},
+			return response
+		} catch (error) {
+			span.recordException(error as Exception)
+			span.setStatus({ code: SpanStatusCode.ERROR })
+			span.end()
+			throw error
+		}
 	})
+	return promise
 }
-
-export { instrumentFetchHandler }

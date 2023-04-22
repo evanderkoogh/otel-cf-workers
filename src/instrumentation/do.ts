@@ -1,9 +1,15 @@
 import { trace, SpanOptions, SpanKind, Exception } from '@opentelemetry/api'
 import { SemanticAttributes } from '@opentelemetry/semantic-conventions'
-import { init, loadConfig, PartialTraceConfig } from '../config'
-import { gatherRequestAttributes, gatherResponseAttributes, isWrapped, unwrap, wrap } from './common'
+import { loadConfig, PartialTraceConfig } from '../config'
+import { init } from '../sdk'
+import { wrap } from './common'
 import { instrumentEnv } from './env'
-import { getParentContextFromHeaders, gatherIncomingCfAttributes } from './fetch'
+import {
+	getParentContextFromHeaders,
+	gatherIncomingCfAttributes,
+	gatherRequestAttributes,
+	gatherResponseAttributes,
+} from './fetch'
 import { instrumentFetcher } from './globals'
 
 type DOBindingsConfigs = {}
@@ -20,14 +26,13 @@ export function instrumentDurableObject(ns: DurableObjectNamespace, nsName: stri
 							get(target, prop) {
 								if (prop === 'fetch') {
 									const fetcher = Reflect.get(target, prop)
-									const config = { includeTraceContext: true }
 									const attrs = {
 										name: `durable_object:${nsName}`,
 										'do.namespace': nsName,
 										'do.id': target.id.toString(),
 										'do.id.name': target.id.name,
 									}
-									return instrumentFetcher(config, fetcher, attrs)
+									return instrumentFetcher(fetcher, () => ({ includeTraceContext: true }), attrs)
 								} else {
 									return Reflect.get(target, prop)
 								}
@@ -42,9 +47,6 @@ export function instrumentDurableObject(ns: DurableObjectNamespace, nsName: stri
 				if (typeof result === 'function') {
 					const handler: ProxyHandler<any> = {
 						apply(target, thisArg, argArray) {
-							if (isWrapped(thisArg)) {
-								thisArg = unwrap(thisArg)
-							}
 							return Reflect.apply(target, thisArg, argArray)
 						},
 					}
@@ -60,7 +62,11 @@ export function instrumentDurableObject(ns: DurableObjectNamespace, nsName: stri
 function instrumentState(state: DurableObjectState, config: {}) {
 	const stateHandler: ProxyHandler<DurableObjectState> = {
 		get(target, prop) {
-			return Reflect.get(target, prop)
+			const result = Reflect.get(target, prop)
+			if (typeof result === 'function') {
+				result.bind(target)
+			}
+			return result
 		},
 	}
 	return wrap(state, stateHandler)
