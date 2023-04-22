@@ -6,8 +6,8 @@ import {
 	gatherIncomingCfAttributes,
 	gatherRequestAttributes,
 	gatherResponseAttributes,
+	instrumentFetcher,
 } from './fetch'
-import { instrumentFetcher } from './globals'
 
 type DOBindingsConfigs = {}
 
