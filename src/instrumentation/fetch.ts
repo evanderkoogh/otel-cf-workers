@@ -10,15 +10,9 @@ import {
 	SpanStatusCode,
 } from '@opentelemetry/api'
 import { SemanticAttributes } from '@opentelemetry/semantic-conventions'
-import { WorkerTraceConfig } from '../config'
 
-export interface FetchHandlerArgs {
-	request: Request<unknown, IncomingRequestCfProperties<unknown>>
-	env: any
-	ctx: ExecutionContext
-}
-
-type FetchHandler<E, C> = ExportedHandlerFetchHandler<E, C>
+type FetchHandler = ExportedHandlerFetchHandler<unknown, unknown>
+export type FetchHandlerArgs = Parameters<FetchHandler>
 
 export function sanitiseURL(url: string): string {
 	const u = new URL(url)
@@ -79,11 +73,7 @@ export function waitUntilTrace(fn: () => Promise<any>): Promise<void> {
 }
 
 let cold_start = true
-export function executeFetchHandler(
-	fetchFn: FetchHandler<unknown, unknown>,
-	{ request, env, ctx }: FetchHandlerArgs,
-	config: WorkerTraceConfig
-): Promise<Response> {
+export function executeFetchHandler(fetchFn: FetchHandler, [request, env, ctx]: FetchHandlerArgs): Promise<Response> {
 	const spanContext = getParentContextFromHeaders(request.headers)
 
 	const tracer = trace.getTracer('fetchHandler')
