@@ -1,5 +1,5 @@
 import { getActiveConfig } from '../config'
-import { instrumentDurableObject } from './do'
+import { instrumentDOBinding } from './do'
 import { instrumentKV } from './kv'
 import { instrumentQueueSender } from './queue'
 
@@ -27,7 +27,7 @@ const instrumentEnv = (env: Record<string, unknown>): Record<string, unknown> =>
 			} else if (isQueue(item)) {
 				return instrumentQueueSender(item, String(prop))
 			} else if (isDurableObject(item)) {
-				return instrumentDurableObject(item, String(prop), {})
+				return instrumentDOBinding(item, String(prop), {})
 			}
 			return item
 		},

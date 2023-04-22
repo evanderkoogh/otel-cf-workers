@@ -11,7 +11,7 @@ import { instrumentFetcher } from './globals'
 
 type DOBindingsConfigs = {}
 
-export function instrumentDurableObject(ns: DurableObjectNamespace, nsName: string, _config: DOBindingsConfigs) {
+export function instrumentDOBinding(ns: DurableObjectNamespace, nsName: string, _config: DOBindingsConfigs) {
 	const nsHandler: ProxyHandler<typeof ns> = {
 		get(target, prop, receiver) {
 			if (prop === 'get') {
