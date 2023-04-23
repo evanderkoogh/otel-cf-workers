@@ -4,7 +4,7 @@ import { context } from '@opentelemetry/api'
 
 const configSymbol = Symbol('Otel Workers Tracing Configuration')
 
-export type Trigger = Request | MessageBatch
+export type Trigger = Request | MessageBatch | 'do-alarm'
 export type Initialiser = (env: Record<string, unknown>, trigger: Trigger) => WorkerTraceConfig
 
 function createBindings() {
@@ -50,6 +50,7 @@ const configSchema = z.object({
 
 const deepPartialSchema = configSchema.deepPartial()
 
+export type TraceConfig = z.input<typeof configSchema>
 export type WorkerTraceConfig = z.output<typeof configSchema>
 export type PartialTraceConfig = z.input<typeof deepPartialSchema>
 
@@ -73,16 +74,26 @@ function ObjectifyEnv(env: Record<string, unknown>) {
 	return obj
 }
 
-export function loadConfig(supplied: PartialTraceConfig, env: Record<string, unknown>): WorkerTraceConfig {
-	const parsedSupplied = deepPartialSchema.parse(supplied)
-	const parsedEnv = deepPartialSchema.parse(ObjectifyEnv(env))
-	const merged = merge(parsedSupplied, parsedEnv)
-	const result = configSchema.safeParse(merged)
+export function parseConfig(config: TraceConfig): WorkerTraceConfig {
+	const result = configSchema.safeParse(config)
 	if (!result.success) {
 		console.error(result.error)
 		throw result.error
 	}
-	const config = result.data
+
+	const check = configSchema.strict().safeParse(config)
+	if (!check.success) {
+		console.error(`Unknown keys detected in the trace config: ${check.error.errors}`)
+	}
+
+	return result.data
+}
+
+export function loadConfig(supplied: PartialTraceConfig, env: Record<string, unknown>): WorkerTraceConfig {
+	const parsedSupplied = deepPartialSchema.parse(supplied)
+	const parsedEnv = deepPartialSchema.parse(ObjectifyEnv(env))
+	const merged = merge(parsedSupplied, parsedEnv)
+	const config = parseConfig(merged as TraceConfig)
 
 	const check = deepPartialSchema.strict().safeParse(supplied)
 	if (!check.success) {
