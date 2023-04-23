@@ -1,9 +1,17 @@
 import { trace } from '@opentelemetry/api'
-import { instrument, instrumentDO, PartialTraceConfig, waitUntilTrace } from '../../../src/index'
+import {
+	instrument,
+	instrumentDO,
+	isRequest,
+	PartialTraceConfig,
+	resolveConfig,
+	waitUntilTrace,
+} from '../../../src/index'
 
 export interface Env {
 	OTEL_TEST: KVNamespace
 	Test_Otel_DO: DurableObjectNamespace
+	'otel.exporter.headers.x-honeycomb-team': string
 }
 
 const handleDO = async (request: Request, env: Env): Promise<Response> => {
@@ -39,19 +47,28 @@ const handler = {
 	},
 }
 
-const workerConfig: PartialTraceConfig = {
-	exporter: { url: 'https://api.honeycomb.io/v1/traces' },
-	service: {
-		name: 'greetings',
-		version: '0.1',
-	},
-	bindings: {
-		kv: {
-			sanitiseKeys({ key }) {
-				return key.toUpperCase()
+const config: resolveConfig = (env: Env, trigger) => {
+	const pathname = isRequest(trigger) ? new URL(trigger.url).pathname : undefined
+	return {
+		exporter: {
+			url: 'https://api.honeycomb.io/v1/traces',
+			headers: { 'x-honeycomb-team': env['otel.exporter.headers.x-honeycomb-team'] },
+		},
+		service: {
+			name: 'greetings',
+			version: '0.1',
+		},
+		globals: {
+			caches: !(pathname === '/nocaches'),
+		},
+		bindings: {
+			kv: {
+				sanitiseKeys({ key }) {
+					return key.toUpperCase()
+				},
 			},
 		},
-	},
+	}
 }
 
 const doConfig: PartialTraceConfig = {
@@ -73,6 +90,6 @@ class OtelDO implements DurableObject {
 
 const TestOtelDO = instrumentDO(OtelDO, doConfig)
 
-export default instrument(handler, workerConfig)
+export default instrument(handler, config)
 
 export { TestOtelDO }
