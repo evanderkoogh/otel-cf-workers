@@ -1,4 +1,4 @@
-import { PartialTraceConfig, Initialiser, loadConfig, withConfig, WorkerTraceConfig } from './config'
+import { PartialTraceConfig, Initialiser, loadConfig, withConfig, WorkerTraceConfig, Trigger } from './config'
 import { executeFetchHandler, FetchHandlerArgs, instrumentGlobalFetch } from './instrumentation/fetch'
 import { instrumentGlobalCache } from './instrumentation/cache'
 import { executeQueueHandler, QueueHandlerArgs } from './instrumentation/queue'
@@ -9,7 +9,6 @@ import { wrap } from './instrumentation/common'
 import { WorkerTracer } from './tracer'
 import { W3CTraceContextPropagator } from '@opentelemetry/core'
 import { Resource } from '@opentelemetry/resources'
-import { SpanProcessor } from '@opentelemetry/sdk-trace-base'
 import { SemanticResourceAttributes } from '@opentelemetry/semantic-conventions'
 import { OTLPFetchTraceExporter } from './exporter'
 import { WorkerTracerProvider } from './provider'
@@ -19,6 +18,11 @@ instrumentGlobalCache()
 instrumentGlobalFetch()
 
 type ContextAndTracker = { ctx: ExecutionContext; tracker: PromiseTracker }
+type FetchHandler = ExportedHandlerFetchHandler
+type QueueHandler = ExportedHandlerQueueHandler
+
+export type resolveConfig = <E>(env: E, trigger: Trigger) => WorkerTraceConfig
+export type ConfigurationOption = PartialTraceConfig | resolveConfig
 
 const createResource = (config: WorkerTraceConfig): Resource => {
 	const workerResourceAttrs = {
@@ -40,17 +44,17 @@ const createResource = (config: WorkerTraceConfig): Resource => {
 	return resource.merge(serviceResource)
 }
 
-let spanProcessor: SpanProcessor
-export function init(config: WorkerTraceConfig): SpanProcessor {
-	if (!spanProcessor) {
+let initialised = false
+export function init(config: WorkerTraceConfig): void {
+	if (!initialised) {
 		propagation.setGlobalPropagator(new W3CTraceContextPropagator())
 		const resource = createResource(config)
 		const exporter = new OTLPFetchTraceExporter(config.exporter)
-		spanProcessor = new FlushOnlySpanProcessor(exporter)
+		const spanProcessor = new FlushOnlySpanProcessor(exporter)
 		const provider = new WorkerTracerProvider(spanProcessor, resource)
 		provider.register()
+		initialised = true
 	}
-	return spanProcessor
 }
 
 class PromiseTracker {
@@ -100,19 +104,31 @@ const exportSpans = async (tracker?: PromiseTracker) => {
 	}
 }
 
+function createInitialiser(config: ConfigurationOption): Initialiser {
+	if (typeof config === 'function') {
+		return (env, trigger) => {
+			const conf = config(env, trigger)
+			init(conf)
+			return conf
+		}
+	} else {
+		return (env) => {
+			const conf = loadConfig(config, env)
+			init(conf)
+			return conf
+		}
+	}
+}
+
 export function instrument<E, Q, C>(
 	handler: ExportedHandler<E, Q, C>,
-	config: PartialTraceConfig
+	config: ConfigurationOption
 ): ExportedHandler<E, Q, C> {
-	const initialiser: Initialiser = (env, _trigger) => {
-		const conf = loadConfig(config, env)
-		init(conf)
-		return conf
-	}
+	const initialiser = createInitialiser(config)
 
 	if (handler.fetch) {
-		const fetchHandler: ProxyHandler<ExportedHandlerFetchHandler> = {
-			apply: async (target, _thisArg, argArray: Parameters<ExportedHandlerFetchHandler>): Promise<Response> => {
+		const fetchHandler: ProxyHandler<FetchHandler> = {
+			apply: async (target, _thisArg, argArray: Parameters<FetchHandler>): Promise<Response> => {
 				const [request, orig_env, orig_ctx] = argArray
 				const config = initialiser(orig_env as Record<string, unknown>, request)
 				const env = instrumentEnv(orig_env as Record<string, unknown>)
@@ -130,9 +146,10 @@ export function instrument<E, Q, C>(
 		}
 		handler.fetch = wrap(handler.fetch, fetchHandler)
 	}
+
 	if (handler.queue) {
-		const queueHandler: ProxyHandler<ExportedHandlerQueueHandler> = {
-			async apply(target, _thisArg, argArray: Parameters<ExportedHandlerQueueHandler>): Promise<void> {
+		const queueHandler: ProxyHandler<QueueHandler> = {
+			async apply(target, _thisArg, argArray: Parameters<QueueHandler>): Promise<void> {
 				const [batch, orig_env, orig_ctx] = argArray
 				const config = initialiser(orig_env as Record<string, unknown>, batch)
 				const env = instrumentEnv(orig_env as Record<string, unknown>)
@@ -154,11 +171,7 @@ export function instrument<E, Q, C>(
 }
 
 export function instrumentDO(doClass: DOClass, config: PartialTraceConfig) {
-	const initialiser: Initialiser = (env, _trigger) => {
-		const conf = loadConfig(config, env)
-		init(conf)
-		return conf
-	}
+	const initialiser = createInitialiser(config)
 
 	const classHandler: ProxyHandler<DOClass> = {
 		construct(target, [orig_state, orig_env]: ConstructorParameters<DOClass>) {
