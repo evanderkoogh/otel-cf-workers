@@ -1,4 +1,5 @@
 import { getActiveConfig } from '../config'
+import { wrap } from './common'
 import { instrumentDOBinding } from './do'
 import { instrumentKV } from './kv'
 import { instrumentQueueSender } from './queue'
@@ -16,13 +17,13 @@ const isDurableObject = (item: unknown): item is DurableObjectNamespace => {
 }
 
 const instrumentEnv = (env: Record<string, unknown>): Record<string, unknown> => {
-	return new Proxy(env, {
+	const envHandler: ProxyHandler<Record<string, unknown>> = {
 		get: (target, prop, receiver) => {
 			const config = getActiveConfig()?.bindings
 			const item = Reflect.get(target, prop, receiver)
 			if (isKVNamespace(item)) {
 				if (config && typeof config.kv !== 'boolean' && typeof prop === 'string') {
-					return instrumentKV(item, prop, config.kv)
+					return instrumentKV(item, prop)
 				}
 			} else if (isQueue(item)) {
 				return instrumentQueueSender(item, String(prop))
@@ -31,7 +32,8 @@ const instrumentEnv = (env: Record<string, unknown>): Record<string, unknown> =>
 			}
 			return item
 		},
-	})
+	}
+	return wrap(env, envHandler)
 }
 
 export { instrumentEnv }

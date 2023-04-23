@@ -1,5 +1,6 @@
 import { Attributes, SpanKind, SpanOptions, trace } from '@opentelemetry/api'
-import { WorkerTraceConfig } from '../config'
+import { getActiveConfig, WorkerTraceConfig } from '../config'
+import { wrap } from './common'
 
 type BindingsConfig = WorkerTraceConfig['bindings']
 type KVConfig = BindingsConfig['kv']
@@ -73,18 +74,19 @@ const KVAttributes: Record<string | symbol, ExtraAttributeFn> = {
 	},
 }
 
-export function instrumentKV(kv: KVNamespace, name: string, config: KVExtendedConfig): KVNamespace {
+export function instrumentKV(kv: KVNamespace, name: string): KVNamespace {
+	const config = getActiveConfig()!.bindings.kv as KVExtendedConfig
 	const tracer = trace.getTracer('KV')
-	return new Proxy(kv, {
+	const kvHandler: ProxyHandler<KVNamespace> = {
 		get: (target, prop, receiver) => {
 			const operation = String(prop)
 			const fn = Reflect.get(target, prop, receiver)
-			return new Proxy(fn, {
+			const fnHandler: ProxyHandler<any> = {
 				apply: (target, _thisArg, argArray) => {
 					const options: SpanOptions = {
 						kind: SpanKind.CLIENT,
 					}
-					const result = tracer.startActiveSpan(`kv:${name}:${operation}`, options, async (span) => {
+					return tracer.startActiveSpan(`kv:${name}:${operation}`, options, async (span) => {
 						span.setAttributes({
 							binding_type: 'KV',
 							kv_namespace: name,
@@ -97,9 +99,10 @@ export function instrumentKV(kv: KVNamespace, name: string, config: KVExtendedCo
 						span.end()
 						return result
 					})
-					return result
 				},
-			})
+			}
+			return wrap(fn, fnHandler)
 		},
-	})
+	}
+	return wrap(kv, kvHandler)
 }
