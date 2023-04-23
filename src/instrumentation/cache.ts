@@ -73,8 +73,5 @@ function _instrumentGlobalCache() {
 }
 
 export function instrumentGlobalCache() {
-	const config = getActiveConfig()
-	if (config?.globals.caches) {
-		return _instrumentGlobalCache()
-	}
+	return _instrumentGlobalCache()
 }
