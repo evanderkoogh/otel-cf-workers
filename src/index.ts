@@ -1,4 +1,4 @@
 export * from './sdk'
 export * from './span'
-export * from './config'
+export type { PartialTraceConfig, Trigger, WorkerTraceConfig } from './config'
 export { waitUntilTrace } from './instrumentation/fetch'
