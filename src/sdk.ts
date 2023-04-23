@@ -45,7 +45,7 @@ const createResource = (config: WorkerTraceConfig): Resource => {
 }
 
 let initialised = false
-export function init(config: WorkerTraceConfig): void {
+function init(config: WorkerTraceConfig): void {
 	if (!initialised) {
 		propagation.setGlobalPropagator(new W3CTraceContextPropagator())
 		const resource = createResource(config)
@@ -183,7 +183,7 @@ export function instrumentDO(doClass: DOClass, config: PartialTraceConfig) {
 					if (prop === 'fetch') {
 						const fetchFn = Reflect.get(target, prop)
 						const fetchHandler: ProxyHandler<DurableObject['fetch']> = {
-							async apply(target, thisArg, argArray: Parameters<DurableObject['fetch']>) {
+							async apply(target, _thisArg, argArray: Parameters<DurableObject['fetch']>) {
 								const request = argArray[0]
 								const config = initialiser(orig_env, request)
 								try {
