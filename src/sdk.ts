@@ -1,4 +1,13 @@
-import { PartialTraceConfig, Initialiser, loadConfig, withConfig, WorkerTraceConfig, Trigger } from './config'
+import {
+	PartialTraceConfig,
+	Initialiser,
+	loadConfig,
+	withConfig,
+	WorkerTraceConfig,
+	Trigger,
+	TraceConfig,
+	parseConfig,
+} from './config'
 import { executeFetchHandler, FetchHandlerArgs, instrumentGlobalFetch } from './instrumentation/fetch'
 import { instrumentGlobalCache } from './instrumentation/cache'
 import { executeQueueHandler, QueueHandlerArgs } from './instrumentation/queue'
@@ -21,8 +30,20 @@ type ContextAndTracker = { ctx: ExecutionContext; tracker: PromiseTracker }
 type FetchHandler = ExportedHandlerFetchHandler
 type QueueHandler = ExportedHandlerQueueHandler
 
-export type resolveConfig = <E>(env: E, trigger: Trigger) => WorkerTraceConfig
+export type resolveConfig = (env: any, trigger: Trigger) => TraceConfig
 export type ConfigurationOption = PartialTraceConfig | resolveConfig
+
+export function isRequest(trigger: Trigger): trigger is Request {
+	return trigger instanceof Request
+}
+
+export function isMessageBatch(trigger: Trigger): trigger is MessageBatch {
+	return !!(trigger as MessageBatch).ackAll
+}
+
+export function isAlarm(trigger: Trigger): trigger is 'do-alarm' {
+	return trigger === 'do-alarm'
+}
 
 const createResource = (config: WorkerTraceConfig): Resource => {
 	const workerResourceAttrs = {
@@ -107,7 +128,7 @@ const exportSpans = async (tracker?: PromiseTracker) => {
 function createInitialiser(config: ConfigurationOption): Initialiser {
 	if (typeof config === 'function') {
 		return (env, trigger) => {
-			const conf = config(env, trigger)
+			const conf = parseConfig(config(env, trigger))
 			init(conf)
 			return conf
 		}
