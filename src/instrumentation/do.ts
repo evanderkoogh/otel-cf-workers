@@ -10,6 +10,8 @@ import {
 } from './fetch'
 
 type DOBindingsConfigs = {}
+type FetchFn = DurableObject['fetch']
+type AlarmFn = NonNullable<DurableObject['alarm']>
 
 export function instrumentDOBinding(ns: DurableObjectNamespace, nsName: string, _config: DOBindingsConfigs) {
 	const nsHandler: ProxyHandler<typeof ns> = {
@@ -70,12 +72,11 @@ export function instrumentState(state: DurableObjectState) {
 }
 
 let cold_start = true
-type FetchFn = DurableObject['fetch']
 export type DOClass = { new (state: DurableObjectState, env: any): DurableObject }
 export function executeDOFetch(fetchFn: FetchFn, request: Request, id: DurableObjectId): Promise<Response> {
 	const spanContext = getParentContextFromHeaders(request.headers)
 
-	const tracer = trace.getTracer('fetchHandler')
+	const tracer = trace.getTracer('DO fetchHandler')
 	const options: SpanOptions = {
 		kind: SpanKind.SERVER,
 		attributes: {
@@ -84,7 +85,8 @@ export function executeDOFetch(fetchFn: FetchFn, request: Request, id: DurableOb
 		},
 	}
 
-	const promise = tracer.startActiveSpan('fetchHandler', options, spanContext, async (span) => {
+	const name = id.name || ''
+	const promise = tracer.startActiveSpan(`do.fetchHandler:${name}`, options, spanContext, async (span) => {
 		span.setAttribute(SemanticAttributes.FAAS_TRIGGER, 'http')
 		span.setAttribute(SemanticAttributes.FAAS_COLDSTART, cold_start)
 		cold_start = false
@@ -101,6 +103,30 @@ export function executeDOFetch(fetchFn: FetchFn, request: Request, id: DurableOb
 			span.end()
 
 			return response
+		} catch (error) {
+			span.recordException(error as Exception)
+			span.setStatus({ code: SpanStatusCode.ERROR })
+			span.end()
+			throw error
+		}
+	})
+	return promise
+}
+
+export function executeDOAlarm(alarmFn: AlarmFn, id: DurableObjectId): Promise<void> {
+	const tracer = trace.getTracer('DO alarmHandler')
+
+	const name = id.name || ''
+	const promise = tracer.startActiveSpan(`do.alarmHandler:${name}`, async (span) => {
+		span.setAttribute(SemanticAttributes.FAAS_TRIGGER, 'http')
+		span.setAttribute(SemanticAttributes.FAAS_COLDSTART, cold_start)
+		cold_start = false
+		span.setAttribute('do.id', id.toString())
+		if (id.name) span.setAttribute('do.name', id.name)
+
+		try {
+			await alarmFn()
+			span.end()
 		} catch (error) {
 			span.recordException(error as Exception)
 			span.setStatus({ code: SpanStatusCode.ERROR })

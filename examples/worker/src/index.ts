@@ -81,10 +81,12 @@ class OtelDO implements DurableObject {
 	async fetch(request: Request): Promise<Response> {
 		await fetch('https://cloudflare.com')
 		await this.env.OTEL_TEST.put('something', 'else')
+		await this.state.storage.setAlarm(Date.now() + 1000)
 		return new Response('Hello World!')
 	}
 	async alarm(): Promise<void> {
-		throw new Error('Method not implemented.')
+		console.log('ding ding!')
+		await this.env.OTEL_TEST.get('something')
 	}
 }
 

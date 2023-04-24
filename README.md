@@ -111,7 +111,7 @@ Triggers:
 - [x] HTTP (`handler.fetch`)
 - [x] Queue (`handler.queue`)
 - [ ] Cron (`handler.scheduled`)
-- [x] Durable Objects (currently only `fetch` calls)
+- [x] Durable Objects
 - [x] waitUntil (`ctx.waitUntil`)
 - [ ] Trace (`handler.trace`)
 
@@ -119,7 +119,7 @@ Globals/built-ins:
 
 - [x] Fetch
 - [x] Caches
-- [ ] Durable Object Storage & Alarms
+- [ ] Durable Object Storage
 
 Bindings:
 
