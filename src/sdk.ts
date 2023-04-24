@@ -11,7 +11,7 @@ import {
 import { executeFetchHandler, FetchHandlerArgs, instrumentGlobalFetch } from './instrumentation/fetch'
 import { instrumentGlobalCache } from './instrumentation/cache'
 import { executeQueueHandler, QueueHandlerArgs } from './instrumentation/queue'
-import { DOClass, executeDOFetch, instrumentState } from './instrumentation/do'
+import { DOClass, executeDOAlarm, executeDOFetch, instrumentState } from './instrumentation/do'
 import { propagation, trace } from '@opentelemetry/api'
 import { instrumentEnv } from './instrumentation/env'
 import { wrap } from './instrumentation/common'
@@ -218,6 +218,26 @@ export function instrumentDO(doClass: DOClass, config: PartialTraceConfig) {
 							},
 						}
 						return wrap(fetchFn, fetchHandler)
+					} else if (prop === 'alarm') {
+						const alarmFn = Reflect.get(target, prop)
+						if (alarmFn) {
+							const alarmHandler: ProxyHandler<NonNullable<DurableObject['alarm']>> = {
+								async apply(target) {
+									const config = initialiser(orig_env, 'do-alarm')
+									try {
+										const bound = target.bind(doObj)
+										return await withConfig(config, executeDOAlarm, undefined, bound, orig_state.id)
+									} catch (error) {
+										throw error
+									} finally {
+										exportSpans()
+									}
+								},
+							}
+							return wrap(alarmFn, alarmHandler)
+						} else {
+							return undefined
+						}
 					} else {
 						const result = Reflect.get(target, prop)
 						if (typeof result === 'function') {
