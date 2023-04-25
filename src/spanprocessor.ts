@@ -1,6 +1,6 @@
-import { Context } from '@opentelemetry/api'
+import { Context, Span } from '@opentelemetry/api'
 import { ExportResultCode } from '@opentelemetry/core'
-import { ReadableSpan, Span, SpanExporter, SpanProcessor } from '@opentelemetry/sdk-trace-base'
+import { ReadableSpan, SpanExporter, SpanProcessor } from '@opentelemetry/sdk-trace-base'
 
 export class FlushOnlySpanProcessor implements SpanProcessor {
 	readonly exporter: SpanExporter
