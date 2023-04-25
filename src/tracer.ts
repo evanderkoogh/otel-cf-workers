@@ -1,5 +1,4 @@
-import * as api from '@opentelemetry/api'
-import { Tracer, TraceFlags, SpanKind, SpanOptions, Context } from '@opentelemetry/api'
+import { Tracer, TraceFlags, SpanKind, SpanOptions, Context, context as api_context, trace } from '@opentelemetry/api'
 import { sanitizeAttributes } from '@opentelemetry/core'
 import { Resource } from '@opentelemetry/resources'
 import { SpanProcessor, RandomIdGenerator } from '@opentelemetry/sdk-trace-base'
@@ -23,13 +22,13 @@ export class WorkerTracer implements Tracer {
 		this.resource.merge(extra)
 	}
 
-	startSpan(name: string, options: api.SpanOptions = {}, context = api.context.active()): api.Span {
+	startSpan(name: string, options: SpanOptions = {}, context = api_context.active()): Span {
 		if (options.root) {
-			context = api.trace.deleteSpan(context)
+			context = trace.deleteSpan(context)
 		}
-		const parentSpan = api.trace.getSpan(context)
+		const parentSpan = trace.getSpan(context)
 		const parentSpanContext = parentSpan?.spanContext()
-		const isChildSpan = parentSpanContext && api.trace.isSpanContextValid(parentSpanContext)
+		const isChildSpan = parentSpanContext && trace.isSpanContextValid(parentSpanContext)
 
 		const spanId = this.idGenerator.generateSpanId()
 		const traceId = isChildSpan ? parentSpanContext.traceId : this.idGenerator.generateTraceId()
@@ -53,22 +52,22 @@ export class WorkerTracer implements Tracer {
 		})
 	}
 
-	startActiveSpan<F extends (span: api.Span) => ReturnType<F>>(name: string, fn: F): ReturnType<F>
-	startActiveSpan<F extends (span: api.Span) => ReturnType<F>>(name: string, options: SpanOptions, fn: F): ReturnType<F>
-	startActiveSpan<F extends (span: api.Span) => ReturnType<F>>(
+	startActiveSpan<F extends (span: Span) => ReturnType<F>>(name: string, fn: F): ReturnType<F>
+	startActiveSpan<F extends (span: Span) => ReturnType<F>>(name: string, options: SpanOptions, fn: F): ReturnType<F>
+	startActiveSpan<F extends (span: Span) => ReturnType<F>>(
 		name: string,
 		options: SpanOptions,
 		context: Context,
 		fn: F
 	): ReturnType<F>
-	startActiveSpan<F extends (span: api.Span) => ReturnType<F>>(name: string, ...args: unknown[]): ReturnType<F> {
+	startActiveSpan<F extends (span: Span) => ReturnType<F>>(name: string, ...args: unknown[]): ReturnType<F> {
 		const options = args.length > 1 ? (args[0] as SpanOptions) : undefined
-		const parentContext = args.length > 2 ? (args[1] as Context) : api.context.active()
+		const parentContext = args.length > 2 ? (args[1] as Context) : api_context.active()
 		const fn = args[args.length - 1] as F
 
 		const span = this.startSpan(name, options, parentContext)
-		const contextWithSpanSet = api.trace.setSpan(parentContext, span)
+		const contextWithSpanSet = trace.setSpan(parentContext, span)
 
-		return api.context.with(contextWithSpanSet, fn, undefined, span)
+		return api_context.with(contextWithSpanSet, fn, undefined, span)
 	}
 }

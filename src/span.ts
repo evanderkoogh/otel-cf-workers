@@ -1,4 +1,3 @@
-import * as api from '@opentelemetry/api'
 import {
 	SpanContext,
 	Link,
@@ -7,6 +6,7 @@ import {
 	Exception,
 	Attributes,
 	HrTime,
+	Span as ApiSpan,
 	SpanStatus,
 	SpanStatusCode,
 	AttributeValue,
@@ -75,7 +75,7 @@ function getHrTime(input?: TimeInput): HrTime {
 	}
 }
 
-export class Span implements api.Span, ReadableSpan {
+export class Span implements ApiSpan, ReadableSpan {
 	name: string
 	private readonly _spanContext: SpanContext
 	private readonly onEnd: OnSpanEnd
