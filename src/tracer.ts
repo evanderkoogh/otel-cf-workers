@@ -28,13 +28,13 @@ export class WorkerTracer implements Tracer {
 		}
 		const parentSpan = trace.getSpan(context)
 		const parentSpanContext = parentSpan?.spanContext()
-		const isChildSpan = parentSpanContext && trace.isSpanContextValid(parentSpanContext)
+		const hasParentContext = parentSpanContext && trace.isSpanContextValid(parentSpanContext)
 
 		const spanId = this.idGenerator.generateSpanId()
-		const traceId = isChildSpan ? parentSpanContext.traceId : this.idGenerator.generateTraceId()
-		const parentSpanId = isChildSpan ? parentSpanContext.spanId : undefined
-		const traceState = isChildSpan ? parentSpanContext.traceState : undefined
-		const traceFlags = TraceFlags.SAMPLED
+		const traceId = hasParentContext ? parentSpanContext.traceId : this.idGenerator.generateTraceId()
+		const parentSpanId = hasParentContext ? parentSpanContext.spanId : undefined
+		const traceState = hasParentContext ? parentSpanContext.traceState : undefined
+		const traceFlags = hasParentContext ? parentSpanContext.traceFlags : TraceFlags.NONE
 		const spanContext = { traceId, spanId, traceFlags, traceState }
 		const spanKind = options.kind || SpanKind.INTERNAL
 		const attributes = sanitizeAttributes(options.attributes)
