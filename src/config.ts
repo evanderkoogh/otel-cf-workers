@@ -103,13 +103,17 @@ export function loadConfig(supplied: PartialTraceConfig, env: Record<string, unk
 	return config
 }
 
+export function setConfig(config: WorkerTraceConfig, ctx = context.active()) {
+	return ctx.setValue(configSymbol, config)
+}
+
 export function withConfig<A extends unknown[], F extends (...args: A) => ReturnType<F>>(
 	config: WorkerTraceConfig,
 	fn: F,
 	thisArg?: ThisParameterType<F>,
 	...args: A
 ): ReturnType<F> {
-	const new_context = context.active().setValue(configSymbol, config)
+	const new_context = setConfig(config)
 	return context.with(new_context, fn, thisArg, ...args)
 }
 
