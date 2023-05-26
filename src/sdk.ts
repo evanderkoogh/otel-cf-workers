@@ -8,9 +8,9 @@ import {
 	TraceConfig,
 	parseConfig,
 } from './config'
-import { createFetchHandler, executeFetchHandler, instrumentGlobalFetch } from './instrumentation/fetch'
+import { createFetchHandler, instrumentGlobalFetch } from './instrumentation/fetch'
 import { instrumentGlobalCache } from './instrumentation/cache'
-import { executeQueueHandler, QueueHandlerArgs } from './instrumentation/queue'
+import { createQueueHandler } from './instrumentation/queue'
 import { DOClass, executeDOAlarm, executeDOFetch, instrumentState } from './instrumentation/do'
 import { propagation, trace } from '@opentelemetry/api'
 import { instrumentEnv } from './instrumentation/env'
@@ -94,24 +94,6 @@ class PromiseTracker {
 	}
 }
 
-const proxyExecutionContext = (context: ExecutionContext): ContextAndTracker => {
-	const tracker = new PromiseTracker()
-	const ctx = new Proxy(context, {
-		get(target, prop) {
-			if (prop === 'waitUntil') {
-				const fn = Reflect.get(target, prop)
-				return new Proxy(fn, {
-					apply(target, thisArg, argArray) {
-						tracker.track(argArray[0])
-						return Reflect.apply(target, context, argArray)
-					},
-				})
-			}
-		},
-	})
-	return { ctx, tracker }
-}
-
 const exportSpans = async (tracker?: PromiseTracker) => {
 	const tracer = trace.getTracer('export')
 	if (tracer instanceof WorkerTracer) {
@@ -153,24 +135,8 @@ export function instrument<E, Q, C>(
 	}
 
 	if (handler.queue) {
-		const queueHandler: ProxyHandler<QueueHandler> = {
-			async apply(target, _thisArg, argArray: Parameters<QueueHandler>): Promise<void> {
-				const [batch, orig_env, orig_ctx] = argArray
-				const config = initialiser(orig_env as Record<string, unknown>, batch)
-				const env = instrumentEnv(orig_env as Record<string, unknown>)
-				const { ctx, tracker } = proxyExecutionContext(orig_ctx)
-
-				try {
-					const args: QueueHandlerArgs = [batch, env, ctx]
-					return await withConfig(config, executeQueueHandler, undefined, target, args)
-				} catch (error) {
-					throw error
-				} finally {
-					orig_ctx.waitUntil(exportSpans(tracker))
-				}
-			},
-		}
-		handler.queue = wrap(handler.queue, queueHandler)
+		const queuer = unwrap(handler.queue) as QueueHandler
+		handler.queue = createQueueHandler(queuer, initialiser)
 	}
 	return handler
 }
