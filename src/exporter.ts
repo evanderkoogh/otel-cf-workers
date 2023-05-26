@@ -1,6 +1,6 @@
 import { createExportTraceServiceRequest } from '@opentelemetry/otlp-transformer'
 import { ExportServiceError, OTLPExporterConfigBase, OTLPExporterError } from '@opentelemetry/otlp-exporter-base'
-import { unwrap } from './instrumentation/common'
+import { unwrap } from './instrumentation/wrap'
 import { ExportResult, ExportResultCode } from '@opentelemetry/core'
 
 const defaultHeaders: Record<string, string> = {

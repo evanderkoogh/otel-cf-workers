@@ -1,5 +1,5 @@
 import { getActiveConfig } from '../config'
-import { wrap } from './common'
+import { wrap } from './wrap'
 import { instrumentDOBinding } from './do'
 import { instrumentKV } from './kv'
 import { instrumentQueueSender } from './queue'

@@ -3,19 +3,22 @@ import {
 	SpanOptions,
 	SpanKind,
 	propagation,
-	context,
+	context as api_context,
 	Attributes,
 	Exception,
 	Context,
 	SpanStatusCode,
 } from '@opentelemetry/api'
 import { SemanticAttributes } from '@opentelemetry/semantic-conventions'
-import { WorkerTraceConfig, getActiveConfig } from '../config'
-import { wrap } from './common'
+import { WorkerTraceConfig, getActiveConfig, Initialiser, setConfig } from '../config'
+import { WorkerTracer } from '../tracer'
+import { wrap } from './wrap'
+import { instrumentEnv } from './env'
+import { PromiseTracker, proxyExecutionContext } from './common'
 
 type FetchConfig = WorkerTraceConfig['globals']['fetch']
-type FetchHandler = ExportedHandlerFetchHandler<unknown, unknown>
-export type FetchHandlerArgs = Parameters<FetchHandler>
+type FetchHandler = ExportedHandlerFetchHandler
+type FetchHandlerArgs = Parameters<FetchHandler>
 
 export function sanitiseURL(url: string): string {
 	const u = new URL(url)
@@ -70,7 +73,7 @@ export function gatherIncomingCfAttributes(request: Request): Attributes {
 }
 
 export function getParentContextFromHeaders(headers: Headers): Context {
-	return propagation.extract(context.active(), headers, {
+	return propagation.extract(api_context.active(), headers, {
 		get(headers, key) {
 			return headers.get(key) || undefined
 		},
@@ -122,6 +125,41 @@ export function executeFetchHandler(fetchFn: FetchHandler, [request, env, ctx]: 
 	return promise
 }
 
+const exportSpans = async (tracker?: PromiseTracker) => {
+	const tracer = trace.getTracer('export')
+	if (tracer instanceof WorkerTracer) {
+		await scheduler.wait(1)
+		if (tracker) {
+			await tracker.wait()
+		}
+		await tracer.spanProcessor.forceFlush()
+	} else {
+		console.error('The global tracer is not of type WorkerTracer and can not export spans')
+	}
+}
+
+export function createFetchHandler(fetchFn: FetchHandler, initialiser: Initialiser) {
+	const fetchHandler: ProxyHandler<FetchHandler> = {
+		apply: async (target, _thisArg, argArray: Parameters<FetchHandler>): Promise<Response> => {
+			const [request, orig_env, orig_ctx] = argArray
+			const config = initialiser(orig_env as Record<string, unknown>, request)
+			const env = instrumentEnv(orig_env as Record<string, unknown>)
+			const { ctx, tracker } = proxyExecutionContext(orig_ctx)
+
+			try {
+				const args: FetchHandlerArgs = [request, env, ctx]
+				const context = setConfig(config)
+				return await api_context.with(context, executeFetchHandler, undefined, target, args)
+			} catch (error) {
+				throw error
+			} finally {
+				orig_ctx.waitUntil(exportSpans(tracker))
+			}
+		},
+	}
+	return wrap(fetchFn, fetchHandler)
+}
+
 type getFetchConfig = (config: WorkerTraceConfig) => FetchConfig
 export function instrumentFetcher(
 	fetchFn: Fetcher['fetch'],
@@ -144,7 +182,7 @@ export function instrumentFetcher(
 			const spanName = typeof attrs?.['name'] === 'string' ? attrs?.['name'] : `fetch: ${host}`
 			const promise = tracer.startActiveSpan(spanName, options, async (span) => {
 				if (config && config.includeTraceContext) {
-					propagation.inject(context.active(), request.headers, {
+					propagation.inject(api_context.active(), request.headers, {
 						set: (h, k, v) => h.set(k, typeof v === 'string' ? v : String(v)),
 					})
 				}

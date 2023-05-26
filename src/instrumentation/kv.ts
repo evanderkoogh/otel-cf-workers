@@ -1,6 +1,6 @@
 import { Attributes, SpanKind, SpanOptions, trace } from '@opentelemetry/api'
 import { getActiveConfig, WorkerTraceConfig } from '../config'
-import { wrap } from './common'
+import { wrap } from './wrap'
 
 type BindingsConfig = WorkerTraceConfig['bindings']
 type KVConfig = BindingsConfig['kv']
