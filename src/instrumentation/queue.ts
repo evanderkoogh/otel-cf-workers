@@ -1,4 +1,8 @@
-import { trace, SpanOptions, SpanKind, Attributes, Exception } from '@opentelemetry/api'
+import { trace, SpanOptions, SpanKind, Attributes, Exception, context as api_context } from '@opentelemetry/api'
+import { Initialiser, setConfig } from '../config'
+import { exportSpans, proxyExecutionContext } from './common'
+import { instrumentEnv } from './env'
+import { executeFetchHandler } from './fetch'
 import { wrap } from './wrap'
 
 type QueueHandler = ExportedHandlerQueueHandler<unknown, unknown>
@@ -149,43 +153,27 @@ export function executeQueueHandler(queueFn: QueueHandler, [batch, env, ctx]: Qu
 	return promise
 }
 
-// const instrumentQueueHandler = <E, Q>(queue: QueueHandler, initialiser: Initialiser): QueueHandler => {
-// 	const queueHandler: ProxyHandler<QueueHandler> = {
-// 		apply: (target, thisArg, argArray) => {
-// 			const batch: MessageBatch = argArray[0]
-// 			const env = argArray[1] as Record<string, unknown>
-// 			const config = initialiser(env, batch)
-// 			argArray[1] = instrumentEnv(env)
-// 			const count = new MessageStatusCount(batch.messages.length)
-// 			argArray[0] = proxyMessageBatch(batch, count)
-// 			const tracer = trace.getTracer('queueHandler')
-// 			const options: SpanOptions = { kind: SpanKind.CONSUMER }
-// 			const promise = tracer.startActiveSpan(`queueHandler:${batch.queue}`, options, async (span) => {
-// 				span.setAttribute('queue.name', batch.queue)
-// 				try {
-// 					const result = await Reflect.apply(target, thisArg, argArray)
-// 					span.setAttribute('queue.implicitly_acked', count.total - count.succeeded - count.failed)
-// 					count.ackRemaining()
-// 					span.setAttributes(count.toAttributes())
+export function createQueueHandler(queueFn: QueueHandler, initialiser: Initialiser) {
+	const queueHandler: ProxyHandler<QueueHandler> = {
+		async apply(target, _thisArg, argArray: Parameters<QueueHandler>): Promise<void> {
+			const [batch, orig_env, orig_ctx] = argArray
+			const config = initialiser(orig_env as Record<string, unknown>, batch)
+			const env = instrumentEnv(orig_env as Record<string, unknown>)
+			const { ctx, tracker } = proxyExecutionContext(orig_ctx)
 
-// 					return result
-// 				} catch (error) {
-// 					span.recordException(error as Exception)
-// 					span.setAttribute('queue.implicitly_retried', count.total - count.succeeded - count.failed)
-// 					count.retryRemaining()
-// 				} finally {
-// 					span.end()
-// 					const tracer = trace.getTracer('export')
-// 					if (tracer instanceof WorkerTracer) {
-// 						await tracer.spanProcessor.forceFlush()
-// 					}
-// 				}
-// 			})
-// 			return promise
-// 		},
-// 	}
-// 	return wrap(queue, queueHandler)
-// }
+			try {
+				const args: QueueHandlerArgs = [batch, env, ctx]
+				const context = setConfig(config)
+				return await api_context.with(context, executeQueueHandler, undefined, target, args)
+			} catch (error) {
+				throw error
+			} finally {
+				orig_ctx.waitUntil(exportSpans(tracker))
+			}
+		},
+	}
+	return wrap(queueFn, queueHandler)
+}
 
 export function instrumentQueueSender(queue: Queue, name: string) {
 	const tracer = trace.getTracer('queueSender')
