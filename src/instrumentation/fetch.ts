@@ -14,7 +14,7 @@ import { WorkerTraceConfig, getActiveConfig, Initialiser, setConfig } from '../c
 import { WorkerTracer } from '../tracer'
 import { wrap } from './wrap'
 import { instrumentEnv } from './env'
-import { PromiseTracker, proxyExecutionContext } from './common'
+import { exportSpans, PromiseTracker, proxyExecutionContext } from './common'
 
 type FetchConfig = WorkerTraceConfig['globals']['fetch']
 type FetchHandler = ExportedHandlerFetchHandler
@@ -123,19 +123,6 @@ export function executeFetchHandler(fetchFn: FetchHandler, [request, env, ctx]: 
 		}
 	})
 	return promise
-}
-
-const exportSpans = async (tracker?: PromiseTracker) => {
-	const tracer = trace.getTracer('export')
-	if (tracer instanceof WorkerTracer) {
-		await scheduler.wait(1)
-		if (tracker) {
-			await tracker.wait()
-		}
-		await tracer.spanProcessor.forceFlush()
-	} else {
-		console.error('The global tracer is not of type WorkerTracer and can not export spans')
-	}
 }
 
 export function createFetchHandler(fetchFn: FetchHandler, initialiser: Initialiser) {
