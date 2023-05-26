@@ -1,6 +1,6 @@
 import { trace } from '@opentelemetry/api'
 import { getActiveConfig } from '../config'
-import { wrap } from './common'
+import { wrap } from './wrap'
 import { sanitiseURL } from './fetch'
 
 type CacheFns = Cache[keyof Cache]

@@ -1,6 +1,6 @@
 import { trace, SpanOptions, SpanKind, Exception, SpanStatusCode } from '@opentelemetry/api'
 import { SemanticAttributes } from '@opentelemetry/semantic-conventions'
-import { wrap } from './common'
+import { wrap } from './wrap'
 import {
 	getParentContextFromHeaders,
 	gatherIncomingCfAttributes,

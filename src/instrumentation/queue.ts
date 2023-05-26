@@ -1,5 +1,5 @@
 import { trace, SpanOptions, SpanKind, Attributes, Exception } from '@opentelemetry/api'
-import { wrap } from './common'
+import { wrap } from './wrap'
 
 type QueueHandler = ExportedHandlerQueueHandler<unknown, unknown>
 export type QueueHandlerArgs = Parameters<QueueHandler>

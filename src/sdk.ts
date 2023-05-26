@@ -8,13 +8,13 @@ import {
 	TraceConfig,
 	parseConfig,
 } from './config'
-import { executeFetchHandler, FetchHandlerArgs, instrumentGlobalFetch } from './instrumentation/fetch'
+import { createFetchHandler, executeFetchHandler, instrumentGlobalFetch } from './instrumentation/fetch'
 import { instrumentGlobalCache } from './instrumentation/cache'
 import { executeQueueHandler, QueueHandlerArgs } from './instrumentation/queue'
 import { DOClass, executeDOAlarm, executeDOFetch, instrumentState } from './instrumentation/do'
 import { propagation, trace } from '@opentelemetry/api'
 import { instrumentEnv } from './instrumentation/env'
-import { wrap } from './instrumentation/common'
+import { unwrap, wrap } from './instrumentation/wrap'
 import { WorkerTracer } from './tracer'
 import { W3CTraceContextPropagator } from '@opentelemetry/core'
 import { Resource } from '@opentelemetry/resources'
@@ -27,7 +27,7 @@ instrumentGlobalCache()
 instrumentGlobalFetch()
 
 type ContextAndTracker = { ctx: ExecutionContext; tracker: PromiseTracker }
-type FetchHandler = ExportedHandlerFetchHandler
+type FetchHandler = ExportedHandlerFetchHandler<unknown, unknown>
 type QueueHandler = ExportedHandlerQueueHandler
 
 export type resolveConfig = (env: any, trigger: Trigger) => TraceConfig
@@ -148,24 +148,8 @@ export function instrument<E, Q, C>(
 	const initialiser = createInitialiser(config)
 
 	if (handler.fetch) {
-		const fetchHandler: ProxyHandler<FetchHandler> = {
-			apply: async (target, _thisArg, argArray: Parameters<FetchHandler>): Promise<Response> => {
-				const [request, orig_env, orig_ctx] = argArray
-				const config = initialiser(orig_env as Record<string, unknown>, request)
-				const env = instrumentEnv(orig_env as Record<string, unknown>)
-				const { ctx, tracker } = proxyExecutionContext(orig_ctx)
-
-				try {
-					const args: FetchHandlerArgs = [request, env, ctx]
-					return await withConfig(config, executeFetchHandler, undefined, target, args)
-				} catch (error) {
-					throw error
-				} finally {
-					orig_ctx.waitUntil(exportSpans(tracker))
-				}
-			},
-		}
-		handler.fetch = wrap(handler.fetch, fetchHandler)
+		const fetcher = unwrap(handler.fetch) as FetchHandler
+		handler.fetch = createFetchHandler(fetcher, initialiser)
 	}
 
 	if (handler.queue) {
