@@ -202,3 +202,5 @@ export function instrumentDO(doClass: DOClass, config: PartialTraceConfig) {
 	}
 	return wrap(doClass, classHandler)
 }
+
+export { waitUntilTrace } from './instrumentation/fetch'
