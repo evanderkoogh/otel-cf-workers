@@ -2,7 +2,6 @@ import { trace, SpanOptions, SpanKind, Attributes, Exception, context as api_con
 import { Initialiser, setConfig } from '../config'
 import { exportSpans, proxyExecutionContext } from './common'
 import { instrumentEnv } from './env'
-import { executeFetchHandler } from './fetch'
 import { unwrap, wrap } from './wrap'
 
 type QueueHandler = ExportedHandlerQueueHandler<unknown, unknown>
