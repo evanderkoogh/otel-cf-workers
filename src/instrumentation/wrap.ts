@@ -35,3 +35,14 @@ export function unwrap<T extends object>(item: T): T {
 		return item
 	}
 }
+
+export function passthroughGet(target: any, prop: string | symbol, thisArg?: any) {
+	const value = Reflect.get(unwrap(target), prop)
+	if (typeof value === 'function') {
+		thisArg = thisArg || unwrap(target)
+		const bound = value.bind(thisArg)
+		return bound
+	} else {
+		return value
+	}
+}
