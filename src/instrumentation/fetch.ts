@@ -11,10 +11,9 @@ import {
 } from '@opentelemetry/api'
 import { SemanticAttributes } from '@opentelemetry/semantic-conventions'
 import { WorkerTraceConfig, getActiveConfig, Initialiser, setConfig } from '../config'
-import { WorkerTracer } from '../tracer'
 import { wrap } from './wrap'
 import { instrumentEnv } from './env'
-import { exportSpans, PromiseTracker, proxyExecutionContext } from './common'
+import { exportSpans, proxyExecutionContext } from './common'
 
 type FetchConfig = WorkerTraceConfig['globals']['fetch']
 type FetchHandler = ExportedHandlerFetchHandler

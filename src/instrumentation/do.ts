@@ -1,6 +1,6 @@
-import { trace, SpanOptions, SpanKind, Exception, SpanStatusCode } from '@opentelemetry/api'
+import { context as api_context, trace, SpanOptions, SpanKind, Exception, SpanStatusCode } from '@opentelemetry/api'
 import { SemanticAttributes } from '@opentelemetry/semantic-conventions'
-import { wrap } from './wrap'
+import { passthroughGet, unwrap, wrap } from './wrap'
 import {
 	getParentContextFromHeaders,
 	gatherIncomingCfAttributes,
@@ -8,50 +8,52 @@ import {
 	gatherResponseAttributes,
 	instrumentFetcher,
 } from './fetch'
+import { instrumentEnv } from './env'
+import { Initialiser, setConfig } from '../config'
+import { exportSpans } from './common'
 
-type DOBindingsConfigs = {}
 type FetchFn = DurableObject['fetch']
-type AlarmFn = NonNullable<DurableObject['alarm']>
+type AlarmFn = DurableObject['alarm']
+type Env = Record<string, unknown>
 
-export function instrumentDOBinding(ns: DurableObjectNamespace, nsName: string, _config: DOBindingsConfigs) {
+function instrumentBindingStub(stub: DurableObjectStub, nsName: string): DurableObjectStub {
+	const stubHandler: ProxyHandler<typeof stub> = {
+		get(target, prop) {
+			if (prop === 'fetch') {
+				const fetcher = Reflect.get(target, prop)
+				const attrs = {
+					name: `durable_object:${nsName}`,
+					'do.namespace': nsName,
+					'do.id': target.id.toString(),
+					'do.id.name': target.id.name,
+				}
+				return instrumentFetcher(fetcher, () => ({ includeTraceContext: true }), attrs)
+			} else {
+				return passthroughGet(target, prop)
+			}
+		},
+	}
+	return wrap(stub, stubHandler)
+}
+
+function instrumentBindingGet(getFn: DurableObjectNamespace['get'], nsName: string): DurableObjectNamespace['get'] {
+	const getHandler: ProxyHandler<DurableObjectNamespace['get']> = {
+		apply(target, thisArg, argArray) {
+			const stub: DurableObjectStub = Reflect.apply(target, thisArg, argArray)
+			return instrumentBindingStub(stub, nsName)
+		},
+	}
+	return wrap(getFn, getHandler)
+}
+
+export function instrumentDOBinding(ns: DurableObjectNamespace, nsName: string) {
 	const nsHandler: ProxyHandler<typeof ns> = {
-		get(target, prop, receiver) {
+		get(target, prop) {
 			if (prop === 'get') {
 				const fn = Reflect.get(ns, prop)
-				const getHandler: ProxyHandler<DurableObjectNamespace['get']> = {
-					apply(target, thisArg, argArray) {
-						const stub: DurableObjectStub = Reflect.apply(target, thisArg, argArray)
-						const stubHandler: ProxyHandler<typeof stub> = {
-							get(target, prop) {
-								if (prop === 'fetch') {
-									const fetcher = Reflect.get(target, prop)
-									const attrs = {
-										name: `durable_object:${nsName}`,
-										'do.namespace': nsName,
-										'do.id': target.id.toString(),
-										'do.id.name': target.id.name,
-									}
-									return instrumentFetcher(fetcher, () => ({ includeTraceContext: true }), attrs)
-								} else {
-									return Reflect.get(target, prop)
-								}
-							},
-						}
-						return wrap(stub, stubHandler)
-					},
-				}
-				return wrap(fn, getHandler)
+				return instrumentBindingGet(fn, nsName)
 			} else {
-				const result = Reflect.get(target, prop, receiver)
-				if (typeof result === 'function') {
-					const handler: ProxyHandler<any> = {
-						apply(target, thisArg, argArray) {
-							return Reflect.apply(target, thisArg, argArray)
-						},
-					}
-					return wrap(result, handler)
-				}
-				return result
+				return passthroughGet(target, prop)
 			}
 		},
 	}
@@ -113,7 +115,7 @@ export function executeDOFetch(fetchFn: FetchFn, request: Request, id: DurableOb
 	return promise
 }
 
-export function executeDOAlarm(alarmFn: AlarmFn, id: DurableObjectId): Promise<void> {
+export function executeDOAlarm(alarmFn: NonNullable<AlarmFn>, id: DurableObjectId): Promise<void> {
 	const tracer = trace.getTracer('DO alarmHandler')
 
 	const name = id.name || ''
@@ -135,4 +137,76 @@ export function executeDOAlarm(alarmFn: AlarmFn, id: DurableObjectId): Promise<v
 		}
 	})
 	return promise
+}
+
+function instrumentFetchFn(fetchFn: FetchFn, initialiser: Initialiser, env: Env, id: DurableObjectId): FetchFn {
+	const fetchHandler: ProxyHandler<FetchFn> = {
+		async apply(target, thisArg, argArray: Parameters<FetchFn>) {
+			const request = argArray[0]
+			const config = initialiser(env, request)
+			try {
+				const context = setConfig(config)
+				const bound = target.bind(unwrap(thisArg))
+				return await api_context.with(context, executeDOFetch, undefined, bound, request, id)
+			} catch (error) {
+				throw error
+			} finally {
+				exportSpans()
+			}
+		},
+	}
+	return wrap(fetchFn, fetchHandler)
+}
+
+function instrumentAlarmFn(alarmFn: AlarmFn, initialiser: Initialiser, env: Env, id: DurableObjectId) {
+	if (!alarmFn) return undefined
+
+	const alarmHandler: ProxyHandler<NonNullable<AlarmFn>> = {
+		async apply(target, thisArg) {
+			const config = initialiser(env, 'do-alarm')
+			try {
+				const context = setConfig(config)
+				const bound = target.bind(unwrap(thisArg))
+				return await api_context.with(context, executeDOAlarm, undefined, bound, id)
+			} catch (error) {
+				throw error
+			} finally {
+				exportSpans()
+			}
+		},
+	}
+	return wrap(alarmFn, alarmHandler)
+}
+
+function instrumentDurableObject(doObj: DurableObject, initialiser: Initialiser, env: Env, state: DurableObjectState) {
+	const objHandler: ProxyHandler<DurableObject> = {
+		get(target, prop) {
+			if (prop === 'fetch') {
+				const fetchFn = Reflect.get(target, prop)
+				return instrumentFetchFn(fetchFn, initialiser, env, state.id)
+			} else if (prop === 'alarm') {
+				const alarmFn = Reflect.get(target, prop)
+				return instrumentAlarmFn(alarmFn, initialiser, env, state.id)
+			} else {
+				const result = Reflect.get(target, prop)
+				if (typeof result === 'function') {
+					result.bind(doObj)
+				}
+				return result
+			}
+		},
+	}
+	return wrap(doObj, objHandler)
+}
+
+export function instrumentDOClass(doClass: DOClass, initialiser: Initialiser): DOClass {
+	const classHandler: ProxyHandler<DOClass> = {
+		construct(target, [orig_state, orig_env]: ConstructorParameters<DOClass>) {
+			const state = instrumentState(orig_state)
+			const env = instrumentEnv(orig_env)
+			const doObj = new target(state, env)
+			return instrumentDurableObject(doObj, initialiser, env, state)
+		},
+	}
+	return wrap(doClass, classHandler)
 }

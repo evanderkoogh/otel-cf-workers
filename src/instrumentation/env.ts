@@ -28,7 +28,7 @@ const instrumentEnv = (env: Record<string, unknown>): Record<string, unknown> =>
 			} else if (isQueue(item)) {
 				return instrumentQueueSender(item, String(prop))
 			} else if (isDurableObject(item)) {
-				return instrumentDOBinding(item, String(prop), {})
+				return instrumentDOBinding(item, String(prop))
 			}
 			return item
 		},

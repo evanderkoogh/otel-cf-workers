@@ -2,7 +2,6 @@ import {
 	PartialTraceConfig,
 	Initialiser,
 	loadConfig,
-	withConfig,
 	WorkerTraceConfig,
 	Trigger,
 	TraceConfig,
@@ -11,11 +10,9 @@ import {
 import { createFetchHandler, instrumentGlobalFetch } from './instrumentation/fetch'
 import { instrumentGlobalCache } from './instrumentation/cache'
 import { createQueueHandler } from './instrumentation/queue'
-import { DOClass, executeDOAlarm, executeDOFetch, instrumentState } from './instrumentation/do'
-import { propagation, trace } from '@opentelemetry/api'
-import { instrumentEnv } from './instrumentation/env'
-import { unwrap, wrap } from './instrumentation/wrap'
-import { WorkerTracer } from './tracer'
+import { DOClass, instrumentDOClass } from './instrumentation/do'
+import { propagation } from '@opentelemetry/api'
+import { unwrap } from './instrumentation/wrap'
 import { W3CTraceContextPropagator } from '@opentelemetry/core'
 import { Resource } from '@opentelemetry/resources'
 import { SemanticResourceAttributes } from '@opentelemetry/semantic-conventions'
@@ -26,7 +23,6 @@ import { FlushOnlySpanProcessor } from './spanprocessor'
 instrumentGlobalCache()
 instrumentGlobalFetch()
 
-type ContextAndTracker = { ctx: ExecutionContext; tracker: PromiseTracker }
 type FetchHandler = ExportedHandlerFetchHandler<unknown, unknown>
 type QueueHandler = ExportedHandlerQueueHandler
 
@@ -78,35 +74,6 @@ function init(config: WorkerTraceConfig): void {
 	}
 }
 
-class PromiseTracker {
-	_outstandingPromises: Promise<unknown>[] = []
-
-	get outstandingPromiseCount() {
-		return this._outstandingPromises.length
-	}
-
-	track(promise: Promise<unknown>): void {
-		this._outstandingPromises.push(promise)
-	}
-
-	async wait() {
-		await Promise.all(this._outstandingPromises)
-	}
-}
-
-const exportSpans = async (tracker?: PromiseTracker) => {
-	const tracer = trace.getTracer('export')
-	if (tracer instanceof WorkerTracer) {
-		await scheduler.wait(1)
-		if (tracker) {
-			await tracker.wait()
-		}
-		await tracer.spanProcessor.forceFlush()
-	} else {
-		console.error('The global tracer is not of type WorkerTracer and can not export spans')
-	}
-}
-
 function createInitialiser(config: ConfigurationOption): Initialiser {
 	if (typeof config === 'function') {
 		return (env, trigger) => {
@@ -141,66 +108,10 @@ export function instrument<E, Q, C>(
 	return handler
 }
 
-export function instrumentDO(doClass: DOClass, config: PartialTraceConfig) {
+export function instrumentDO(doClass: DOClass, config: ConfigurationOption) {
 	const initialiser = createInitialiser(config)
 
-	const classHandler: ProxyHandler<DOClass> = {
-		construct(target, [orig_state, orig_env]: ConstructorParameters<DOClass>) {
-			const state = instrumentState(orig_state)
-			const env = instrumentEnv(orig_env)
-			const doObj = new target(state, env)
-			const objHandler: ProxyHandler<DurableObject> = {
-				get(target, prop) {
-					if (prop === 'fetch') {
-						const fetchFn = Reflect.get(target, prop)
-						const fetchHandler: ProxyHandler<DurableObject['fetch']> = {
-							async apply(target, _thisArg, argArray: Parameters<DurableObject['fetch']>) {
-								const request = argArray[0]
-								const config = initialiser(orig_env, request)
-								try {
-									const bound = target.bind(doObj)
-									return await withConfig(config, executeDOFetch, undefined, bound, request, orig_state.id)
-								} catch (error) {
-									throw error
-								} finally {
-									exportSpans()
-								}
-							},
-						}
-						return wrap(fetchFn, fetchHandler)
-					} else if (prop === 'alarm') {
-						const alarmFn = Reflect.get(target, prop)
-						if (alarmFn) {
-							const alarmHandler: ProxyHandler<NonNullable<DurableObject['alarm']>> = {
-								async apply(target) {
-									const config = initialiser(orig_env, 'do-alarm')
-									try {
-										const bound = target.bind(doObj)
-										return await withConfig(config, executeDOAlarm, undefined, bound, orig_state.id)
-									} catch (error) {
-										throw error
-									} finally {
-										exportSpans()
-									}
-								},
-							}
-							return wrap(alarmFn, alarmHandler)
-						} else {
-							return undefined
-						}
-					} else {
-						const result = Reflect.get(target, prop)
-						if (typeof result === 'function') {
-							result.bind(doObj)
-						}
-						return result
-					}
-				},
-			}
-			return wrap(doObj, objHandler)
-		},
-	}
-	return wrap(doClass, classHandler)
+	return instrumentDOClass(doClass, initialiser)
 }
 
 export { waitUntilTrace } from './instrumentation/fetch'
