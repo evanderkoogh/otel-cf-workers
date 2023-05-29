@@ -1,9 +1,13 @@
 import { trace } from '@opentelemetry/api'
-import { getActiveConfig } from '../config'
+import { WorkerTraceConfig, getActiveConfig } from '../config'
 import { wrap } from './wrap'
 import { sanitiseURL } from './fetch'
 
 type CacheFns = Cache[keyof Cache]
+
+function shouldTrace(config?: WorkerTraceConfig): boolean {
+	return !!config?.globals.caches
+}
 
 const tracer = trace.getTracer('cache instrumentation')
 
@@ -11,7 +15,7 @@ function instrumentFunction<T extends CacheFns>(fn: T, cacheName: string, op: st
 	const handler: ProxyHandler<typeof fn> = {
 		async apply(target, thisArg, argArray) {
 			const config = getActiveConfig()
-			if (!config?.globals.caches) {
+			if (!shouldTrace(config)) {
 				return await Reflect.apply(target, thisArg, argArray)
 			}
 
