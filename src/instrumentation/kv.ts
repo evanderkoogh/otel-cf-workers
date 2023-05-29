@@ -2,8 +2,7 @@ import { Attributes, SpanKind, SpanOptions, trace } from '@opentelemetry/api'
 import { getActiveConfig, WorkerTraceConfig } from '../config'
 import { wrap } from './wrap'
 
-type BindingsConfig = WorkerTraceConfig['bindings']
-type KVConfig = BindingsConfig['kv']
+type KVConfig = WorkerTraceConfig['bindings']['kv']
 type KVExtendedConfig<K extends KVConfig = KVConfig> = K extends boolean ? never : K
 
 type ExtraAttributeFn = (config: KVExtendedConfig, name: string, argArray: any[], result: any) => Attributes
