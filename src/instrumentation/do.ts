@@ -16,6 +16,8 @@ type FetchFn = DurableObject['fetch']
 type AlarmFn = DurableObject['alarm']
 type Env = Record<string, unknown>
 
+const traceIdSymbol = Symbol('traceId')
+
 function instrumentBindingStub(stub: DurableObjectStub, nsName: string): DurableObjectStub {
 	const stubHandler: ProxyHandler<typeof stub> = {
 		get(target, prop) {
@@ -89,6 +91,8 @@ export function executeDOFetch(fetchFn: FetchFn, request: Request, id: DurableOb
 
 	const name = id.name || ''
 	const promise = tracer.startActiveSpan(`do.fetchHandler:${name}`, options, spanContext, async (span) => {
+		const traceId = span.spanContext().traceId
+		api_context.active().setValue(traceIdSymbol, traceId)
 		span.setAttribute(SemanticAttributes.FAAS_TRIGGER, 'http')
 		span.setAttribute(SemanticAttributes.FAAS_COLDSTART, cold_start)
 		cold_start = false
@@ -120,7 +124,8 @@ export function executeDOAlarm(alarmFn: NonNullable<AlarmFn>, id: DurableObjectI
 
 	const name = id.name || ''
 	const promise = tracer.startActiveSpan(`do.alarmHandler:${name}`, async (span) => {
-		span.setAttribute(SemanticAttributes.FAAS_TRIGGER, 'http')
+		const traceId = span.spanContext().traceId
+		api_context.active().setValue(traceIdSymbol, traceId)
 		span.setAttribute(SemanticAttributes.FAAS_COLDSTART, cold_start)
 		cold_start = false
 		span.setAttribute('do.id', id.toString())
@@ -144,14 +149,15 @@ function instrumentFetchFn(fetchFn: FetchFn, initialiser: Initialiser, env: Env,
 		async apply(target, thisArg, argArray: Parameters<FetchFn>) {
 			const request = argArray[0]
 			const config = initialiser(env, request)
+			const context = setConfig(config)
 			try {
-				const context = setConfig(config)
 				const bound = target.bind(unwrap(thisArg))
 				return await api_context.with(context, executeDOFetch, undefined, bound, request, id)
 			} catch (error) {
 				throw error
 			} finally {
-				exportSpans()
+				const traceId = context.getValue(traceIdSymbol) as string
+				exportSpans(traceId)
 			}
 		},
 	}
@@ -164,14 +170,15 @@ function instrumentAlarmFn(alarmFn: AlarmFn, initialiser: Initialiser, env: Env,
 	const alarmHandler: ProxyHandler<NonNullable<AlarmFn>> = {
 		async apply(target, thisArg) {
 			const config = initialiser(env, 'do-alarm')
+			const context = setConfig(config)
 			try {
-				const context = setConfig(config)
 				const bound = target.bind(unwrap(thisArg))
 				return await api_context.with(context, executeDOAlarm, undefined, bound, id)
 			} catch (error) {
 				throw error
 			} finally {
-				exportSpans()
+				const traceId = context.getValue(traceIdSymbol) as string
+				exportSpans(traceId)
 			}
 		},
 	}

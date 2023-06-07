@@ -19,6 +19,8 @@ type FetchConfig = WorkerTraceConfig['globals']['fetch']
 type FetchHandler = ExportedHandlerFetchHandler
 type FetchHandlerArgs = Parameters<FetchHandler>
 
+const traceIdSymbol = Symbol('traceId')
+
 export function sanitiseURL(url: string): string {
 	const u = new URL(url)
 	return `${u.protocol}//${u.host}${u.pathname}${u.search}`
@@ -98,6 +100,8 @@ export function executeFetchHandler(fetchFn: FetchHandler, [request, env, ctx]: 
 	const options: SpanOptions = { kind: SpanKind.SERVER }
 
 	const promise = tracer.startActiveSpan('fetchHandler', options, spanContext, async (span) => {
+		const traceId = span.spanContext().traceId
+		api_context.active().setValue(traceIdSymbol, traceId)
 		span.setAttribute(SemanticAttributes.FAAS_TRIGGER, 'http')
 		span.setAttribute(SemanticAttributes.FAAS_COLDSTART, cold_start)
 		cold_start = false
@@ -107,7 +111,7 @@ export function executeFetchHandler(fetchFn: FetchHandler, [request, env, ctx]: 
 
 		try {
 			const response: Response = await fetchFn(request, env, ctx)
-			if (response.ok) {
+			if (response.status < 500) {
 				span.setStatus({ code: SpanStatusCode.OK })
 			}
 			span.setAttributes(gatherResponseAttributes(response))
@@ -131,15 +135,16 @@ export function createFetchHandler(fetchFn: FetchHandler, initialiser: Initialis
 			const config = initialiser(orig_env as Record<string, unknown>, request)
 			const env = instrumentEnv(orig_env as Record<string, unknown>)
 			const { ctx, tracker } = proxyExecutionContext(orig_ctx)
+			const context = setConfig(config)
 
 			try {
 				const args: FetchHandlerArgs = [request, env, ctx]
-				const context = setConfig(config)
 				return await api_context.with(context, executeFetchHandler, undefined, target, args)
 			} catch (error) {
 				throw error
 			} finally {
-				orig_ctx.waitUntil(exportSpans(tracker))
+				const traceId = context.getValue(traceIdSymbol) as string
+				orig_ctx.waitUntil(exportSpans(traceId, tracker))
 			}
 		},
 	}

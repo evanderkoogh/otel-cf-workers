@@ -1,16 +1,17 @@
-import { Context, Span, SpanStatusCode, TraceFlags } from '@opentelemetry/api'
+import { Context, Span } from '@opentelemetry/api'
 import { ExportResult, ExportResultCode } from '@opentelemetry/core'
 import { ReadableSpan, SpanExporter, SpanProcessor } from '@opentelemetry/sdk-trace-base'
+import { TailSampler } from './sampling'
 
 class TraceInfo {
 	readonly traceId: string
-	readonly localRootSpan: Span
+	readonly localRootSpan: ReadableSpan
 	readonly completedSpans: ReadableSpan[] = []
 	readonly inProgressSpanIds: Set<string> = new Set()
 
 	constructor(traceId: string, localRootSpan: Span) {
 		this.traceId = traceId
-		this.localRootSpan = localRootSpan
+		this.localRootSpan = localRootSpan as unknown as ReadableSpan
 	}
 }
 
@@ -20,9 +21,11 @@ export class BatchTraceSpanProcessor implements SpanProcessor {
 	private traceInfos: Map<string, TraceInfo> = new Map()
 	private listeners: Map<string, ExportFinishedListener> = new Map()
 	private exporter: SpanExporter
+	private tailSampler: TailSampler
 
-	constructor(exporter: SpanExporter) {
+	constructor(exporter: SpanExporter, tailSampler: TailSampler) {
 		this.exporter = exporter
+		this.tailSampler = tailSampler
 	}
 
 	setListener(traceId: string, listener: ExportFinishedListener) {
@@ -56,11 +59,9 @@ export class BatchTraceSpanProcessor implements SpanProcessor {
 	}
 
 	private finishTrace(traceInfo: TraceInfo) {
-		const localRootSpan = traceInfo.localRootSpan as unknown as ReadableSpan
-		const isTraceSampled = localRootSpan.spanContext().traceFlags === TraceFlags.SAMPLED
-		const isSpanError = localRootSpan.status.code === SpanStatusCode.ERROR
-		const shouldSample = isTraceSampled || isSpanError
-		if (shouldSample) {
+		const { traceId, localRootSpan, completedSpans: spans } = traceInfo
+		const localTrace = { traceId, localRootSpan, spans }
+		if (this.tailSampler(localTrace)) {
 			this.exportSpan(traceInfo)
 		}
 		this.traceInfos.delete(traceInfo.traceId)
@@ -74,6 +75,18 @@ export class BatchTraceSpanProcessor implements SpanProcessor {
 				listener(result)
 				this.listeners.delete(traceId)
 			}
+		})
+	}
+
+	flushTrace(traceId: string): Promise<void> {
+		return new Promise((resolve, reject) => {
+			this.setListener(traceId, (exportResult) => {
+				if (exportResult.code === ExportResultCode.SUCCESS) {
+					resolve()
+				} else {
+					reject(exportResult.error)
+				}
+			})
 		})
 	}
 

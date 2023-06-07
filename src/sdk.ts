@@ -18,7 +18,8 @@ import { Resource } from '@opentelemetry/resources'
 import { SemanticResourceAttributes } from '@opentelemetry/semantic-conventions'
 import { OTLPFetchTraceExporter } from './exporter'
 import { WorkerTracerProvider } from './provider'
-import { FlushOnlySpanProcessor } from './spanprocessor'
+import { BatchTraceSpanProcessor, FlushOnlySpanProcessor } from './spanprocessor'
+import { isHeadSampled, isRootErrorSpan, multiTailSampler } from './sampling'
 
 instrumentGlobalCache()
 instrumentGlobalFetch()
@@ -67,7 +68,8 @@ function init(config: WorkerTraceConfig): void {
 		propagation.setGlobalPropagator(new W3CTraceContextPropagator())
 		const resource = createResource(config)
 		const exporter = new OTLPFetchTraceExporter(config.exporter)
-		const spanProcessor = new FlushOnlySpanProcessor(exporter)
+		const tailSampler = multiTailSampler([isHeadSampled, isRootErrorSpan])
+		const spanProcessor = new BatchTraceSpanProcessor(exporter, tailSampler)
 		const provider = new WorkerTracerProvider(spanProcessor, resource)
 		provider.register()
 		initialised = true

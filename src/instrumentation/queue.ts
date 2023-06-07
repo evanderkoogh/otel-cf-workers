@@ -7,6 +7,8 @@ import { unwrap, wrap } from './wrap'
 type QueueHandler = ExportedHandlerQueueHandler<unknown, unknown>
 export type QueueHandlerArgs = Parameters<QueueHandler>
 
+const traceIdSymbol = Symbol('traceId')
+
 class MessageStatusCount {
 	succeeded = 0
 	failed = 0
@@ -133,6 +135,8 @@ export function executeQueueHandler(queueFn: QueueHandler, [batch, env, ctx]: Qu
 	const tracer = trace.getTracer('queueHandler')
 	const options: SpanOptions = { kind: SpanKind.CONSUMER }
 	const promise = tracer.startActiveSpan(`queueHandler:${batch.queue}`, options, async (span) => {
+		const traceId = span.spanContext().traceId
+		api_context.active().setValue(traceIdSymbol, traceId)
 		span.setAttribute('queue.name', batch.queue)
 		try {
 			const result = queueFn(batch, env, ctx)
@@ -159,15 +163,17 @@ export function createQueueHandler(queueFn: QueueHandler, initialiser: Initialis
 			const config = initialiser(orig_env as Record<string, unknown>, batch)
 			const env = instrumentEnv(orig_env as Record<string, unknown>)
 			const { ctx, tracker } = proxyExecutionContext(orig_ctx)
+			const context = setConfig(config)
 
 			try {
 				const args: QueueHandlerArgs = [batch, env, ctx]
-				const context = setConfig(config)
+
 				return await api_context.with(context, executeQueueHandler, undefined, target, args)
 			} catch (error) {
 				throw error
 			} finally {
-				orig_ctx.waitUntil(exportSpans(tracker))
+				const traceId = context.getValue(traceIdSymbol) as string
+				orig_ctx.waitUntil(exportSpans(traceId, tracker))
 			}
 		},
 	}
