@@ -1,6 +1,7 @@
 import { trace } from '@opentelemetry/api'
 import { WorkerTracer } from '../tracer'
 import { wrap } from './wrap'
+import { BatchTraceSpanProcessor } from '../spanprocessor'
 
 type ContextAndTracker = { ctx: ExecutionContext; tracker: PromiseTracker }
 type WaitUntilFn = ExecutionContext['waitUntil']
@@ -44,14 +45,19 @@ export function proxyExecutionContext(context: ExecutionContext): ContextAndTrac
 	return { ctx, tracker }
 }
 
-export async function exportSpans(tracker?: PromiseTracker) {
+export async function exportSpans(traceId: string, tracker?: PromiseTracker) {
 	const tracer = trace.getTracer('export')
 	if (tracer instanceof WorkerTracer) {
 		await scheduler.wait(1)
 		if (tracker) {
 			await tracker.wait()
 		}
-		await tracer.spanProcessor.forceFlush()
+		const spanProcessor = tracer.spanProcessor
+		if (spanProcessor instanceof BatchTraceSpanProcessor && traceId) {
+			await spanProcessor.flushTrace(traceId)
+		} else {
+			await spanProcessor.forceFlush()
+		}
 	} else {
 		console.error('The global tracer is not of type WorkerTracer and can not export spans')
 	}
