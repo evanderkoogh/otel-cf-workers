@@ -1,6 +1,6 @@
 import { context } from '@opentelemetry/api'
 import { SpanExporter } from '@opentelemetry/sdk-trace-base'
-import { LocalTrace } from './sampling'
+import { SanitiserFn } from './spanprocessor'
 
 const configSymbol = Symbol('Otel Workers Tracing Configuration')
 
@@ -26,8 +26,6 @@ export interface GlobalsConfig {
 	fetch?: FetcherConfig
 }
 
-export type Sanitiser = (trace: LocalTrace) => LocalTrace
-
 export interface ServiceConfig {
 	name: string
 	namespace?: string
@@ -38,7 +36,7 @@ export interface TraceConfig {
 	bindings?: BindingsConfig
 	exporter: ExporterConfig
 	globals?: GlobalsConfig
-	sanitiser?: Sanitiser
+	sanitiser?: SanitiserFn
 	service: ServiceConfig
 }
 

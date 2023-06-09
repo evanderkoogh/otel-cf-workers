@@ -4,7 +4,7 @@ import { propagation } from '@opentelemetry/api'
 import { W3CTraceContextPropagator } from '@opentelemetry/core'
 import { Resource } from '@opentelemetry/resources'
 import { SemanticResourceAttributes } from '@opentelemetry/semantic-conventions'
-import { SpanExporter } from '@opentelemetry/sdk-trace-base'
+import { ReadableSpan, SpanExporter } from '@opentelemetry/sdk-trace-base'
 
 import { Initialiser, Trigger, TraceConfig, ResolvedTraceConfig, ExporterConfig } from './config'
 import { OTLPExporter } from './exporter'
@@ -69,7 +69,7 @@ function init(config: ResolvedTraceConfig): void {
 		const resource = createResource(config)
 		const exporter = isSpanExporter(config.exporter) ? config.exporter : new OTLPExporter(config.exporter)
 		const tailSampler = multiTailSampler([isHeadSampled, isRootErrorSpan])
-		const spanProcessor = new BatchTraceSpanProcessor(exporter, tailSampler)
+		const spanProcessor = new BatchTraceSpanProcessor(exporter, tailSampler, config.sanitiser)
 		const provider = new WorkerTracerProvider(spanProcessor, resource)
 		provider.register()
 		initialised = true
