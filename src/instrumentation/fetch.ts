@@ -10,12 +10,11 @@ import {
 	SpanStatusCode,
 } from '@opentelemetry/api'
 import { SemanticAttributes } from '@opentelemetry/semantic-conventions'
-import { WorkerTraceConfig, getActiveConfig, Initialiser, setConfig } from '../config'
+import { FetcherConfig, getActiveConfig, Initialiser, ResolvedTraceConfig, setConfig } from '../config'
 import { wrap } from './wrap'
 import { instrumentEnv } from './env'
 import { exportSpans, proxyExecutionContext } from './common'
 
-type FetchConfig = WorkerTraceConfig['globals']['fetch']
 type FetchHandler = ExportedHandlerFetchHandler
 type FetchHandlerArgs = Parameters<FetchHandler>
 
@@ -151,7 +150,7 @@ export function createFetchHandler(fetchFn: FetchHandler, initialiser: Initialis
 	return wrap(fetchFn, fetchHandler)
 }
 
-type getFetchConfig = (config: WorkerTraceConfig) => FetchConfig
+type getFetchConfig = (config: ResolvedTraceConfig) => FetcherConfig
 export function instrumentFetcher(
 	fetchFn: Fetcher['fetch'],
 	configFn: getFetchConfig,
@@ -160,11 +159,8 @@ export function instrumentFetcher(
 	const handler: ProxyHandler<typeof fetch> = {
 		apply: (target, thisArg, argArray): ReturnType<typeof fetch> => {
 			const workerConfig = getActiveConfig()
-			const config = !!workerConfig ? configFn(workerConfig) : undefined
+			const config = configFn(workerConfig)
 			const request = new Request(argArray[0], argArray[1])
-			if (!config) {
-				return Reflect.apply(target, thisArg, [request])
-			}
 
 			const tracer = trace.getTracer('fetcher')
 			const options: SpanOptions = { kind: SpanKind.CLIENT, attributes: attrs }
@@ -172,7 +168,7 @@ export function instrumentFetcher(
 			const host = new URL(request.url).host
 			const spanName = typeof attrs?.['name'] === 'string' ? attrs?.['name'] : `fetch: ${host}`
 			const promise = tracer.startActiveSpan(spanName, options, async (span) => {
-				if (config && config.includeTraceContext) {
+				if (config.includeTraceContext) {
 					propagation.inject(api_context.active(), request.headers, {
 						set: (h, k, v) => h.set(k, typeof v === 'string' ? v : String(v)),
 					})

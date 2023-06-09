@@ -1,113 +1,57 @@
-import { z } from 'zod'
-import merge from 'deepmerge'
 import { context } from '@opentelemetry/api'
+import { SpanExporter } from '@opentelemetry/sdk-trace-base'
+import { LocalTrace } from './sampling'
 
 const configSymbol = Symbol('Otel Workers Tracing Configuration')
 
 export type Trigger = Request | MessageBatch | 'do-alarm'
-export type Initialiser = (env: Record<string, unknown>, trigger: Trigger) => WorkerTraceConfig
+export type Initialiser = (env: Record<string, unknown>, trigger: Trigger) => ResolvedTraceConfig
 
-function createBindings() {
-	const sanitiseKeyOpts = z.object({ namespace: z.string(), key: z.string() })
-	const sanitiseKeys = z.function(z.tuple([sanitiseKeyOpts]), z.string()).optional()
-	const kv = z.literal(false).or(z.object({ sanitiseKeys })).default({})
-
-	return z.object({ kv }).default({})
+export interface BindingsConfig {
+	kv: boolean
 }
 
-function createExporter() {
-	return z.object({
-		url: z.string().url(),
-		headers: z.record(z.string()).default({}),
-	})
+export interface OTLPExporterConfig {
+	url: string
+	headers?: Record<string, string>
+}
+export type ExporterConfig = OTLPExporterConfig | SpanExporter
+
+export type IncludeTraceContextFn = (request: Request) => boolean
+export interface FetcherConfig {
+	includeTraceContext?: boolean | IncludeTraceContextFn
+}
+export interface GlobalsConfig {
+	caches?: boolean
+	fetch?: FetcherConfig
 }
 
-function createGlobals() {
-	const globalFetch = z.object({ includeTraceContext: z.boolean().default(true) })
+export type Sanitiser = (trace: LocalTrace) => LocalTrace
 
-	return z
-		.object({
-			caches: z.boolean().default(true),
-			fetch: z.literal(false).or(globalFetch).default({}),
-		})
-		.default({})
+export interface ServiceConfig {
+	name: string
+	namespace?: string
+	version?: string
 }
 
-function createService() {
-	return z.object({
-		name: z.string(),
-		namespace: z.string().optional(),
-		version: z.string().optional(),
-	})
+export interface TraceConfig {
+	bindings?: BindingsConfig
+	exporter: ExporterConfig
+	globals?: GlobalsConfig
+	sanitiser?: Sanitiser
+	service: ServiceConfig
 }
 
-const configSchema = z.object({
-	bindings: createBindings(),
-	exporter: createExporter(),
-	globals: createGlobals(),
-	service: createService(),
-})
-
-const deepPartialSchema = configSchema.deepPartial()
-
-export type TraceConfig = z.input<typeof configSchema>
-export type WorkerTraceConfig = z.output<typeof configSchema>
-export type PartialTraceConfig = z.input<typeof deepPartialSchema>
-
-function ObjectifyEnv(env: Record<string, unknown>) {
-	const filtered = Object.keys(env).filter((key) => key.toLowerCase().startsWith('otel.'))
-	const paths = filtered.map((key) => ({ key, path: key.substring(5).split('.') }))
-	const obj: any = {}
-	paths.forEach((entry) => {
-		let node = obj
-		entry.path.forEach((path, index, array) => {
-			if (index === array.length - 1) {
-				node[path] = env[entry.key]
-			} else {
-				if (!node[path]) {
-					node[path] = {}
-				}
-				node = node[path]
-			}
-		})
-	})
-	return obj
+export interface ResolvedTraceConfig extends TraceConfig {
+	bindings: BindingsConfig
+	globals: Required<GlobalsConfig>
 }
 
-export function parseConfig(config: TraceConfig): WorkerTraceConfig {
-	const result = configSchema.safeParse(config)
-	if (!result.success) {
-		console.error(result.error)
-		throw result.error
-	}
-
-	const check = configSchema.strict().safeParse(config)
-	if (!check.success) {
-		console.error(`Unknown keys detected in the trace config: ${check.error.errors}`)
-	}
-
-	return result.data
-}
-
-export function loadConfig(supplied: PartialTraceConfig, env: Record<string, unknown>): WorkerTraceConfig {
-	const parsedSupplied = deepPartialSchema.parse(supplied)
-	const parsedEnv = deepPartialSchema.parse(ObjectifyEnv(env))
-	const merged = merge(parsedSupplied, parsedEnv)
-	const config = parseConfig(merged as TraceConfig)
-
-	const check = deepPartialSchema.strict().safeParse(supplied)
-	if (!check.success) {
-		console.error(`Unknown keys detected in the trace config: ${check.error.errors}`)
-	}
-
-	return config
-}
-
-export function setConfig(config: WorkerTraceConfig, ctx = context.active()) {
+export function setConfig(config: ResolvedTraceConfig, ctx = context.active()) {
 	return ctx.setValue(configSymbol, config)
 }
 
-export function getActiveConfig(): WorkerTraceConfig | undefined {
-	const config = context.active().getValue(configSymbol)
-	return !!config ? (config as WorkerTraceConfig) : undefined
+export function getActiveConfig(): ResolvedTraceConfig {
+	const config = context.active().getValue(configSymbol) as ResolvedTraceConfig
+	return config
 }

@@ -1,10 +1,8 @@
-import { WorkerTraceConfig, getActiveConfig } from '../config'
+import { BindingsConfig, getActiveConfig } from '../config'
 import { wrap } from './wrap'
 import { instrumentDOBinding } from './do'
 import { instrumentKV } from './kv'
 import { instrumentQueueSender } from './queue'
-
-type BindingsConfig = WorkerTraceConfig['bindings']
 
 const isKVNamespace = (item: unknown): item is KVNamespace => {
 	return !!(item as KVNamespace).getWithMetadata

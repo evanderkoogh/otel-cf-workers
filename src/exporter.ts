@@ -2,20 +2,18 @@ import { createExportTraceServiceRequest } from '@opentelemetry/otlp-transformer
 import { ExportServiceError, OTLPExporterConfigBase, OTLPExporterError } from '@opentelemetry/otlp-exporter-base'
 import { unwrap } from './instrumentation/wrap'
 import { ExportResult, ExportResultCode } from '@opentelemetry/core'
+import { SpanExporter } from '@opentelemetry/sdk-trace-base'
+import { OTLPExporterConfig } from './config'
 
 const defaultHeaders: Record<string, string> = {
 	accept: 'application/json',
 	'content-type': 'application/json',
 }
 
-export interface FetchTraceExporterConfig extends OTLPExporterConfigBase {
-	url: string
-}
-
-export class OTLPFetchTraceExporter {
+export class OTLPExporter implements SpanExporter {
 	private headers: Record<string, string>
 	private url: string
-	constructor(config: FetchTraceExporterConfig) {
+	constructor(config: OTLPExporterConfig) {
 		this.url = config.url
 		this.headers = Object.assign({}, defaultHeaders, config.headers)
 	}
