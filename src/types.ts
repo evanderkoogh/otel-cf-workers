@@ -34,5 +34,3 @@ export interface ResolvedTraceConfig extends TraceConfig {
 }
 
 export type Trigger = Request | MessageBatch | 'do-alarm'
-
-export type Initialiser = (env: Record<string, unknown>, trigger: Trigger) => ResolvedTraceConfig

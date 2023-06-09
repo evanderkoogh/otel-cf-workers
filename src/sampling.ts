@@ -10,6 +10,14 @@ export type TraceFlagsAndState = {
 
 export type HeadSamplerFn = (trigger: Trigger) => TraceFlags | TraceFlagsAndState
 
+export function alwaysSample(_trigger: Trigger) {
+	return TraceFlags.SAMPLED
+}
+
+export function neverSample(_trigger: Trigger) {
+	return TraceFlags.NONE
+}
+
 export interface LocalTrace {
 	readonly traceId: string
 	readonly localRootSpan: ReadableSpan

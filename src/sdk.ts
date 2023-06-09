@@ -10,12 +10,13 @@ import { OTLPExporter } from './exporter'
 import { WorkerTracerProvider } from './provider'
 import { isHeadSampled, isRootErrorSpan, multiTailSampler } from './sampling'
 import { BatchTraceSpanProcessor } from './spanprocessor'
-import { Trigger, TraceConfig, ResolvedTraceConfig, ExporterConfig, Initialiser } from './types'
+import { Trigger, TraceConfig, ResolvedTraceConfig, ExporterConfig } from './types'
 import { createFetchHandler, instrumentGlobalFetch } from './instrumentation/fetch'
 import { instrumentGlobalCache } from './instrumentation/cache'
 import { createQueueHandler } from './instrumentation/queue'
 import { DOClass, instrumentDOClass } from './instrumentation/do'
 import { unwrap } from './instrumentation/wrap'
+import { Initialiser } from './config'
 
 instrumentGlobalCache()
 instrumentGlobalFetch()
