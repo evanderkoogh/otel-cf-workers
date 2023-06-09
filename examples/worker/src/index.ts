@@ -1,53 +1,8 @@
-import { trace } from '@opentelemetry/api'
-import {
-	instrument,
-	instrumentDO,
-	isRequest,
-	PartialTraceConfig,
-	resolveConfig,
-	waitUntilTrace,
-} from '../../../src/index'
+import { instrument, instrumentDO, isRequest, ResolveConfigFn } from '../../../src/index'
+import { Env, OtelDO } from './handler'
+import handler from './handler'
 
-export interface Env {
-	OTEL_TEST: KVNamespace
-	Test_Otel_DO: DurableObjectNamespace
-	'otel.exporter.headers.x-honeycomb-team': string
-}
-
-const handleDO = async (request: Request, env: Env): Promise<Response> => {
-	const ns = env.Test_Otel_DO
-	const id = ns.idFromName('testing')
-	const stub = ns.get(id)
-	return await stub.fetch('https://does-not-exist.com/blah')
-}
-
-const handleRest = async (request: Request, env: Env, ctx: ExecutionContext): Promise<Response> => {
-	await fetch('https://cloudflare.com')
-
-	const cache = await caches.open('stuff')
-	const promises = [env.OTEL_TEST.get('non-existant'), cache.match(new Request('https://no-exist.com'))]
-	await Promise.all(promises)
-
-	const greeting = "G'day World"
-	trace.getActiveSpan()?.setAttribute('greeting', greeting)
-	ctx.waitUntil(waitUntilTrace(() => fetch('https://workers.dev')))
-	return new Response(`${greeting}!`)
-}
-
-const handler = {
-	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-		const pathname = new URL(request.url).pathname
-		if (pathname === '/do') {
-			return handleDO(request, env)
-		} else if (pathname === '/error') {
-			throw new Error('You asked for it!')
-		} else {
-			return handleRest(request, env, ctx)
-		}
-	},
-}
-
-const config: resolveConfig = (env: Env, trigger) => {
+const config: ResolveConfigFn = (env: Env, trigger) => {
 	const pathname = isRequest(trigger) ? new URL(trigger.url).pathname : undefined
 	return {
 		exporter: {
@@ -61,32 +16,16 @@ const config: resolveConfig = (env: Env, trigger) => {
 		globals: {
 			caches: !(pathname === '/nocaches'),
 		},
-		bindings: {
-			kv: {
-				sanitiseKeys({ key }) {
-					return key.toUpperCase()
-				},
-			},
+	}
+}
+
+const doConfig: ResolveConfigFn = (env: Env, trigger) => {
+	return {
+		exporter: {
+			url: 'https://api.honeycomb.io/v1/traces',
+			headers: { 'x-honeycomb-team': env['otel.exporter.headers.x-honeycomb-team'] },
 		},
-	}
-}
-
-const doConfig: PartialTraceConfig = {
-	exporter: { url: 'https://api.honeycomb.io/v1/traces' },
-	service: { name: 'greetings-do' },
-}
-
-class OtelDO implements DurableObject {
-	constructor(protected state: DurableObjectState, protected env: Env) {}
-	async fetch(request: Request): Promise<Response> {
-		await fetch('https://cloudflare.com')
-		await this.env.OTEL_TEST.put('something', 'else')
-		await this.state.storage.setAlarm(Date.now() + 1000)
-		return new Response('Hello World!')
-	}
-	async alarm(): Promise<void> {
-		console.log('ding ding!')
-		await this.env.OTEL_TEST.get('something')
+		service: { name: 'greetings-do' },
 	}
 }
 
