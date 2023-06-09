@@ -4,7 +4,7 @@ import { propagation } from '@opentelemetry/api'
 import { W3CTraceContextPropagator } from '@opentelemetry/core'
 import { Resource } from '@opentelemetry/resources'
 import { SemanticResourceAttributes } from '@opentelemetry/semantic-conventions'
-import { ReadableSpan, SpanExporter } from '@opentelemetry/sdk-trace-base'
+import { SpanExporter } from '@opentelemetry/sdk-trace-base'
 
 import { Initialiser, Trigger, TraceConfig, ResolvedTraceConfig, ExporterConfig } from './config'
 import { OTLPExporter } from './exporter'
