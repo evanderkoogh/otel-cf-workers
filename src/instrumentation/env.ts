@@ -1,8 +1,9 @@
-import { BindingsConfig, getActiveConfig } from '../config'
+import { getActiveConfig } from '../config'
 import { wrap } from './wrap'
 import { instrumentDOBinding } from './do'
 import { instrumentKV } from './kv'
 import { instrumentQueueSender } from './queue'
+import { BindingsConfig } from '../types'
 
 const isKVNamespace = (item: unknown): item is KVNamespace => {
 	return !!(item as KVNamespace).getWithMetadata

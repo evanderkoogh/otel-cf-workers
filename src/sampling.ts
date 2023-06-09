@@ -1,5 +1,14 @@
 import { TraceFlags, SpanStatusCode } from '@opentelemetry/api'
 import { ReadableSpan } from '@opentelemetry/sdk-trace-base'
+import { TraceState } from '@opentelemetry/core'
+import { Trigger } from './types'
+
+export type TraceFlagsAndState = {
+	traceFlags: TraceFlags
+	traceState: TraceState
+}
+
+export type HeadSamplerFn = (trigger: Trigger) => TraceFlags | TraceFlagsAndState
 
 export interface LocalTrace {
 	readonly traceId: string
