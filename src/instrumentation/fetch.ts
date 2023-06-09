@@ -10,11 +10,11 @@ import {
 	SpanStatusCode,
 } from '@opentelemetry/api'
 import { SemanticAttributes } from '@opentelemetry/semantic-conventions'
-import { getActiveConfig, setConfig } from '../config'
+import { Initialiser, getActiveConfig, setConfig } from '../config'
 import { wrap } from './wrap'
 import { instrumentEnv } from './env'
 import { exportSpans, proxyExecutionContext } from './common'
-import { Initialiser, ResolvedTraceConfig } from '../types'
+import { ResolvedTraceConfig } from '../types'
 
 export type IncludeTraceContextFn = (request: Request) => boolean
 export interface FetcherConfig {

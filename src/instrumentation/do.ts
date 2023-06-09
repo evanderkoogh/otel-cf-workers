@@ -9,9 +9,8 @@ import {
 	instrumentFetcher,
 } from './fetch'
 import { instrumentEnv } from './env'
-import { setConfig } from '../config'
+import { Initialiser, setConfig } from '../config'
 import { exportSpans } from './common'
-import { Initialiser } from '../types'
 
 type FetchFn = DurableObject['fetch']
 type AlarmFn = DurableObject['alarm']
