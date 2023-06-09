@@ -3,6 +3,8 @@ import { ExportResult, ExportResultCode } from '@opentelemetry/core'
 import { ReadableSpan, SpanExporter, SpanProcessor } from '@opentelemetry/sdk-trace-base'
 import { TailSampler } from './sampling'
 
+export type SanitiserFn = (spans: ReadableSpan[]) => ReadableSpan[]
+
 class TraceInfo {
 	readonly traceId: string
 	readonly localRootSpan: ReadableSpan
@@ -22,10 +24,12 @@ export class BatchTraceSpanProcessor implements SpanProcessor {
 	private listeners: Map<string, ExportFinishedListener> = new Map()
 	private exporter: SpanExporter
 	private tailSampler: TailSampler
+	private sanitiser?: SanitiserFn
 
-	constructor(exporter: SpanExporter, tailSampler: TailSampler) {
+	constructor(exporter: SpanExporter, tailSampler: TailSampler, sanitiser?: SanitiserFn) {
 		this.exporter = exporter
 		this.tailSampler = tailSampler
+		this.sanitiser = sanitiser
 	}
 
 	setListener(traceId: string, listener: ExportFinishedListener) {
@@ -68,7 +72,8 @@ export class BatchTraceSpanProcessor implements SpanProcessor {
 	}
 
 	private exportSpan(traceInfo: TraceInfo) {
-		this.exporter.export(traceInfo.completedSpans, (result) => {
+		const spans = !!this.sanitiser ? this.sanitiser(traceInfo.completedSpans) : traceInfo.completedSpans
+		this.exporter.export(spans, (result) => {
 			const traceId = traceInfo.traceId
 			const listener = this.listeners.get(traceId)
 			if (listener) {
