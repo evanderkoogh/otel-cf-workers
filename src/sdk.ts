@@ -1,25 +1,21 @@
-import {
-	PartialTraceConfig,
-	Initialiser,
-	loadConfig,
-	WorkerTraceConfig,
-	Trigger,
-	TraceConfig,
-	parseConfig,
-} from './config'
+import merge from 'deepmerge'
+
+import { propagation } from '@opentelemetry/api'
+import { W3CTraceContextPropagator } from '@opentelemetry/core'
+import { Resource } from '@opentelemetry/resources'
+import { SemanticResourceAttributes } from '@opentelemetry/semantic-conventions'
+import { SpanExporter } from '@opentelemetry/sdk-trace-base'
+
+import { Initialiser, Trigger, TraceConfig, ResolvedTraceConfig, ExporterConfig } from './config'
+import { OTLPExporter } from './exporter'
+import { WorkerTracerProvider } from './provider'
+import { isHeadSampled, isRootErrorSpan, multiTailSampler } from './sampling'
+import { BatchTraceSpanProcessor } from './spanprocessor'
 import { createFetchHandler, instrumentGlobalFetch } from './instrumentation/fetch'
 import { instrumentGlobalCache } from './instrumentation/cache'
 import { createQueueHandler } from './instrumentation/queue'
 import { DOClass, instrumentDOClass } from './instrumentation/do'
-import { propagation } from '@opentelemetry/api'
 import { unwrap } from './instrumentation/wrap'
-import { W3CTraceContextPropagator } from '@opentelemetry/core'
-import { Resource } from '@opentelemetry/resources'
-import { SemanticResourceAttributes } from '@opentelemetry/semantic-conventions'
-import { OTLPFetchTraceExporter } from './exporter'
-import { WorkerTracerProvider } from './provider'
-import { BatchTraceSpanProcessor, FlushOnlySpanProcessor } from './spanprocessor'
-import { isHeadSampled, isRootErrorSpan, multiTailSampler } from './sampling'
 
 instrumentGlobalCache()
 instrumentGlobalFetch()
@@ -27,8 +23,8 @@ instrumentGlobalFetch()
 type FetchHandler = ExportedHandlerFetchHandler<unknown, unknown>
 type QueueHandler = ExportedHandlerQueueHandler
 
-export type resolveConfig = (env: any, trigger: Trigger) => TraceConfig
-export type ConfigurationOption = PartialTraceConfig | resolveConfig
+export type ResolveConfigFn = (env: any, trigger: Trigger) => TraceConfig
+export type ConfigurationOption = TraceConfig | ResolveConfigFn
 
 export function isRequest(trigger: Trigger): trigger is Request {
 	return trigger instanceof Request
@@ -42,7 +38,7 @@ export function isAlarm(trigger: Trigger): trigger is 'do-alarm' {
 	return trigger === 'do-alarm'
 }
 
-const createResource = (config: WorkerTraceConfig): Resource => {
+const createResource = (config: ResolvedTraceConfig): Resource => {
 	const workerResourceAttrs = {
 		[SemanticResourceAttributes.CLOUD_PROVIDER]: 'cloudflare',
 		[SemanticResourceAttributes.CLOUD_PLATFORM]: 'cloudflare.workers',
@@ -62,18 +58,37 @@ const createResource = (config: WorkerTraceConfig): Resource => {
 	return resource.merge(serviceResource)
 }
 
+function isSpanExporter(exporterConfig: ExporterConfig): exporterConfig is SpanExporter {
+	return !!(exporterConfig as SpanExporter).export
+}
+
 let initialised = false
-function init(config: WorkerTraceConfig): void {
+function init(config: ResolvedTraceConfig): void {
 	if (!initialised) {
 		propagation.setGlobalPropagator(new W3CTraceContextPropagator())
 		const resource = createResource(config)
-		const exporter = new OTLPFetchTraceExporter(config.exporter)
+		const exporter = isSpanExporter(config.exporter) ? config.exporter : new OTLPExporter(config.exporter)
 		const tailSampler = multiTailSampler([isHeadSampled, isRootErrorSpan])
 		const spanProcessor = new BatchTraceSpanProcessor(exporter, tailSampler)
 		const provider = new WorkerTracerProvider(spanProcessor, resource)
 		provider.register()
 		initialised = true
 	}
+}
+
+const defaults = {
+	bindings: {
+		kv: true,
+	},
+	globals: {
+		caches: true,
+		fetch: {
+			includeTraceContext: true,
+		},
+	},
+}
+function parseConfig(supplied: TraceConfig): ResolvedTraceConfig {
+	return merge(defaults, supplied)
 }
 
 function createInitialiser(config: ConfigurationOption): Initialiser {
@@ -84,8 +99,8 @@ function createInitialiser(config: ConfigurationOption): Initialiser {
 			return conf
 		}
 	} else {
-		return (env) => {
-			const conf = loadConfig(config, env)
+		return () => {
+			const conf = parseConfig(config)
 			init(conf)
 			return conf
 		}

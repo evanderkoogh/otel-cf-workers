@@ -1,28 +1,17 @@
 import { Attributes, SpanKind, SpanOptions, trace } from '@opentelemetry/api'
-import { getActiveConfig, WorkerTraceConfig } from '../config'
 import { wrap } from './wrap'
 
-type KVConfig = WorkerTraceConfig['bindings']['kv']
-type KVExtendedConfig<K extends KVConfig = KVConfig> = K extends boolean ? never : K
-
-type ExtraAttributeFn = (config: KVExtendedConfig, name: string, argArray: any[], result: any) => Attributes
+type ExtraAttributeFn = (argArray: any[], result: any) => Attributes
 
 const KVAttributes: Record<string | symbol, ExtraAttributeFn> = {
-	delete(config, name, argArray) {
-		const originalKey = argArray[0]
-		const arg = { namespace: name, key: originalKey }
-		const key: string = config.sanitiseKeys ? config.sanitiseKeys(arg) : originalKey
-		const attrs: Attributes = {
-			'kv.key': key,
+	delete(argArray) {
+		return {
+			'kv.key': argArray[0],
 		}
-		return attrs
 	},
-	get(config, name, argArray) {
-		const originalKey = argArray[0]
-		const arg = { namespace: name, key: originalKey }
-		const key: string = config.sanitiseKeys ? config.sanitiseKeys(arg) : originalKey
+	get(argArray) {
 		const attrs: Attributes = {
-			'kv.key': key,
+			'kv.key': argArray[0],
 		}
 		const opts = argArray[1]
 		if (typeof opts === 'string') {
@@ -33,20 +22,16 @@ const KVAttributes: Record<string | symbol, ExtraAttributeFn> = {
 		}
 		return attrs
 	},
-	getWithMetadata(config, name, argArray, result) {
-		const attrs = this.get(config, name, argArray, result)
+	getWithMetadata(argArray, result) {
+		const attrs = this.get(argArray, result)
 		attrs['withMetadata'] = true
 		return attrs
 	},
-	list(config, name, argArray, result) {
+	list(argArray, result) {
 		const attrs: Attributes = {}
 		const opts: KVNamespaceListOptions = argArray[0] || {}
 		const { cursor, limit, prefix } = opts
-		if (prefix) {
-			const arg = { namespace: name, key: prefix }
-			const sanitisedPrefex: string = config.sanitiseKeys ? config.sanitiseKeys(arg) : prefix
-			attrs['kv.list_prefix'] = sanitisedPrefex
-		}
+		attrs['kv.list_prefix'] = prefix || undefined
 		attrs['kv.list_request_cursor'] = cursor || undefined
 		attrs['kv.list_limit'] = limit || undefined
 		const { list_complete } = result as KVNamespaceListResult<any, any>
@@ -56,12 +41,9 @@ const KVAttributes: Record<string | symbol, ExtraAttributeFn> = {
 		}
 		return attrs
 	},
-	put(config, name, argArray) {
-		const originalKey = argArray[0]
-		const arg = { namespace: name, key: originalKey }
-		const key: string = config.sanitiseKeys ? config.sanitiseKeys(arg) : originalKey
+	put(argArray) {
 		const attrs: Attributes = {
-			'kv.key': key,
+			'kv.key': argArray[0],
 		}
 		if (argArray.length > 2 && argArray[2]) {
 			const { expiration, expirationTtl, metadata } = argArray[2] as KVNamespacePutOptions
@@ -74,7 +56,6 @@ const KVAttributes: Record<string | symbol, ExtraAttributeFn> = {
 }
 
 export function instrumentKV(kv: KVNamespace, name: string): KVNamespace {
-	const config = getActiveConfig()!.bindings.kv as KVExtendedConfig
 	const tracer = trace.getTracer('KV')
 	const kvHandler: ProxyHandler<KVNamespace> = {
 		get: (target, prop, receiver) => {
@@ -92,7 +73,7 @@ export function instrumentKV(kv: KVNamespace, name: string): KVNamespace {
 							operation,
 						})
 						const result = await Reflect.apply(target, kv, argArray)
-						const extraAttrs = KVAttributes[prop] ? KVAttributes[prop](config, name, argArray, result) : {}
+						const extraAttrs = KVAttributes[prop] ? KVAttributes[prop](argArray, result) : {}
 						span.setAttributes(extraAttrs)
 						span.setAttribute('hasResult', !!result)
 						span.end()
