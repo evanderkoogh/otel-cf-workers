@@ -78,7 +78,6 @@ export class BatchTraceSpanProcessor implements SpanProcessor {
 
 		spans = !!this.sanitiser ? this.sanitiser(spans) : spans
 		this.exporter.export(spans, (result) => {
-			console.log(`exporting ${spans.length} spans done: ${result.code}`)
 			const traceId = spans[0].spanContext().traceId
 			const listener = this.listeners.get(traceId)
 			if (listener) {
