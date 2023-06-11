@@ -6,6 +6,7 @@
 	"type": "module",
 	"scripts": {
 		"build": "rimraf ./dist && tsc",
+		"preversion": "pnpm build",
 		"prepublishOnly": "pnpm build",
 		"watch": "tsc --watch"
 	},
