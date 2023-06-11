@@ -1,7 +1,7 @@
-import { Context, Span } from '@opentelemetry/api'
+import { Span } from '@opentelemetry/api'
 import { ExportResult, ExportResultCode } from '@opentelemetry/core'
 import { ReadableSpan, SpanExporter, SpanProcessor } from '@opentelemetry/sdk-trace-base'
-import { TailSampler } from './sampling'
+import { TailSampleFn } from './sampling'
 
 export type SanitiserFn = (spans: ReadableSpan[]) => ReadableSpan[]
 
@@ -23,10 +23,10 @@ export class BatchTraceSpanProcessor implements SpanProcessor {
 	private traceInfos: Map<string, TraceInfo> = new Map()
 	private listeners: Map<string, ExportFinishedListener> = new Map()
 	private exporter: SpanExporter
-	private tailSampler: TailSampler
+	private tailSampler: TailSampleFn
 	private sanitiser?: SanitiserFn
 
-	constructor(exporter: SpanExporter, tailSampler: TailSampler, sanitiser?: SanitiserFn) {
+	constructor(exporter: SpanExporter, tailSampler: TailSampleFn, sanitiser?: SanitiserFn) {
 		this.exporter = exporter
 		this.tailSampler = tailSampler
 		this.sanitiser = sanitiser
@@ -44,8 +44,10 @@ export class BatchTraceSpanProcessor implements SpanProcessor {
 
 	onStart(span: Span) {
 		const { traceId, spanId } = span.spanContext()
+		console.log(`Starting span with context: ${JSON.stringify(span.spanContext())}`)
 		const traceInfo = this.traceInfos.get(traceId) || this.createNewTraceInfo(traceId, span)
 		traceInfo.inProgressSpanIds.add(spanId)
+		this.traceInfos.set(traceId, traceInfo)
 	}
 
 	onEnd(span: ReadableSpan) {
@@ -58,23 +60,28 @@ export class BatchTraceSpanProcessor implements SpanProcessor {
 				this.finishTrace(traceInfo)
 			}
 		} else {
-			this.exporter.export([span], () => {})
+			this.exportSpan([span])
 		}
 	}
 
 	private finishTrace(traceInfo: TraceInfo) {
 		const { traceId, localRootSpan, completedSpans: spans } = traceInfo
+		console.log('spanContext in finishTrace: ', localRootSpan.spanContext())
 		const localTrace = { traceId, localRootSpan, spans }
-		if (this.tailSampler(localTrace)) {
-			this.exportSpan(traceInfo)
+		const shouldExport = this.tailSampler(localTrace)
+		if (shouldExport) {
+			this.exportSpan(traceInfo.completedSpans)
 		}
 		this.traceInfos.delete(traceInfo.traceId)
 	}
 
-	private exportSpan(traceInfo: TraceInfo) {
-		const spans = !!this.sanitiser ? this.sanitiser(traceInfo.completedSpans) : traceInfo.completedSpans
+	private exportSpan(spans: ReadableSpan[]) {
+		if (spans.length < 1) return
+
+		spans = !!this.sanitiser ? this.sanitiser(spans) : spans
 		this.exporter.export(spans, (result) => {
-			const traceId = traceInfo.traceId
+			console.log(`exporting ${spans.length} spans done: ${result.code}`)
+			const traceId = spans[0].spanContext().traceId
 			const listener = this.listeners.get(traceId)
 			if (listener) {
 				listener(result)

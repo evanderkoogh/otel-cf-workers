@@ -2,6 +2,7 @@ import { SpanExporter } from '@opentelemetry/sdk-trace-base'
 import { SanitiserFn } from './spanprocessor'
 import { OTLPExporterConfig } from './exporter'
 import { FetcherConfig } from './instrumentation/fetch'
+import { HeadSampleFn, TailSampleFn } from './sampling'
 
 export interface BindingsConfig {
 	kv: boolean
@@ -20,10 +21,16 @@ export interface ServiceConfig {
 	version?: string
 }
 
+export interface SamplingConfig {
+	headSampleFn: HeadSampleFn
+	tailSampleFn: TailSampleFn
+}
+
 export interface TraceConfig {
 	bindings?: BindingsConfig
 	exporter: ExporterConfig
 	globals?: GlobalsConfig
+	sampling?: SamplingConfig
 	sanitiser?: SanitiserFn
 	service: ServiceConfig
 }
