@@ -44,7 +44,6 @@ export class BatchTraceSpanProcessor implements SpanProcessor {
 
 	onStart(span: Span) {
 		const { traceId, spanId } = span.spanContext()
-		console.log(`Starting span with context: ${JSON.stringify(span.spanContext())}`)
 		const traceInfo = this.traceInfos.get(traceId) || this.createNewTraceInfo(traceId, span)
 		traceInfo.inProgressSpanIds.add(spanId)
 		this.traceInfos.set(traceId, traceInfo)
@@ -66,7 +65,6 @@ export class BatchTraceSpanProcessor implements SpanProcessor {
 
 	private finishTrace(traceInfo: TraceInfo) {
 		const { traceId, localRootSpan, completedSpans: spans } = traceInfo
-		console.log('spanContext in finishTrace: ', localRootSpan.spanContext())
 		const localTrace = { traceId, localRootSpan, spans }
 		const shouldExport = this.tailSampler(localTrace)
 		if (shouldExport) {
