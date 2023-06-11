@@ -6,7 +6,7 @@ export function isWrapped<T>(item: T): item is Wrapped<T> {
 	return !!(item as Wrapped<T>)[unwrapSymbol]
 }
 
-export function wrap<T extends object>(item: T, handler: ProxyHandler<T>): T {
+export function wrap<T extends object>(item: T, handler: ProxyHandler<T>, passthrough: boolean = false): T {
 	if (isWrapped(item)) {
 		return item
 	}
@@ -17,6 +17,8 @@ export function wrap<T extends object>(item: T, handler: ProxyHandler<T>): T {
 		} else {
 			if (handler.get) {
 				return handler.get(target, prop, receiver)
+			} else if (passthrough) {
+				passthroughGet(target, prop)
 			}
 		}
 	}

@@ -189,7 +189,7 @@ export function instrumentFetcher(
 			return promise
 		},
 	}
-	return wrap(fetchFn, handler)
+	return wrap(fetchFn, handler, true)
 }
 
 export function instrumentGlobalFetch(): void {
