@@ -23,7 +23,7 @@ const handleRest = async (request: Request, env: Env, ctx: ExecutionContext): Pr
 
 	const greeting = "G'day World"
 	trace.getActiveSpan()?.setAttribute('greeting', greeting)
-	ctx.waitUntil(waitUntilTrace(() => fetch('https://workers.dev')))
+	ctx.waitUntil(fetch('https://workers.dev'))
 	return new Response(`${greeting}!`)
 }
 
