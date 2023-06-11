@@ -1,11 +1,12 @@
 import { trace } from '@opentelemetry/api'
-import { WorkerTraceConfig, getActiveConfig } from '../config'
+import { getActiveConfig } from '../config'
 import { wrap } from './wrap'
 import { sanitiseURL } from './fetch'
+import { ResolvedTraceConfig } from '../types'
 
 type CacheFns = Cache[keyof Cache]
 
-function shouldTrace(config?: WorkerTraceConfig): boolean {
+function shouldTrace(config?: ResolvedTraceConfig): boolean {
 	return !!config?.globals.caches
 }
 
