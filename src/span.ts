@@ -6,7 +6,7 @@ import {
 	Exception,
 	Attributes,
 	HrTime,
-	Span as ApiSpan,
+	Span,
 	SpanStatus,
 	SpanStatusCode,
 	AttributeValue,
@@ -75,7 +75,7 @@ function getHrTime(input?: TimeInput): HrTime {
 	}
 }
 
-export class Span implements ApiSpan, ReadableSpan {
+export class SpanImpl implements Span, ReadableSpan {
 	name: string
 	private readonly _spanContext: SpanContext
 	private readonly onEnd: OnSpanEnd
