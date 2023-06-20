@@ -28,9 +28,9 @@ dependencies:
   deepmerge:
     specifier: ^4.3.1
     version: 4.3.1
-  zod:
-    specifier: ^3.21.4
-    version: 3.21.4
+  ts-checked-fsm:
+    specifier: ^1.1.0
+    version: 1.1.0
 
 devDependencies:
   '@cloudflare/workers-types':
@@ -245,12 +245,12 @@ packages:
       glob: 9.3.2
     dev: true
 
+  /ts-checked-fsm@1.1.0:
+    resolution: {integrity: sha512-kYbLNv4/orTm6TA0mdQmDy3k9teMmhyvzwtgYo3a0/TFjwDXi/g/3LkJlQd99fqqH5NxhWYLanNrwovb/r9PWA==}
+    dev: false
+
   /typescript@5.0.3:
     resolution: {integrity: sha512-xv8mOEDnigb/tN9PSMTwSEqAnUvkoXMQlicOb0IUVDBSQCgBSaAAROUZYy2IcUy5qU6XajK5jjjO7TMWqBTKZA==}
     engines: {node: '>=12.20'}
     hasBin: true
     dev: true
-
-  /zod@3.21.4:
-    resolution: {integrity: sha512-m46AKbrzKVzOzs/DZgVnG5H55N1sv1M8qZU3A8RIKbs3mrACDNeIOeilDymVb2HdmP8uwshOCF4uJ8uM9rCqJw==}
-    dev: false

@@ -1,9 +1,6 @@
-import { TraceFlags, trace } from '@opentelemetry/api'
+import { trace } from '@opentelemetry/api'
 import { WorkerTracer } from '../tracer'
 import { wrap } from './wrap'
-import { BatchTraceSpanProcessor } from '../spanprocessor'
-import { HeadSampleFn, TraceFlagsAndState } from '../sampling'
-import { Trigger } from '../types'
 
 type ContextAndTracker = { ctx: ExecutionContext; tracker: PromiseTracker }
 type WaitUntilFn = ExecutionContext['waitUntil']
@@ -54,22 +51,8 @@ export async function exportSpans(traceId: string, tracker?: PromiseTracker) {
 		if (tracker) {
 			await tracker.wait()
 		}
-		const spanProcessor = tracer.spanProcessor
-		if (spanProcessor instanceof BatchTraceSpanProcessor && traceId) {
-			await spanProcessor.flushTrace(traceId)
-		} else {
-			await spanProcessor.forceFlush()
-		}
+		await tracer.spanProcessor.forceFlush()
 	} else {
 		console.error('The global tracer is not of type WorkerTracer and can not export spans')
 	}
-}
-
-function isFlagAndState(flags: TraceFlags | TraceFlagsAndState): flags is TraceFlagsAndState {
-	return !!(flags as TraceFlagsAndState).traceFlags
-}
-
-export function getFlagsAndState(sampler: HeadSampleFn, trigger: Trigger): TraceFlagsAndState {
-	const flagOrFlagAndState = sampler(trigger)
-	return isFlagAndState(flagOrFlagAndState) ? flagOrFlagAndState : { traceFlags: flagOrFlagAndState }
 }
