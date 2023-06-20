@@ -4,7 +4,7 @@ import { propagation } from '@opentelemetry/api'
 import { W3CTraceContextPropagator } from '@opentelemetry/core'
 import { Resource } from '@opentelemetry/resources'
 import { SemanticResourceAttributes } from '@opentelemetry/semantic-conventions'
-import { SpanExporter } from '@opentelemetry/sdk-trace-base'
+import { ReadableSpan, SpanExporter } from '@opentelemetry/sdk-trace-base'
 
 import { OTLPExporter } from './exporter'
 import { WorkerTracerProvider } from './provider'
@@ -70,7 +70,7 @@ function init(config: ResolvedTraceConfig): void {
 		const resource = createResource(config)
 		const exporter = isSpanExporter(config.exporter) ? config.exporter : new OTLPExporter(config.exporter)
 		const tailSampler = multiTailSampler([isHeadSampled, isRootErrorSpan])
-		const spanProcessor = new BatchTraceSpanProcessor(exporter, tailSampler, config.sanitiser)
+		const spanProcessor = new BatchTraceSpanProcessor(exporter, tailSampler, config.postProcessorFn)
 		const provider = new WorkerTracerProvider(spanProcessor, resource)
 		provider.register()
 		initialised = true
@@ -87,6 +87,7 @@ const defaults = {
 			includeTraceContext: true,
 		},
 	},
+	postProcessorFn: (spans: ReadableSpan[]) => spans,
 }
 function parseConfig(supplied: TraceConfig): ResolvedTraceConfig {
 	return merge(defaults, supplied)
