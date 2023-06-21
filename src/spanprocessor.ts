@@ -139,7 +139,7 @@ export class BatchTraceSpanProcessor implements SpanProcessor {
 			this.inprogressExports.set(traceId, promise)
 			promise.then((result) => {
 				if (result.code === ExportResultCode.FAILED) {
-					console.log('Error reporting spans to exporter:', result.error)
+					console.log('Error sending spans to exporter:', result.error)
 				}
 				this.action(traceId, { actionName: 'exportDone' })
 				this.inprogressExports.delete(traceId)
