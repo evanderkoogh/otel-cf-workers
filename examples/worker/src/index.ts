@@ -1,6 +1,5 @@
 import { instrument, instrumentDO, isRequest, ResolveConfigFn } from '../../../src/index'
-import { Env, OtelDO } from './handler'
-import handler from './handler'
+import handler, { Env, OtelDO } from './handler'
 
 const config: ResolveConfigFn = (env: Env, trigger) => {
 	const pathname = isRequest(trigger) ? new URL(trigger.url).pathname : undefined
