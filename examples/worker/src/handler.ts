@@ -1,5 +1,4 @@
 import { trace } from '@opentelemetry/api'
-import { waitUntilTrace } from '../../../src'
 
 export interface Env {
 	OTEL_TEST: KVNamespace
