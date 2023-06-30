@@ -1,5 +1,4 @@
 import { trace } from '@opentelemetry/api'
-import { getActiveConfig } from '../config'
 import { wrap } from './wrap'
 import { sanitiseURL } from './fetch'
 
