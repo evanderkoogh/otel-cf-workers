@@ -5,14 +5,9 @@ import { TailSampleFn } from './sampling'
 
 export type PostProcessorFn = (spans: ReadableSpan[]) => ReadableSpan[]
 
-export interface BindingsConfig {
-	kv: boolean
-}
-
 export type ExporterConfig = OTLPExporterConfig | SpanExporter
 
 export interface GlobalsConfig {
-	caches?: boolean
 	fetch?: FetcherConfig
 }
 
@@ -27,7 +22,6 @@ export interface SamplingConfig {
 }
 
 export interface TraceConfig {
-	bindings?: BindingsConfig
 	exporter: ExporterConfig
 	globals?: GlobalsConfig
 	sampling?: SamplingConfig
@@ -36,7 +30,6 @@ export interface TraceConfig {
 }
 
 export interface ResolvedTraceConfig extends TraceConfig {
-	bindings: BindingsConfig
 	globals: Required<GlobalsConfig>
 	postProcessorFn: PostProcessorFn
 }
