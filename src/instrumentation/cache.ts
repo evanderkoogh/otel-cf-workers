@@ -2,24 +2,14 @@ import { trace } from '@opentelemetry/api'
 import { getActiveConfig } from '../config'
 import { wrap } from './wrap'
 import { sanitiseURL } from './fetch'
-import { ResolvedTraceConfig } from '../types'
 
 type CacheFns = Cache[keyof Cache]
-
-function shouldTrace(config?: ResolvedTraceConfig): boolean {
-	return !!config?.globals.caches
-}
 
 const tracer = trace.getTracer('cache instrumentation')
 
 function instrumentFunction<T extends CacheFns>(fn: T, cacheName: string, op: string): T {
 	const handler: ProxyHandler<typeof fn> = {
 		async apply(target, thisArg, argArray) {
-			const config = getActiveConfig()
-			if (!shouldTrace(config)) {
-				return await Reflect.apply(target, thisArg, argArray)
-			}
-
 			return tracer.startActiveSpan(`cache:${cacheName}:${op}`, async (span) => {
 				span.setAttribute('cache.name', cacheName)
 				if (argArray[0].url) {

@@ -78,11 +78,7 @@ function init(config: ResolvedTraceConfig): void {
 }
 
 const defaults = {
-	bindings: {
-		kv: true,
-	},
 	globals: {
-		caches: true,
 		fetch: {
 			includeTraceContext: true,
 		},
