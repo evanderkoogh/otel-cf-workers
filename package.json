@@ -10,7 +10,7 @@
 		"prepublishOnly": "pnpm build",
 		"watch": "tsc --watch"
 	},
-	"homepage": "https://github.com/owner/project#readme",
+	"homepage": "https://github.com/evanderkoogh/otel-cf-workers#readme",
 	"dependencies": {
 		"@opentelemetry/api": "^1.4.1",
 		"@opentelemetry/core": "^1.11.0",
