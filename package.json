@@ -10,6 +10,7 @@
 		"prepublishOnly": "pnpm build",
 		"watch": "tsc --watch"
 	},
+	"homepage": "https://github.com/owner/project#readme",
 	"dependencies": {
 		"@opentelemetry/api": "^1.4.1",
 		"@opentelemetry/core": "^1.11.0",
@@ -29,5 +30,6 @@
 	},
 	"publishConfig": {
 		"access": "public"
-	}
+	},
+	"license": "BSD-3-Clause"
 }
