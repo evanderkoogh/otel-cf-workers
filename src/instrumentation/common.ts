@@ -17,7 +17,7 @@ export class PromiseTracker {
 	}
 
 	async wait() {
-		await Promise.all(this._outstandingPromises)
+		await allSettledMutable(this._outstandingPromises)
 	}
 }
 
@@ -55,4 +55,15 @@ export async function exportSpans(traceId: string, tracker?: PromiseTracker) {
 	} else {
 		console.error('The global tracer is not of type WorkerTracer and can not export spans')
 	}
+}
+
+/** Like `Promise.allSettled`, but handles modifications to the promises array */
+export async function allSettledMutable(promises: Promise<unknown>[]): Promise<PromiseSettledResult<unknown>[]> {
+	let values: PromiseSettledResult<unknown>[]
+	// when the length of the array changes, there has been a nested call to waitUntil
+	// and we should await the promises again
+	do {
+		values = await Promise.allSettled(promises)
+	} while (values.length !== promises.length)
+	return values
 }
