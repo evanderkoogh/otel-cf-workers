@@ -4,6 +4,7 @@ import { Action, State, stateMachine } from 'ts-checked-fsm'
 import { TailSampleFn } from './sampling'
 import { ExportResult, ExportResultCode } from '@opentelemetry/core'
 import { PostProcessorFn } from './types'
+import { getActiveConfig } from './config'
 
 type CompletedTrace = {
 	traceId: string
@@ -111,15 +112,8 @@ type AnyTraceState = Parameters<typeof nextState>[0]
 type AnyTraceAction = Parameters<typeof nextState>[1]
 
 export class BatchTraceSpanProcessor implements SpanProcessor {
-	private exportArgs: StartExportArguments
-
 	private traces: Map<string, AnyTraceState> = new Map()
 	private inprogressExports: Map<string, Promise<ExportResult>> = new Map()
-
-	constructor(exporter: SpanExporter, tailSampler: TailSampleFn, postProcessor: PostProcessorFn) {
-		this.exportArgs = { exporter, tailSampler, postProcessor }
-		console.log(this.exportArgs)
-	}
 
 	private action(traceId: string, action: AnyTraceAction): AnyTraceState {
 		const state = this.traces.get(traceId) || { stateName: 'not_started' }
@@ -133,7 +127,9 @@ export class BatchTraceSpanProcessor implements SpanProcessor {
 	}
 
 	private export(traceId: string) {
-		const newState = this.action(traceId, { actionName: 'startExport', args: this.exportArgs })
+		const { exporter, sampling, postProcessorFn } = getActiveConfig()
+		const exportArgs = { exporter, tailSampler: sampling.tailSampler, postProcessor: postProcessorFn }
+		const newState = this.action(traceId, { actionName: 'startExport', args: exportArgs })
 		if (newState.stateName === 'exporting') {
 			const promise = newState.promise
 			this.inprogressExports.set(traceId, promise)

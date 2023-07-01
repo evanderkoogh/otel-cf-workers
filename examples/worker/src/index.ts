@@ -1,8 +1,7 @@
-import { instrument, instrumentDO, isRequest, ResolveConfigFn } from '../../../src/index'
+import { instrument, instrumentDO, ResolveConfigFn } from '../../../src/index'
 import handler, { Env, OtelDO } from './handler'
 
 const config: ResolveConfigFn = (env: Env, trigger) => {
-	const pathname = isRequest(trigger) ? new URL(trigger.url).pathname : undefined
 	return {
 		exporter: {
 			url: 'https://api.honeycomb.io/v1/traces',
@@ -11,9 +10,6 @@ const config: ResolveConfigFn = (env: Env, trigger) => {
 		service: {
 			name: 'greetings',
 			version: '0.1',
-		},
-		globals: {
-			caches: !(pathname === '/nocaches'),
 		},
 	}
 }

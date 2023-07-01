@@ -1,10 +1,8 @@
-import merge from 'deepmerge'
-
 import { propagation } from '@opentelemetry/api'
 import { W3CTraceContextPropagator } from '@opentelemetry/core'
 import { Resource } from '@opentelemetry/resources'
 import { SemanticResourceAttributes } from '@opentelemetry/semantic-conventions'
-import { ReadableSpan, SpanExporter } from '@opentelemetry/sdk-trace-base'
+import { AlwaysOnSampler, ReadableSpan, SpanExporter } from '@opentelemetry/sdk-trace-base'
 
 import { OTLPExporter } from './exporter'
 import { WorkerTracerProvider } from './provider'
@@ -68,25 +66,28 @@ function init(config: ResolvedTraceConfig): void {
 	if (!initialised) {
 		propagation.setGlobalPropagator(new W3CTraceContextPropagator())
 		const resource = createResource(config)
-		const exporter = isSpanExporter(config.exporter) ? config.exporter : new OTLPExporter(config.exporter)
-		const tailSampler = multiTailSampler([isHeadSampled, isRootErrorSpan])
-		const spanProcessor = new BatchTraceSpanProcessor(exporter, tailSampler, config.postProcessorFn)
+		const spanProcessor = new BatchTraceSpanProcessor()
 		const provider = new WorkerTracerProvider(spanProcessor, resource)
 		provider.register()
 		initialised = true
 	}
 }
 
-const defaults = {
-	globals: {
-		fetch: {
-			includeTraceContext: true,
-		},
-	},
-	postProcessorFn: (spans: ReadableSpan[]) => spans,
-}
 function parseConfig(supplied: TraceConfig): ResolvedTraceConfig {
-	return merge(defaults, supplied)
+	return {
+		exporter: isSpanExporter(supplied.exporter) ? supplied.exporter : new OTLPExporter(supplied.exporter),
+		globals: {
+			fetch: {
+				includeTraceContext: supplied.globals?.fetch?.includeTraceContext || true,
+			},
+		},
+		postProcessorFn: supplied.postProcessorFn || ((spans: ReadableSpan[]) => spans),
+		sampling: {
+			headSampler: supplied.sampling?.headSampler || new AlwaysOnSampler(),
+			tailSampler: supplied.sampling?.tailSampler || multiTailSampler([isHeadSampled, isRootErrorSpan]),
+		},
+		service: supplied.service,
+	}
 }
 
 function createInitialiser(config: ConfigurationOption): Initialiser {
