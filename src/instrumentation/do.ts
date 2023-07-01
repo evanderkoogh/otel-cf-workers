@@ -81,25 +81,20 @@ export function executeDOFetch(fetchFn: FetchFn, request: Request, id: DurableOb
 	const spanContext = getParentContextFromHeaders(request.headers)
 
 	const tracer = trace.getTracer('DO fetchHandler')
+	const attributes = {
+		[SemanticAttributes.FAAS_TRIGGER]: 'http',
+		[SemanticAttributes.FAAS_COLDSTART]: cold_start,
+	}
+	cold_start = false
+	Object.assign(attributes, gatherRequestAttributes(request))
+	Object.assign(attributes, gatherIncomingCfAttributes(request))
 	const options: SpanOptions = {
+		attributes,
 		kind: SpanKind.SERVER,
-		attributes: {
-			'do.id': id.toString(),
-			'do.name': id.name,
-		},
 	}
 
 	const name = id.name || ''
 	const promise = tracer.startActiveSpan(`do.fetchHandler:${name}`, options, spanContext, async (span) => {
-		const traceId = span.spanContext().traceId
-		api_context.active().setValue(traceIdSymbol, traceId)
-		span.setAttribute(SemanticAttributes.FAAS_TRIGGER, 'http')
-		span.setAttribute(SemanticAttributes.FAAS_COLDSTART, cold_start)
-		cold_start = false
-
-		span.setAttributes(gatherRequestAttributes(request))
-		span.setAttributes(gatherIncomingCfAttributes(request))
-
 		try {
 			const response: Response = await fetchFn(request)
 			if (response.ok) {
@@ -124,8 +119,6 @@ export function executeDOAlarm(alarmFn: NonNullable<AlarmFn>, id: DurableObjectI
 
 	const name = id.name || ''
 	const promise = tracer.startActiveSpan(`do.alarmHandler:${name}`, async (span) => {
-		const traceId = span.spanContext().traceId
-		api_context.active().setValue(traceIdSymbol, traceId)
 		span.setAttribute(SemanticAttributes.FAAS_COLDSTART, cold_start)
 		cold_start = false
 		span.setAttribute('do.id', id.toString())
