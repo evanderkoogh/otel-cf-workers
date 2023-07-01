@@ -133,11 +133,15 @@ export function executeQueueHandler(queueFn: QueueHandler, [batch, env, ctx]: Qu
 	const count = new MessageStatusCount(batch.messages.length)
 	batch = proxyMessageBatch(batch, count)
 	const tracer = trace.getTracer('queueHandler')
-	const options: SpanOptions = { kind: SpanKind.CONSUMER }
+	const options: SpanOptions = {
+		attributes: {
+			'queue.name': batch.queue,
+		},
+		kind: SpanKind.CONSUMER,
+	}
 	const promise = tracer.startActiveSpan(`queueHandler:${batch.queue}`, options, async (span) => {
 		const traceId = span.spanContext().traceId
 		api_context.active().setValue(traceIdSymbol, traceId)
-		span.setAttribute('queue.name', batch.queue)
 		try {
 			const result = queueFn(batch, env, ctx)
 			await span.setAttribute('queue.implicitly_acked', count.total - count.succeeded - count.failed)

@@ -102,18 +102,19 @@ export function executeFetchHandler(fetchFn: FetchHandler, [request, env, ctx]: 
 	const spanContext = getParentContextFromHeaders(request.headers)
 
 	const tracer = trace.getTracer('fetchHandler')
-	const options: SpanOptions = { kind: SpanKind.SERVER }
+	const attributes = {
+		[SemanticAttributes.FAAS_TRIGGER]: 'http',
+		[SemanticAttributes.FAAS_COLDSTART]: cold_start,
+	}
+	cold_start = false
+	Object.assign(attributes, gatherRequestAttributes(request))
+	Object.assign(attributes, gatherIncomingCfAttributes(request))
+	const options: SpanOptions = {
+		attributes,
+		kind: SpanKind.SERVER,
+	}
 
 	const promise = tracer.startActiveSpan('fetchHandler', options, spanContext, async (span) => {
-		const traceId = span.spanContext().traceId
-		api_context.active().setValue(traceIdSymbol, traceId)
-		span.setAttribute(SemanticAttributes.FAAS_TRIGGER, 'http')
-		span.setAttribute(SemanticAttributes.FAAS_COLDSTART, cold_start)
-		cold_start = false
-
-		span.setAttributes(gatherRequestAttributes(request))
-		span.setAttributes(gatherIncomingCfAttributes(request))
-
 		try {
 			const response: Response = await fetchFn(request, env, ctx)
 			if (response.status < 500) {

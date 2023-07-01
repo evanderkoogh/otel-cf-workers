@@ -1,4 +1,4 @@
-import { trace } from '@opentelemetry/api'
+import { SpanKind, SpanOptions, trace } from '@opentelemetry/api'
 import { wrap } from './wrap'
 import { sanitiseURL } from './fetch'
 
@@ -9,12 +9,17 @@ const tracer = trace.getTracer('cache instrumentation')
 function instrumentFunction<T extends CacheFns>(fn: T, cacheName: string, op: string): T {
 	const handler: ProxyHandler<typeof fn> = {
 		async apply(target, thisArg, argArray) {
-			return tracer.startActiveSpan(`cache:${cacheName}:${op}`, async (span) => {
-				span.setAttribute('cache.name', cacheName)
-				if (argArray[0].url) {
-					span.setAttribute('http.url', sanitiseURL(argArray[0].url))
-				}
+			const attributes = {
+				'cache.name': cacheName,
+				'http.url': argArray[0].url ? sanitiseURL(argArray[0].url) : undefined,
+				'cache.operation': op,
+			}
+			const options: SpanOptions = { kind: SpanKind.CLIENT, attributes }
+			return tracer.startActiveSpan(`cache:${cacheName}:${op}`, options, async (span) => {
 				const result = await Reflect.apply(target, thisArg, argArray)
+				if (op === 'match') {
+					span.setAttribute('cache.hit', !result)
+				}
 				span.end()
 				return result
 			})
