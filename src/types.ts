@@ -1,4 +1,4 @@
-import { ReadableSpan, SpanExporter } from '@opentelemetry/sdk-trace-base'
+import { ReadableSpan, Sampler, SpanExporter } from '@opentelemetry/sdk-trace-base'
 import { OTLPExporterConfig } from './exporter'
 import { FetcherConfig } from './instrumentation/fetch'
 import { TailSampleFn } from './sampling'
@@ -18,11 +18,12 @@ export interface ServiceConfig {
 }
 
 export interface SamplingConfig {
-	tailSampleFn: TailSampleFn
+	headSampler?: Sampler
+	tailSampler?: TailSampleFn
 }
 
-export interface TraceConfig {
-	exporter: ExporterConfig
+export interface TraceConfig<EC extends ExporterConfig = ExporterConfig> {
+	exporter: EC
 	globals?: GlobalsConfig
 	sampling?: SamplingConfig
 	postProcessorFn?: PostProcessorFn
@@ -30,8 +31,10 @@ export interface TraceConfig {
 }
 
 export interface ResolvedTraceConfig extends TraceConfig {
+	exporter: SpanExporter
 	globals: Required<GlobalsConfig>
 	postProcessorFn: PostProcessorFn
+	sampling: Required<SamplingConfig>
 }
 
 export type Trigger = Request | MessageBatch | 'do-alarm'

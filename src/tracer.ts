@@ -10,9 +10,10 @@ import {
 } from '@opentelemetry/api'
 import { sanitizeAttributes } from '@opentelemetry/core'
 import { Resource } from '@opentelemetry/resources'
-import { SpanProcessor, RandomIdGenerator, ReadableSpan } from '@opentelemetry/sdk-trace-base'
+import { SpanProcessor, RandomIdGenerator, ReadableSpan, SamplingDecision } from '@opentelemetry/sdk-trace-base'
 
 import { SpanImpl } from './span'
+import { getActiveConfig } from './config'
 
 export class WorkerTracer implements Tracer {
 	private readonly _spanProcessor: SpanProcessor
@@ -39,14 +40,20 @@ export class WorkerTracer implements Tracer {
 		const parentSpanContext = parentSpan?.spanContext()
 		const hasParentContext = parentSpanContext && trace.isSpanContextValid(parentSpanContext)
 
-		const spanId = this.idGenerator.generateSpanId()
 		const traceId = hasParentContext ? parentSpanContext.traceId : this.idGenerator.generateTraceId()
-		const parentSpanId = hasParentContext ? parentSpanContext.spanId : undefined
-		const traceState = hasParentContext ? parentSpanContext.traceState : undefined
-		const traceFlags = hasParentContext ? parentSpanContext.traceFlags : TraceFlags.SAMPLED
-		const spanContext = { traceId, spanId, traceFlags, traceState }
 		const spanKind = options.kind || SpanKind.INTERNAL
-		const attributes = sanitizeAttributes(options.attributes)
+		const sanitisedAttrs = sanitizeAttributes(options.attributes)
+
+		const sampler = getActiveConfig().sampling.headSampler
+		const samplingDecision = sampler.shouldSample(context, traceId, name, spanKind, sanitisedAttrs, [])
+		const { decision, traceState, attributes: attrs } = samplingDecision
+		const attributes = Object.assign({}, sanitisedAttrs, attrs)
+
+		const spanId = this.idGenerator.generateSpanId()
+		const parentSpanId = hasParentContext ? parentSpanContext.spanId : undefined
+		const traceFlags = decision === SamplingDecision.RECORD_AND_SAMPLED ? TraceFlags.SAMPLED : TraceFlags.NONE
+		const spanContext = { traceId, spanId, traceFlags, traceState }
+
 		const span = new SpanImpl({
 			attributes,
 			name,
