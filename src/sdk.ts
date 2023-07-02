@@ -2,13 +2,20 @@ import { propagation } from '@opentelemetry/api'
 import { W3CTraceContextPropagator } from '@opentelemetry/core'
 import { Resource } from '@opentelemetry/resources'
 import { SemanticResourceAttributes } from '@opentelemetry/semantic-conventions'
-import { AlwaysOnSampler, ReadableSpan, SpanExporter } from '@opentelemetry/sdk-trace-base'
+import {
+	AlwaysOnSampler,
+	ParentBasedSampler,
+	ReadableSpan,
+	Sampler,
+	SpanExporter,
+	TraceIdRatioBasedSampler,
+} from '@opentelemetry/sdk-trace-base'
 
 import { OTLPExporter } from './exporter'
 import { WorkerTracerProvider } from './provider'
 import { isHeadSampled, isRootErrorSpan, multiTailSampler } from './sampling'
 import { BatchTraceSpanProcessor } from './spanprocessor'
-import { Trigger, TraceConfig, ResolvedTraceConfig, ExporterConfig } from './types'
+import { Trigger, TraceConfig, ResolvedTraceConfig, ExporterConfig, ParentRatioSamplingConfig } from './types'
 import { createFetchHandler, instrumentGlobalFetch } from './instrumentation/fetch'
 import { instrumentGlobalCache } from './instrumentation/cache'
 import { createQueueHandler } from './instrumentation/queue'
@@ -73,7 +80,30 @@ function init(config: ResolvedTraceConfig): void {
 	}
 }
 
+function isSampler(sampler: Sampler | ParentRatioSamplingConfig): sampler is Sampler {
+	return !!(sampler as Sampler).shouldSample
+}
+
+function createSampler(conf: ParentRatioSamplingConfig): Sampler {
+	const ratioSampler = new TraceIdRatioBasedSampler(conf.ratio)
+	if (typeof conf.acceptRemote === 'boolean' && !conf.acceptRemote) {
+		return new ParentBasedSampler({
+			root: ratioSampler,
+			remoteParentSampled: ratioSampler,
+			remoteParentNotSampled: ratioSampler,
+		})
+	} else {
+		return new ParentBasedSampler({ root: ratioSampler })
+	}
+}
+
 function parseConfig(supplied: TraceConfig): ResolvedTraceConfig {
+	const headSampleConf = supplied.sampling?.headSampler
+	const headSampler = headSampleConf
+		? isSampler(headSampleConf)
+			? headSampleConf
+			: createSampler(headSampleConf)
+		: new AlwaysOnSampler()
 	return {
 		exporter: isSpanExporter(supplied.exporter) ? supplied.exporter : new OTLPExporter(supplied.exporter),
 		globals: {
@@ -83,7 +113,7 @@ function parseConfig(supplied: TraceConfig): ResolvedTraceConfig {
 		},
 		postProcessorFn: supplied.postProcessorFn || ((spans: ReadableSpan[]) => spans),
 		sampling: {
-			headSampler: supplied.sampling?.headSampler || new AlwaysOnSampler(),
+			headSampler,
 			tailSampler: supplied.sampling?.tailSampler || multiTailSampler([isHeadSampled, isRootErrorSpan]),
 		},
 		service: supplied.service,
