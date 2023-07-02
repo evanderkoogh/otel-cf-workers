@@ -17,8 +17,13 @@ export interface ServiceConfig {
 	version?: string
 }
 
+export interface ParentRatioSamplingConfig {
+	acceptRemote?: boolean
+	ratio: number
+}
+
 export interface SamplingConfig {
-	headSampler?: Sampler
+	headSampler?: Sampler | ParentRatioSamplingConfig
 	tailSampler?: TailSampleFn
 }
 
