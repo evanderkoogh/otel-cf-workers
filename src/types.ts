@@ -22,8 +22,9 @@ export interface ParentRatioSamplingConfig {
 	ratio: number
 }
 
-export interface SamplingConfig {
-	headSampler?: Sampler | ParentRatioSamplingConfig
+type HeadSamplerConf = Sampler | ParentRatioSamplingConfig
+export interface SamplingConfig<HS extends HeadSamplerConf = HeadSamplerConf> {
+	headSampler?: HS
 	tailSampler?: TailSampleFn
 }
 
@@ -39,7 +40,7 @@ export interface ResolvedTraceConfig extends TraceConfig {
 	exporter: SpanExporter
 	globals: Required<GlobalsConfig>
 	postProcessorFn: PostProcessorFn
-	sampling: Required<SamplingConfig>
+	sampling: Required<SamplingConfig<Sampler>>
 }
 
 export type Trigger = Request | MessageBatch | 'do-alarm'
