@@ -3,16 +3,16 @@ import { instrumentDOBinding } from './do'
 import { instrumentKV } from './kv'
 import { instrumentQueueSender } from './queue'
 
-const isKVNamespace = (item: unknown | undefined): item is KVNamespace => {
-	return typeof item !== 'undefined' && !!(item as KVNamespace).getWithMetadata
+const isKVNamespace = (item?: unknown): item is KVNamespace => {
+	return !!(item as KVNamespace)?.getWithMetadata
 }
 
-const isQueue = (item: unknown | undefined): item is Queue => {
-	return typeof item !== 'undefined' && !!(item as Queue).sendBatch
+const isQueue = (item?: unknown): item is Queue => {
+	return !!(item as Queue)?.sendBatch
 }
 
-const isDurableObject = (item: unknown | undefined): item is DurableObjectNamespace => {
-	return typeof item !== 'undefined' && !!(item as DurableObjectNamespace).idFromName
+const isDurableObject = (item?: unknown): item is DurableObjectNamespace => {
+	return !!(item as DurableObjectNamespace)?.idFromName
 }
 
 const instrumentEnv = (env: Record<string, unknown>): Record<string, unknown> => {
