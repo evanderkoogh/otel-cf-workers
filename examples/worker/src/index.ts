@@ -1,7 +1,7 @@
 import { instrument, instrumentDO, ResolveConfigFn } from '../../../src/index'
 import handler, { Env, OtelDO } from './handler'
 
-const config: ResolveConfigFn = (env: Env, trigger) => {
+const config: ResolveConfigFn = (env: Env, _trigger) => {
 	return {
 		exporter: {
 			url: 'https://api.honeycomb.io/v1/traces',
@@ -14,7 +14,7 @@ const config: ResolveConfigFn = (env: Env, trigger) => {
 	}
 }
 
-const doConfig: ResolveConfigFn = (env: Env, trigger) => {
+const doConfig: ResolveConfigFn = (env: Env, _trigger) => {
 	return {
 		exporter: {
 			url: 'https://api.honeycomb.io/v1/traces',
