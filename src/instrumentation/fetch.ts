@@ -194,5 +194,5 @@ export function instrumentFetcher(
 }
 
 export function instrumentGlobalFetch(): void {
-	globalThis.fetch = instrumentFetcher(globalThis.fetch, (config) => config.globals.fetch)
+	globalThis.fetch = instrumentFetcher(globalThis.fetch, (config) => config.fetch)
 }
