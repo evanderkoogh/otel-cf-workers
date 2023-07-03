@@ -111,7 +111,7 @@ function parseConfig(supplied: TraceConfig): ResolvedTraceConfig {
 				includeTraceContext: supplied.globals?.fetch?.includeTraceContext || true,
 			},
 		},
-		postProcessorFn: supplied.postProcessorFn || ((spans: ReadableSpan[]) => spans),
+		postProcessor: supplied.postProcessor || ((spans: ReadableSpan[]) => spans),
 		sampling: {
 			headSampler,
 			tailSampler: supplied.sampling?.tailSampler || multiTailSampler([isHeadSampled, isRootErrorSpan]),

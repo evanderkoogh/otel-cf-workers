@@ -31,15 +31,15 @@ export interface SamplingConfig<HS extends HeadSamplerConf = HeadSamplerConf> {
 export interface TraceConfig<EC extends ExporterConfig = ExporterConfig> {
 	exporter: EC
 	globals?: GlobalsConfig
+	postProcessor?: PostProcessorFn
 	sampling?: SamplingConfig
-	postProcessorFn?: PostProcessorFn
 	service: ServiceConfig
 }
 
 export interface ResolvedTraceConfig extends TraceConfig {
 	exporter: SpanExporter
 	globals: Required<GlobalsConfig>
-	postProcessorFn: PostProcessorFn
+	postProcessor: PostProcessorFn
 	sampling: Required<SamplingConfig<Sampler>>
 }
 
