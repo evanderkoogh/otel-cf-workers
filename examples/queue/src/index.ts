@@ -1,10 +1,11 @@
-import { instrument, PartialTraceConfig } from '../../../src/index'
+import { instrument, ResolveConfigFn } from '../../../src/index'
 
 interface QueueData {
 	pathname: string
 }
 export interface Env {
 	QUEUE: Queue<QueueData>
+	API_KEY: string
 }
 
 const handler: ExportedHandler<Env, QueueData> = {
@@ -22,12 +23,17 @@ const handler: ExportedHandler<Env, QueueData> = {
 	},
 }
 
-const config: PartialTraceConfig = {
-	exporter: { url: 'https://api.honeycomb.io/v1/traces' },
-	service: {
-		name: 'queueGreetings',
-		version: '0.1',
-	},
+const config: ResolveConfigFn = (env: Env, trigger) => {
+	return {
+		exporter: {
+			url: 'https://api.honeycomb.io/v1/traces',
+			headers: { 'x-honeycomb-team': env.API_KEY },
+		},
+		service: {
+			name: 'greetings',
+			version: '0.1',
+		},
+	}
 }
 
 export default instrument(handler, config)
