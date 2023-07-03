@@ -7,10 +7,6 @@ export type PostProcessorFn = (spans: ReadableSpan[]) => ReadableSpan[]
 
 export type ExporterConfig = OTLPExporterConfig | SpanExporter
 
-export interface GlobalsConfig {
-	fetch?: FetcherConfig
-}
-
 export interface ServiceConfig {
 	name: string
 	namespace?: string
@@ -30,7 +26,7 @@ export interface SamplingConfig<HS extends HeadSamplerConf = HeadSamplerConf> {
 
 export interface TraceConfig<EC extends ExporterConfig = ExporterConfig> {
 	exporter: EC
-	globals?: GlobalsConfig
+	fetch?: FetcherConfig
 	postProcessor?: PostProcessorFn
 	sampling?: SamplingConfig
 	service: ServiceConfig
@@ -38,7 +34,7 @@ export interface TraceConfig<EC extends ExporterConfig = ExporterConfig> {
 
 export interface ResolvedTraceConfig extends TraceConfig {
 	exporter: SpanExporter
-	globals: Required<GlobalsConfig>
+	fetch: Required<FetcherConfig>
 	postProcessor: PostProcessorFn
 	sampling: Required<SamplingConfig<Sampler>>
 }
