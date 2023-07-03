@@ -127,8 +127,8 @@ export class BatchTraceSpanProcessor implements SpanProcessor {
 	}
 
 	private export(traceId: string) {
-		const { exporter, sampling, postProcessorFn } = getActiveConfig()
-		const exportArgs = { exporter, tailSampler: sampling.tailSampler, postProcessor: postProcessorFn }
+		const { exporter, sampling, postProcessor } = getActiveConfig()
+		const exportArgs = { exporter, tailSampler: sampling.tailSampler, postProcessor }
 		const newState = this.action(traceId, { actionName: 'startExport', args: exportArgs })
 		if (newState.stateName === 'exporting') {
 			const promise = newState.promise
