@@ -55,33 +55,37 @@ const KVAttributes: Record<string | symbol, ExtraAttributeFn> = {
 	},
 }
 
-export function instrumentKV(kv: KVNamespace, name: string): KVNamespace {
+function instrumentKVFn(fn: Function, name: string, operation: string) {
 	const tracer = trace.getTracer('KV')
+	const fnHandler: ProxyHandler<any> = {
+		apply: (target, thisArg, argArray) => {
+			const options: SpanOptions = {
+				kind: SpanKind.CLIENT,
+				attributes: {
+					binding_type: 'KV',
+					kv_namespace: name,
+					operation,
+				},
+			}
+			return tracer.startActiveSpan(`kv:${name}:${operation}`, options, async (span) => {
+				const result = await Reflect.apply(target, thisArg, argArray)
+				const extraAttrs = KVAttributes[operation] ? KVAttributes[operation](argArray, result) : {}
+				span.setAttributes(extraAttrs)
+				span.setAttribute('hasResult', !!result)
+				span.end()
+				return result
+			})
+		},
+	}
+	return wrap(fn, fnHandler)
+}
+
+export function instrumentKV(kv: KVNamespace, name: string): KVNamespace {
 	const kvHandler: ProxyHandler<KVNamespace> = {
 		get: (target, prop, receiver) => {
 			const operation = String(prop)
 			const fn = Reflect.get(target, prop, receiver)
-			const fnHandler: ProxyHandler<any> = {
-				apply: (target, _thisArg, argArray) => {
-					const options: SpanOptions = {
-						kind: SpanKind.CLIENT,
-					}
-					return tracer.startActiveSpan(`kv:${name}:${operation}`, options, async (span) => {
-						span.setAttributes({
-							binding_type: 'KV',
-							kv_namespace: name,
-							operation,
-						})
-						const result = await Reflect.apply(target, kv, argArray)
-						const extraAttrs = KVAttributes[prop] ? KVAttributes[prop](argArray, result) : {}
-						span.setAttributes(extraAttrs)
-						span.setAttribute('hasResult', !!result)
-						span.end()
-						return result
-					})
-				},
-			}
-			return wrap(fn, fnHandler)
+			return instrumentKVFn(fn, name, operation)
 		},
 	}
 	return wrap(kv, kvHandler)
