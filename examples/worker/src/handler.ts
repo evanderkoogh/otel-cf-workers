@@ -43,12 +43,13 @@ export class OtelDO implements DurableObject {
 	constructor(protected state: DurableObjectState, protected env: Env) {}
 	async fetch(request: Request): Promise<Response> {
 		await fetch('https://cloudflare.com')
-		await this.env.OTEL_TEST.put('something', 'else')
+		await this.state.storage.put('something', 'else')
 		await this.state.storage.setAlarm(Date.now() + 1000)
 		return new Response('Hello World!')
 	}
 	async alarm(): Promise<void> {
 		console.log('ding ding!')
-		await this.env.OTEL_TEST.get('something')
+		await this.state.storage.get('something')
+		await this.state.storage.get('something_else')
 	}
 }

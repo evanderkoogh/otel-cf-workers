@@ -227,13 +227,12 @@ Triggers:
 - [ ] Cron (`handler.scheduled`)
 - [x] Durable Objects
 - [x] waitUntil (`ctx.waitUntil`)
-- [ ] Trace (`handler.trace`)
 
 Globals/built-ins:
 
 - [x] Fetch
 - [x] Caches
-- [ ] Durable Object Storage
+- [x] Durable Object Storage
 
 Bindings:
 

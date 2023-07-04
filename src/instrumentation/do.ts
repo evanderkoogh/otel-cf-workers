@@ -11,6 +11,7 @@ import {
 import { instrumentEnv } from './env'
 import { Initialiser, setConfig } from '../config'
 import { exportSpans } from './common'
+import { instrumentStorage } from './do-storage'
 
 type FetchFn = DurableObject['fetch']
 type AlarmFn = DurableObject['alarm']
@@ -64,12 +65,15 @@ export function instrumentDOBinding(ns: DurableObjectNamespace, nsName: string) 
 
 export function instrumentState(state: DurableObjectState) {
 	const stateHandler: ProxyHandler<DurableObjectState> = {
-		get(target, prop) {
-			const result = Reflect.get(target, prop)
-			if (typeof result === 'function') {
+		get(target, prop, receiver) {
+			const result = Reflect.get(target, prop, unwrap(receiver))
+			if (prop === 'storage') {
+				return instrumentStorage(result)
+			} else if (typeof result === 'function') {
 				return result.bind(target)
+			} else {
+				return result
 			}
-			return result
 		},
 	}
 	return wrap(state, stateHandler)
