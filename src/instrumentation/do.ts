@@ -12,6 +12,7 @@ import { instrumentEnv } from './env'
 import { Initialiser, setConfig } from '../config'
 import { exportSpans } from './common'
 import { instrumentStorage } from './do-storage'
+import { DOConstructorTrigger } from '../types'
 
 type FetchFn = DurableObject['fetch']
 type AlarmFn = DurableObject['alarm']
@@ -204,9 +205,20 @@ function instrumentDurableObject(doObj: DurableObject, initialiser: Initialiser,
 export function instrumentDOClass(doClass: DOClass, initialiser: Initialiser): DOClass {
 	const classHandler: ProxyHandler<DOClass> = {
 		construct(target, [orig_state, orig_env]: ConstructorParameters<DOClass>) {
+			const trigger: DOConstructorTrigger = {
+				id: orig_state.id.toString(),
+				name: orig_state.id.name,
+			}
+			const constructorConfig = initialiser(orig_env, trigger)
+			console.log(JSON.stringify(constructorConfig, null, 2))
+			const context = setConfig(constructorConfig)
 			const state = instrumentState(orig_state)
 			const env = instrumentEnv(orig_env)
-			const doObj = new target(state, env)
+			const createDO = () => {
+				return new target(state, env)
+			}
+			const doObj = api_context.with(context, createDO)
+
 			return instrumentDurableObject(doObj, initialiser, env, state)
 		},
 	}

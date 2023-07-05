@@ -39,4 +39,9 @@ export interface ResolvedTraceConfig extends TraceConfig {
 	sampling: Required<SamplingConfig<Sampler>>
 }
 
-export type Trigger = Request | MessageBatch | 'do-alarm'
+export interface DOConstructorTrigger {
+	id: string
+	name?: string
+}
+
+export type Trigger = Request | MessageBatch | DOConstructorTrigger | 'do-alarm'
