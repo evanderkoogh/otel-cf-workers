@@ -153,8 +153,7 @@ function instrumentFetchFn(fetchFn: FetchFn, initialiser: Initialiser, env: Env,
 			} catch (error) {
 				throw error
 			} finally {
-				const traceId = context.getValue(traceIdSymbol) as string
-				exportSpans(traceId)
+				exportSpans()
 			}
 		},
 	}
@@ -174,8 +173,7 @@ function instrumentAlarmFn(alarmFn: AlarmFn, initialiser: Initialiser, env: Env,
 			} catch (error) {
 				throw error
 			} finally {
-				const traceId = context.getValue(traceIdSymbol) as string
-				exportSpans(traceId)
+				exportSpans()
 			}
 		},
 	}
