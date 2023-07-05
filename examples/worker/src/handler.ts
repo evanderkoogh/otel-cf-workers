@@ -40,7 +40,11 @@ export default {
 }
 
 export class OtelDO implements DurableObject {
-	constructor(protected state: DurableObjectState, protected env: Env) {}
+	constructor(protected state: DurableObjectState, protected env: Env) {
+		state.blockConcurrencyWhile(async () => {
+			await this.state.storage.getAlarm()
+		})
+	}
 	async fetch(request: Request): Promise<Response> {
 		await fetch('https://cloudflare.com')
 		await this.state.storage.put('something', 'else')
