@@ -176,8 +176,7 @@ export function createQueueHandler(queueFn: QueueHandler, initialiser: Initialis
 			} catch (error) {
 				throw error
 			} finally {
-				const traceId = context.getValue(traceIdSymbol) as string
-				orig_ctx.waitUntil(exportSpans(traceId, tracker))
+				orig_ctx.waitUntil(exportSpans(tracker))
 			}
 		},
 	}
