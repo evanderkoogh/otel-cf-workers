@@ -1,3 +1,4 @@
+export * from './buffer.js'
 export * from './sampling'
 export * from './sdk'
 export * from './span'
