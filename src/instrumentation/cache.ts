@@ -1,6 +1,6 @@
 import { SpanKind, SpanOptions, trace } from '@opentelemetry/api'
-import { wrap } from './wrap'
-import { sanitiseURL } from './fetch'
+import { wrap } from '../wrap.js'
+import { sanitiseURL } from './fetch.js'
 
 type CacheFns = Cache[keyof Cache]
 

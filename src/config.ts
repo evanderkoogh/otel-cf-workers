@@ -1,5 +1,5 @@
 import { context } from '@opentelemetry/api'
-import { ResolvedTraceConfig, Trigger } from './types'
+import { ResolvedTraceConfig, Trigger } from './types.js'
 
 const configSymbol = Symbol('Otel Workers Tracing Configuration')
 

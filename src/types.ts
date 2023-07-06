@@ -1,7 +1,7 @@
 import { ReadableSpan, Sampler, SpanExporter } from '@opentelemetry/sdk-trace-base'
-import { OTLPExporterConfig } from './exporter'
-import { FetcherConfig } from './instrumentation/fetch'
-import { TailSampleFn } from './sampling'
+import { OTLPExporterConfig } from './exporter.js'
+import { FetcherConfig } from './instrumentation/fetch.js'
+import { TailSampleFn } from './sampling.js'
 
 export type PostProcessorFn = (spans: ReadableSpan[]) => ReadableSpan[]
 

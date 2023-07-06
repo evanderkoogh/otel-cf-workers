@@ -1,8 +1,8 @@
 import { createExportTraceServiceRequest } from '@opentelemetry/otlp-transformer'
 import { ExportServiceError, OTLPExporterError } from '@opentelemetry/otlp-exporter-base'
-import { unwrap } from './instrumentation/wrap'
 import { ExportResult, ExportResultCode } from '@opentelemetry/core'
 import { SpanExporter } from '@opentelemetry/sdk-trace-base'
+import { unwrap } from './wrap.js'
 
 export interface OTLPExporterConfig {
 	url: string

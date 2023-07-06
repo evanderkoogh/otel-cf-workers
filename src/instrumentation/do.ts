@@ -1,18 +1,18 @@
 import { context as api_context, trace, SpanOptions, SpanKind, Exception, SpanStatusCode } from '@opentelemetry/api'
 import { SemanticAttributes } from '@opentelemetry/semantic-conventions'
-import { passthroughGet, unwrap, wrap } from './wrap'
+import { passthroughGet, unwrap, wrap } from '../wrap.js'
 import {
 	getParentContextFromHeaders,
 	gatherIncomingCfAttributes,
 	gatherRequestAttributes,
 	gatherResponseAttributes,
 	instrumentFetcher,
-} from './fetch'
-import { instrumentEnv } from './env'
-import { Initialiser, setConfig } from '../config'
-import { exportSpans } from './common'
-import { instrumentStorage } from './do-storage'
-import { DOConstructorTrigger } from '../types'
+} from './fetch.js'
+import { instrumentEnv } from './env.js'
+import { Initialiser, setConfig } from '../config.js'
+import { exportSpans } from './common.js'
+import { instrumentStorage } from './do-storage.js'
+import { DOConstructorTrigger } from '../types.js'
 
 type FetchFn = DurableObject['fetch']
 type AlarmFn = DurableObject['alarm']

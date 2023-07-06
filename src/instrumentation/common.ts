@@ -1,6 +1,6 @@
 import { trace } from '@opentelemetry/api'
-import { WorkerTracer } from '../tracer'
-import { wrap } from './wrap'
+import { WorkerTracer } from '../tracer.js'
+import { wrap } from '../wrap.js'
 
 type ContextAndTracker = { ctx: ExecutionContext; tracker: PromiseTracker }
 type WaitUntilFn = ExecutionContext['waitUntil']
