@@ -4,6 +4,14 @@ An OpenTelemetry compatible library for instrumenting and exporting traces from 
 
 ## Getting started
 
+To be able to use the Open Telemetry library you have to add the NodeJS compatibility flag in your `wrangler.toml` file.
+
+```
+compatibility_flags = [ "nodejs_compat" ]
+```
+
+### Code example
+
 ```typescript
 import { trace } from '@opentelemetry/api'
 import { instrument, ResolveConfigFn } from '@microlabs/otel-cf-workers'
