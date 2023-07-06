@@ -1,7 +1,7 @@
-import { wrap } from './wrap'
-import { instrumentDOBinding } from './do'
-import { instrumentKV } from './kv'
-import { instrumentQueueSender } from './queue'
+import { wrap } from '../wrap.js'
+import { instrumentDOBinding } from './do.js'
+import { instrumentKV } from './kv.js'
+import { instrumentQueueSender } from './queue.js'
 
 const isKVNamespace = (item?: unknown): item is KVNamespace => {
 	return !!(item as KVNamespace)?.getWithMetadata

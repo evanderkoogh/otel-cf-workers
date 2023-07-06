@@ -4,7 +4,7 @@ import { context, trace, Tracer, TracerOptions, TracerProvider } from '@opentele
 import { SpanProcessor } from '@opentelemetry/sdk-trace-base'
 import { Resource } from '@opentelemetry/resources'
 
-import { WorkerTracer } from './tracer'
+import { WorkerTracer } from './tracer.js'
 
 /**
  * Register this TracerProvider for use with the OpenTelemetry API.

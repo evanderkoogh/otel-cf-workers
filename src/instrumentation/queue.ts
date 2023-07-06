@@ -1,8 +1,8 @@
 import { trace, SpanOptions, SpanKind, Attributes, Exception, context as api_context } from '@opentelemetry/api'
-import { Initialiser, setConfig } from '../config'
-import { exportSpans, proxyExecutionContext } from './common'
-import { instrumentEnv } from './env'
-import { unwrap, wrap } from './wrap'
+import { Initialiser, setConfig } from '../config.js'
+import { exportSpans, proxyExecutionContext } from './common.js'
+import { instrumentEnv } from './env.js'
+import { unwrap, wrap } from '../wrap.js'
 
 type QueueHandler = ExportedHandlerQueueHandler<unknown, unknown>
 export type QueueHandlerArgs = Parameters<QueueHandler>

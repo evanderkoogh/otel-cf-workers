@@ -1,11 +1,19 @@
 {
 	"name": "@microlabs/otel-cf-workers",
 	"version": "1.0.0-rc.2",
-	"main": "./dist/index.js",
-	"types": "./dist/index.d.ts",
-	"type": "module",
+	"main": "dist/cjs/index.js",
+	"module": "dist/esm/index.js",
+	"types": "dist/esm/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./dist/esm/index.d.ts",
+			"import": "./dist/esm/index.js",
+			"require": "./dist/cjs/index.js"
+		}
+	},
 	"scripts": {
-		"build": "rimraf ./dist && tsc",
+		"fix-dist": "echo '{\"type\": \"module\"}' > dist/esm/package.json && echo '{\"type\": \"commonjs\"}' > dist/cjs/package.json",
+		"build": "rimraf ./dist && tsc && tsc -p tsconfig-cjs.json && pnpm fix-dist",
 		"preversion": "pnpm build",
 		"prepublishOnly": "pnpm build",
 		"watch": "tsc --watch"

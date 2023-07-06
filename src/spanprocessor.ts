@@ -1,10 +1,11 @@
 import { Context, Span } from '@opentelemetry/api'
 import { ReadableSpan, SpanExporter, SpanProcessor } from '@opentelemetry/sdk-trace-base'
-import { Action, State, stateMachine } from 'ts-checked-fsm'
-import { TailSampleFn } from './sampling'
 import { ExportResult, ExportResultCode } from '@opentelemetry/core'
-import { PostProcessorFn } from './types'
-import { getActiveConfig } from './config'
+import { Action, State, stateMachine } from 'ts-checked-fsm'
+
+import { getActiveConfig } from './config.js'
+import { TailSampleFn } from './sampling.js'
+import { PostProcessorFn } from './types.js'
 
 type CompletedTrace = {
 	traceId: string

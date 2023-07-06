@@ -11,17 +11,17 @@ import {
 	TraceIdRatioBasedSampler,
 } from '@opentelemetry/sdk-trace-base'
 
-import { OTLPExporter } from './exporter'
-import { WorkerTracerProvider } from './provider'
-import { isHeadSampled, isRootErrorSpan, multiTailSampler } from './sampling'
-import { BatchTraceSpanProcessor } from './spanprocessor'
-import { Trigger, TraceConfig, ResolvedTraceConfig, ExporterConfig, ParentRatioSamplingConfig } from './types'
-import { createFetchHandler, instrumentGlobalFetch } from './instrumentation/fetch'
-import { instrumentGlobalCache } from './instrumentation/cache'
-import { createQueueHandler } from './instrumentation/queue'
-import { DOClass, instrumentDOClass } from './instrumentation/do'
-import { unwrap } from './instrumentation/wrap'
-import { Initialiser } from './config'
+import { Initialiser } from './config.js'
+import { OTLPExporter } from './exporter.js'
+import { WorkerTracerProvider } from './provider.js'
+import { isHeadSampled, isRootErrorSpan, multiTailSampler } from './sampling.js'
+import { BatchTraceSpanProcessor } from './spanprocessor.js'
+import { Trigger, TraceConfig, ResolvedTraceConfig, ExporterConfig, ParentRatioSamplingConfig } from './types.js'
+import { unwrap } from './wrap.js'
+import { createFetchHandler, instrumentGlobalFetch } from './instrumentation/fetch.js'
+import { instrumentGlobalCache } from './instrumentation/cache.js'
+import { createQueueHandler } from './instrumentation/queue.js'
+import { DOClass, instrumentDOClass } from './instrumentation/do.js'
 
 instrumentGlobalCache()
 instrumentGlobalFetch()

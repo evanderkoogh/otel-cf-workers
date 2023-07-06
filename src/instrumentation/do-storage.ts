@@ -1,5 +1,5 @@
 import { Attributes, SpanKind, SpanOptions, trace } from '@opentelemetry/api'
-import { wrap } from './wrap'
+import { wrap } from '../wrap.js'
 
 type ExtraAttributeFn = (argArray: any[], result: any) => Attributes
 
