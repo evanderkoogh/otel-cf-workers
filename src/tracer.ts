@@ -10,10 +10,11 @@ import {
 } from '@opentelemetry/api'
 import { sanitizeAttributes } from '@opentelemetry/core'
 import { Resource } from '@opentelemetry/resources'
-import { SpanProcessor, RandomIdGenerator, ReadableSpan, SamplingDecision } from '@opentelemetry/sdk-trace-base'
+import { SpanProcessor, ReadableSpan, SamplingDecision } from '@opentelemetry/sdk-trace-base'
 
-import { SpanImpl } from './span.js'
 import { getActiveConfig } from './config.js'
+import { RandomIdGenerator } from './idGenerator.js'
+import { SpanImpl } from './span.js'
 
 export class WorkerTracer implements Tracer {
 	private readonly _spanProcessor: SpanProcessor
