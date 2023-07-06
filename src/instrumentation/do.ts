@@ -18,8 +18,6 @@ type FetchFn = DurableObject['fetch']
 type AlarmFn = DurableObject['alarm']
 type Env = Record<string, unknown>
 
-const traceIdSymbol = Symbol('traceId')
-
 function instrumentBindingStub(stub: DurableObjectStub, nsName: string): DurableObjectStub {
 	const stubHandler: ProxyHandler<typeof stub> = {
 		get(target, prop) {
@@ -210,7 +208,6 @@ export function instrumentDOClass(doClass: DOClass, initialiser: Initialiser): D
 				name: orig_state.id.name,
 			}
 			const constructorConfig = initialiser(orig_env, trigger)
-			console.log(JSON.stringify(constructorConfig, null, 2))
 			const context = setConfig(constructorConfig)
 			const state = instrumentState(orig_state)
 			const env = instrumentEnv(orig_env)
