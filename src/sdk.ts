@@ -158,4 +158,4 @@ export function instrumentDO(doClass: DOClass, config: ConfigurationOption) {
 	return instrumentDOClass(doClass, initialiser)
 }
 
-export { waitUntilTrace } from './instrumentation/fetch'
+export { waitUntilTrace } from './instrumentation/fetch.js'
