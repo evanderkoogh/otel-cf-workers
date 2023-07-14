@@ -107,7 +107,7 @@ function parseConfig(supplied: TraceConfig): ResolvedTraceConfig {
 	return {
 		exporter: isSpanExporter(supplied.exporter) ? supplied.exporter : new OTLPExporter(supplied.exporter),
 		fetch: {
-			includeTraceContext: supplied.fetch?.includeTraceContext || true,
+			includeTraceContext: supplied.fetch?.includeTraceContext ?? true,
 		},
 		postProcessor: supplied.postProcessor || ((spans: ReadableSpan[]) => spans),
 		sampling: {
