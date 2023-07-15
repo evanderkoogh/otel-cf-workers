@@ -21,6 +21,16 @@ export interface FetcherConfig {
 	includeTraceContext?: boolean | IncludeTraceContextFn
 }
 
+export type AcceptTraceContextFn = (request: Request) => boolean
+export interface FetchHandlerConfig {
+	/**
+	 * Whether to enable context propagation for incoming requests to `fetch`.
+	 * This enables or disables distributed tracing from W3C Trace Context headers.
+	 * @default true
+	 */
+	acceptTraceContext?: boolean | AcceptTraceContextFn
+}
+
 type FetchHandler = ExportedHandlerFetchHandler
 type FetchHandlerArgs = Parameters<FetchHandler>
 
@@ -89,6 +99,15 @@ export function getParentContextFromHeaders(headers: Headers): Context {
 	})
 }
 
+function getParentContextFromRequest(request: Request) {
+	const workerConfig = getActiveConfig()
+	const acceptTraceContext =
+		typeof workerConfig.handlers.fetch.acceptTraceContext === 'function'
+			? workerConfig.handlers.fetch.acceptTraceContext(request)
+			: workerConfig.handlers.fetch.acceptTraceContext ?? true
+	return acceptTraceContext ? getParentContextFromHeaders(request.headers) : api_context.active()
+}
+
 export function waitUntilTrace(fn: () => Promise<any>): Promise<void> {
 	const tracer = trace.getTracer('waitUntil')
 	return tracer.startActiveSpan('waitUntil', async (span) => {
@@ -99,7 +118,7 @@ export function waitUntilTrace(fn: () => Promise<any>): Promise<void> {
 
 let cold_start = true
 export function executeFetchHandler(fetchFn: FetchHandler, [request, env, ctx]: FetchHandlerArgs): Promise<Response> {
-	const spanContext = getParentContextFromHeaders(request.headers)
+	const spanContext = getParentContextFromRequest(request)
 
 	const tracer = trace.getTracer('fetchHandler')
 	const attributes = {
