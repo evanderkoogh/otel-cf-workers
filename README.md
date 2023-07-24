@@ -142,7 +142,24 @@ const exporter = {
 ### Fetch
 
 `includeTraceContext` is used to specify if outgoing requests should include the TraceContext so that the other service can participate in a distributed trace.
-The default is `true` for all outgoing requests, but you can turn it off for all requests with `false`,or specify a method that takes the outgoing `Request` method and return a boolean on whether to include the tracing context.
+The default is `true` for all outgoing requests, but you can turn it off for all requests with `false`, or specify a method that takes the outgoing `Request` method and return a boolean on whether to include the tracing context.
+
+Example:
+
+```typescript
+const fetchConf = (request: Request): boolean => {
+	return new URL(request.url).hostname === 'example.com'
+}
+```
+
+### Handlers
+
+The `handlers` field of the configuration overrides the way in which event handlers, such as `fetch` or `queue`, are instrumented.
+
+#### Fetch Handler
+
+`acceptTraceContext` is used to specify if incoming requests handled by `fetch` should accept a TraceContext and participate in a distributed trace.
+The default is `true` for all incoming requests, but you can turn it off for all requests with `false` or specify a method that takes the incoming `Request` and returns a boolean indicating whether to accept the tracing context.
 
 Example:
 
