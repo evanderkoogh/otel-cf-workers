@@ -105,6 +105,7 @@ export function executeFetchHandler(fetchFn: FetchHandler, [request, env, ctx]: 
 	const attributes = {
 		[SemanticAttributes.FAAS_TRIGGER]: 'http',
 		[SemanticAttributes.FAAS_COLDSTART]: cold_start,
+		[SemanticAttributes.FAAS_EXECUTION]: request.headers.get('cf-ray') ?? undefined,
 	}
 	cold_start = false
 	Object.assign(attributes, gatherRequestAttributes(request))
