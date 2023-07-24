@@ -43,8 +43,11 @@ const StorageAttributes: Record<string | symbol, ExtraAttributeFn> = {
 		return attrs
 	},
 	list(argArray, result: Map<string, unknown>) {
-		const attrs = argArray[0]
-		attrs['do.storage.number_of_results'] = result.size
+		// list may be called with no arguments
+		const attrs: Attributes = {
+			'do.storage.number_of_results': result.size,
+		}
+		Object.assign(attrs, argArray[0])
 		return attrs
 	},
 	put(argArray) {
