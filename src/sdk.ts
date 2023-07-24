@@ -109,6 +109,11 @@ function parseConfig(supplied: TraceConfig): ResolvedTraceConfig {
 		fetch: {
 			includeTraceContext: supplied.fetch?.includeTraceContext ?? true,
 		},
+		handlers: {
+			fetch: {
+				acceptTraceContext: supplied.handlers?.fetch?.acceptTraceContext ?? true,
+			},
+		},
 		postProcessor: supplied.postProcessor || ((spans: ReadableSpan[]) => spans),
 		sampling: {
 			headSampler,
