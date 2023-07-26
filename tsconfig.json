@@ -1,8 +1,10 @@
 {
-    "extends": "./tsconfig-base.json",
-    "compilerOptions": {
-        "module": "esnext",
-        "outDir": "dist/esm",
-        "target": "esnext"
-    }
+	"extends": "./tsconfig-base.json",
+	"include": ["./src/**/*", "./tests/**/*"],
+	"compilerOptions": {
+		"module": "esnext",
+		"outDir": "dist/esm",
+		"target": "esnext",
+		"types": ["@cloudflare/workers-types"]
+	}
 }
