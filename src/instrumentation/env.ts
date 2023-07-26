@@ -7,8 +7,8 @@ const isKVNamespace = (item?: unknown): item is KVNamespace => {
 	return !!(item as KVNamespace)?.getWithMetadata
 }
 
-const isQueue = (item?: unknown): item is Queue => {
-	return !!(item as Queue)?.sendBatch
+const isQueue = (item?: unknown): item is Queue<unknown> => {
+	return !!(item as Queue<unknown>)?.sendBatch
 }
 
 const isDurableObject = (item?: unknown): item is DurableObjectNamespace => {

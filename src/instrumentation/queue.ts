@@ -183,9 +183,9 @@ export function createQueueHandler(queueFn: QueueHandler, initialiser: Initialis
 	return wrap(queueFn, queueHandler)
 }
 
-function instrumentQueueSend(fn: Queue['send'], name: string): Queue['send'] {
+function instrumentQueueSend(fn: Queue<unknown>['send'], name: string): Queue<unknown>['send'] {
 	const tracer = trace.getTracer('queueSender')
-	const handler: ProxyHandler<Queue['send']> = {
+	const handler: ProxyHandler<Queue<unknown>['send']> = {
 		apply: (target, thisArg, argArray) => {
 			return tracer.startActiveSpan(`queueSend: ${name}`, async (span) => {
 				span.setAttribute('queue.operation', 'send')
@@ -197,9 +197,9 @@ function instrumentQueueSend(fn: Queue['send'], name: string): Queue['send'] {
 	return wrap(fn, handler)
 }
 
-function instrumentQueueSendBatch(fn: Queue['sendBatch'], name: string): Queue['sendBatch'] {
+function instrumentQueueSendBatch(fn: Queue<unknown>['sendBatch'], name: string): Queue<unknown>['sendBatch'] {
 	const tracer = trace.getTracer('queueSender')
-	const handler: ProxyHandler<Queue['sendBatch']> = {
+	const handler: ProxyHandler<Queue<unknown>['sendBatch']> = {
 		apply: (target, thisArg, argArray) => {
 			return tracer.startActiveSpan(`queueSendBatch: ${name}`, async (span) => {
 				span.setAttribute('queue.operation', 'sendBatch')
@@ -211,8 +211,8 @@ function instrumentQueueSendBatch(fn: Queue['sendBatch'], name: string): Queue['
 	return wrap(fn, handler)
 }
 
-export function instrumentQueueSender(queue: Queue, name: string) {
-	const queueHandler: ProxyHandler<Queue> = {
+export function instrumentQueueSender(queue: Queue<unknown>, name: string) {
+	const queueHandler: ProxyHandler<Queue<unknown>> = {
 		get: (target, prop) => {
 			if (prop === 'send') {
 				const sendFn = Reflect.get(target, prop)
