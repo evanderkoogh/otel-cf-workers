@@ -1,6 +1,6 @@
 import { trace } from '@opentelemetry/api'
 import { WorkerTracer } from '../tracer.js'
-import { wrap } from '../wrap.js'
+import { passthroughGet, wrap } from '../wrap.js'
 
 type ContextAndTracker = { ctx: ExecutionContext; tracker: PromiseTracker }
 type WaitUntilFn = ExecutionContext['waitUntil']
@@ -38,6 +38,8 @@ export function proxyExecutionContext(context: ExecutionContext): ContextAndTrac
 			if (prop === 'waitUntil') {
 				const fn = Reflect.get(target, prop)
 				return createWaitUntil(fn, context, tracker)
+			} else {
+				return passthroughGet(target, prop)
 			}
 		},
 	})
