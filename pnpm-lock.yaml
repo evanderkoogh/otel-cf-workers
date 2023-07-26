@@ -34,8 +34,8 @@ dependencies:
 
 devDependencies:
   '@cloudflare/workers-types':
-    specifier: ^4.20230321.0
-    version: 4.20230321.0
+    specifier: ^4.20230628.0
+    version: 4.20230628.0
   rimraf:
     specifier: ^4.4.1
     version: 4.4.1
@@ -45,8 +45,8 @@ devDependencies:
 
 packages:
 
-  /@cloudflare/workers-types@4.20230321.0:
-    resolution: {integrity: sha512-zyRFz9AUS0tbg3/kJ+3zxvp9fl/O9yOJlChih/o86hhOqRMcZVbWefYAvFPidRvYUHM5YTG1wjU1bF9FFckRVg==}
+  /@cloudflare/workers-types@4.20230628.0:
+    resolution: {integrity: sha512-dpOFJJPEEWahLJKhj+xRY+VwXu/s/634CVsLVnTNDCfs2KXZx9nwQ/04M0OKBJFdc6jheWwAAv/AGvRvrTDkDg==}
     dev: true
 
   /@opentelemetry/api@1.4.1:
