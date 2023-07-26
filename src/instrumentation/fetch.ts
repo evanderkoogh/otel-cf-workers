@@ -34,8 +34,6 @@ export interface FetchHandlerConfig {
 type FetchHandler = ExportedHandlerFetchHandler
 type FetchHandlerArgs = Parameters<FetchHandler>
 
-const traceIdSymbol = Symbol('traceId')
-
 export function sanitiseURL(url: string): string {
 	const u = new URL(url)
 	return `${u.protocol}//${u.host}${u.pathname}${u.search}`
