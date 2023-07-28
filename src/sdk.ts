@@ -23,9 +23,6 @@ import { instrumentGlobalCache } from './instrumentation/cache.js'
 import { createQueueHandler } from './instrumentation/queue.js'
 import { DOClass, instrumentDOClass } from './instrumentation/do.js'
 
-instrumentGlobalCache()
-instrumentGlobalFetch()
-
 type FetchHandler = ExportedHandlerFetchHandler<unknown, unknown>
 type QueueHandler = ExportedHandlerQueueHandler
 
@@ -71,6 +68,8 @@ function isSpanExporter(exporterConfig: ExporterConfig): exporterConfig is SpanE
 let initialised = false
 function init(config: ResolvedTraceConfig): void {
 	if (!initialised) {
+		instrumentGlobalCache()
+		instrumentGlobalFetch()
 		propagation.setGlobalPropagator(new W3CTraceContextPropagator())
 		const resource = createResource(config)
 		const spanProcessor = new BatchTraceSpanProcessor()
