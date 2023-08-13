@@ -39,7 +39,7 @@ const KVAttributes: Record<string | symbol, ExtraAttributeFn> = {
 		attrs['kv.list_request_cursor'] = cursor || undefined
 		attrs['kv.list_limit'] = limit || undefined
 		const { list_complete } = result as KVNamespaceListResult<any, any>
-		attrs['kv.list_complete'] = limit || undefined
+		attrs['kv.list_complete'] = list_complete || undefined
 		if (!list_complete) {
 			attrs['kv.list_response_cursor'] = cursor || undefined
 		}
