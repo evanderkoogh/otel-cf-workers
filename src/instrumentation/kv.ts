@@ -15,16 +15,16 @@ const KVAttributes: Record<string | symbol, ExtraAttributeFn> = {
 		}
 		const opts = argArray[1]
 		if (typeof opts === 'string') {
-			attrs['type'] = opts
+			attrs['kv.type'] = opts
 		} else if (typeof opts === 'object') {
-			attrs['type'] = opts.type
-			attrs['cacheTtl'] = opts.cacheTtl
+			attrs['kv.type'] = opts.type
+			attrs['kv.cacheTtl'] = opts.cacheTtl
 		}
 		return attrs
 	},
 	getWithMetadata(argArray, result) {
 		const attrs = this.get(argArray, result)
-		attrs['withMetadata'] = true
+		attrs['kv.withMetadata'] = true
 		return attrs
 	},
 	list(argArray, result) {
