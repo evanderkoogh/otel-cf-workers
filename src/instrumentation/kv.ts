@@ -25,6 +25,10 @@ const KVAttributes: Record<string | symbol, ExtraAttributeFn> = {
 	getWithMetadata(argArray, result) {
 		const attrs = this.get(argArray, result)
 		attrs['kv.withMetadata'] = true
+		const { cacheStatus } = result as KVNamespaceGetWithMetadataResult<any, any>
+		if (typeof cacheStatus === 'string') {
+		  attrs['kv.cacheStatus'] = cacheStatus
+		}
 		return attrs
 	},
 	list(argArray, result) {
