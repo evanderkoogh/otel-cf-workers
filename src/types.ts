@@ -1,4 +1,4 @@
-import { ReadableSpan, Sampler, SpanExporter } from '@opentelemetry/sdk-trace-base'
+import { ReadableSpan, Sampler, SpanExporter, SpanProcessor } from '@opentelemetry/sdk-trace-base'
 import { OTLPExporterConfig } from './exporter.js'
 import { FetchHandlerConfig, FetcherConfig } from './instrumentation/fetch.js'
 import { TailSampleFn } from './sampling.js'
@@ -35,6 +35,7 @@ export interface TraceConfig<EC extends ExporterConfig = ExporterConfig> {
 	postProcessor?: PostProcessorFn
 	sampling?: SamplingConfig
 	service: ServiceConfig
+	spanProcessors: SpanProcessor[]
 }
 
 export interface ResolvedTraceConfig extends TraceConfig {
@@ -43,6 +44,7 @@ export interface ResolvedTraceConfig extends TraceConfig {
 	fetch: Required<FetcherConfig>
 	postProcessor: PostProcessorFn
 	sampling: Required<SamplingConfig<Sampler>>
+	spanProcessors: SpanProcessor[]
 }
 
 export interface DOConstructorTrigger {
