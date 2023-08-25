@@ -15,16 +15,20 @@ const KVAttributes: Record<string | symbol, ExtraAttributeFn> = {
 		}
 		const opts = argArray[1]
 		if (typeof opts === 'string') {
-			attrs['type'] = opts
+			attrs['kv.type'] = opts
 		} else if (typeof opts === 'object') {
-			attrs['type'] = opts.type
-			attrs['cacheTtl'] = opts.cacheTtl
+			attrs['kv.type'] = opts.type
+			attrs['kv.cacheTtl'] = opts.cacheTtl
 		}
 		return attrs
 	},
 	getWithMetadata(argArray, result) {
 		const attrs = this.get(argArray, result)
-		attrs['withMetadata'] = true
+		attrs['kv.withMetadata'] = true
+		const { cacheStatus } = result as KVNamespaceGetWithMetadataResult<any, any>
+		if (typeof cacheStatus === 'string') {
+		  attrs['kv.cacheStatus'] = cacheStatus
+		}
 		return attrs
 	},
 	list(argArray, result) {
@@ -34,10 +38,13 @@ const KVAttributes: Record<string | symbol, ExtraAttributeFn> = {
 		attrs['kv.list_prefix'] = prefix || undefined
 		attrs['kv.list_request_cursor'] = cursor || undefined
 		attrs['kv.list_limit'] = limit || undefined
-		const { list_complete } = result as KVNamespaceListResult<any, any>
-		attrs['kv.list_complete'] = limit || undefined
+		const { list_complete, cacheStatus } = result as KVNamespaceListResult<any, any>
+		attrs['kv.list_complete'] = list_complete || undefined
 		if (!list_complete) {
 			attrs['kv.list_response_cursor'] = cursor || undefined
+		}
+		if (typeof cacheStatus === 'string') {
+		  attrs['kv.cacheStatus'] = cacheStatus
 		}
 		return attrs
 	},
