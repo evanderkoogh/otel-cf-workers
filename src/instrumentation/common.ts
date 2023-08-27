@@ -53,7 +53,7 @@ export async function exportSpans(tracker?: PromiseTracker) {
 		if (tracker) {
 			await tracker.wait()
 		}
-		await tracer.spanProcessor.forceFlush()
+		await tracer.spanProcessors.forEach(sp => { sp.forceFlush() });
 	} else {
 		console.error('The global tracer is not of type WorkerTracer and can not export spans')
 	}

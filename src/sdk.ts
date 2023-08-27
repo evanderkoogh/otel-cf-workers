@@ -72,8 +72,9 @@ function init(config: ResolvedTraceConfig): void {
 		instrumentGlobalFetch()
 		propagation.setGlobalPropagator(new W3CTraceContextPropagator())
 		const resource = createResource(config)
-		const spanProcessor = new BatchTraceSpanProcessor()
-		const provider = new WorkerTracerProvider(spanProcessor, resource)
+		config.spanProcessors.push(new BatchTraceSpanProcessor())
+
+		const provider = new WorkerTracerProvider(config.spanProcessors, resource)
 		provider.register()
 		initialised = true
 	}
@@ -119,6 +120,7 @@ function parseConfig(supplied: TraceConfig): ResolvedTraceConfig {
 			tailSampler: supplied.sampling?.tailSampler || multiTailSampler([isHeadSampled, isRootErrorSpan]),
 		},
 		service: supplied.service,
+		spanProcessors: supplied.spanProcessors || [],
 	}
 }
 

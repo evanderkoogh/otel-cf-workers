@@ -14,19 +14,19 @@ import { WorkerTracer } from './tracer.js'
  * @param config Configuration object for SDK registration
  */
 export class WorkerTracerProvider implements TracerProvider {
-	private spanProcessor: SpanProcessor
+	private spanProcessors: SpanProcessor[]
 	private resource: Resource
 	private tracers: Record<string, Tracer> = {}
 
-	constructor(spanProcessor: SpanProcessor, resource: Resource) {
-		this.spanProcessor = spanProcessor
+	constructor(spanProcessors: SpanProcessor[], resource: Resource) {
+		this.spanProcessors = spanProcessors
 		this.resource = resource
 	}
 
 	getTracer(name: string, version?: string, options?: TracerOptions): Tracer {
 		const key = `${name}@${version || ''}:${options?.schemaUrl || ''}`
 		if (!this.tracers[key]) {
-			this.tracers[key] = new WorkerTracer(this.spanProcessor, this.resource)
+			this.tracers[key] = new WorkerTracer(this.spanProcessors, this.resource)
 		}
 		return this.tracers[key]
 	}

@@ -16,16 +16,16 @@ import { SpanImpl } from './span.js'
 import { getActiveConfig } from './config.js'
 
 export class WorkerTracer implements Tracer {
-	private readonly _spanProcessor: SpanProcessor
+	private readonly _spanProcessors: SpanProcessor[]
 	private readonly resource: Resource
 	private readonly idGenerator: RandomIdGenerator = new RandomIdGenerator()
-	constructor(spanProcessor: SpanProcessor, resource: Resource) {
-		this._spanProcessor = spanProcessor
+	constructor(spanProcessors: SpanProcessor[], resource: Resource) {
+		this._spanProcessors = spanProcessors
 		this.resource = resource
 	}
 
-	get spanProcessor() {
-		return this._spanProcessor
+	get spanProcessors() {
+		return this._spanProcessors
 	}
 
 	addToResource(extra: Resource) {
@@ -58,7 +58,9 @@ export class WorkerTracer implements Tracer {
 			attributes,
 			name,
 			onEnd: (span) => {
-				this.spanProcessor.onEnd(span as unknown as ReadableSpan)
+				this.spanProcessors.forEach(sp => {
+					sp.onEnd(span as unknown as ReadableSpan)
+				});
 			},
 			resource: this.resource,
 			spanContext,
@@ -68,7 +70,7 @@ export class WorkerTracer implements Tracer {
 		})
 		//Do not get me started on the idosyncracies of the Otel JS libraries.
 		//@ts-ignore
-		this.spanProcessor.onStart(span, context)
+		this.spanProcessors.forEach(sp => { sp.onStart(span, context) })
 		return span
 	}
 
