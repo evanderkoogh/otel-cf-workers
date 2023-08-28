@@ -35,7 +35,7 @@ export interface TraceConfig<EC extends ExporterConfig = ExporterConfig> {
 	postProcessor?: PostProcessorFn
 	sampling?: SamplingConfig
 	service: ServiceConfig
-	spanProcessors: SpanProcessor[]
+	spanProcessors: SpanProcessor | SpanProcessor[]
 }
 
 export interface ResolvedTraceConfig extends TraceConfig {
@@ -44,7 +44,7 @@ export interface ResolvedTraceConfig extends TraceConfig {
 	fetch: Required<FetcherConfig>
 	postProcessor: PostProcessorFn
 	sampling: Required<SamplingConfig<Sampler>>
-	spanProcessors: SpanProcessor[]
+	spanProcessors: SpanProcessor | SpanProcessor[]
 }
 
 export interface DOConstructorTrigger {

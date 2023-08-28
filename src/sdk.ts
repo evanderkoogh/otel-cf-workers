@@ -72,9 +72,9 @@ function init(config: ResolvedTraceConfig): void {
 		instrumentGlobalFetch()
 		propagation.setGlobalPropagator(new W3CTraceContextPropagator())
 		const resource = createResource(config)
-		config.spanProcessors.push(new BatchTraceSpanProcessor())
+		const spanProcessors = Array.isArray(config.spanProcessors) ? config.spanProcessors : [config.spanProcessors]
 
-		const provider = new WorkerTracerProvider(config.spanProcessors, resource)
+		const provider = new WorkerTracerProvider(spanProcessors, resource)
 		provider.register()
 		initialised = true
 	}
