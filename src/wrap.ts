@@ -3,11 +3,11 @@ const unwrapSymbol = Symbol('unwrap')
 type Wrapped<T> = { [unwrapSymbol]: T } & T
 
 export function isWrapped<T>(item: T): item is Wrapped<T> {
-	return !!(item as Wrapped<T>)[unwrapSymbol]
+	return item && !!(item as Wrapped<T>)[unwrapSymbol]
 }
 
 export function wrap<T extends object>(item: T, handler: ProxyHandler<T>, autoPassthrough: boolean = true): T {
-	if (isWrapped(item)) {
+	if (isWrapped(item) || typeof item !== 'object' || typeof item !== 'function') {
 		return item
 	}
 	const proxyHandler = Object.assign({}, handler)
