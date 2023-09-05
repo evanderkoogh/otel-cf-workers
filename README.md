@@ -236,6 +236,18 @@ const service = {
 }
 ```
 
+### Propagation
+
+Register a custom propagator with:
+
+```ts
+const config: ResolveConfigFn = (env: Env, _trigger) => {
+	return {
+		propagator: new MyCoolPropagator,
+	}
+}
+```
+
 ## Distributed Tracing
 
 One of the advantages of using Open Telemetry is that it makes it easier to do distributed tracing through multiple different services. This library will automatically inject the W3C Trace Context headers when making calls to Durable Objects or outbound fetch calls.

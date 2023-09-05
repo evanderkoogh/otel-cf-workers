@@ -70,7 +70,7 @@ function init(config: ResolvedTraceConfig): void {
 	if (!initialised) {
 		instrumentGlobalCache()
 		instrumentGlobalFetch()
-		propagation.setGlobalPropagator(new W3CTraceContextPropagator())
+		propagation.setGlobalPropagator(config.propagator)
 		const resource = createResource(config)
 		const spanProcessors = Array.isArray(config.spanProcessors) ? config.spanProcessors : [config.spanProcessors]
 
@@ -121,6 +121,7 @@ function parseConfig(supplied: TraceConfig): ResolvedTraceConfig {
 		},
 		service: supplied.service,
 		spanProcessors: supplied.spanProcessors || [],
+		propagator: supplied.propagator || new W3CTraceContextPropagator(),
 	}
 }
 

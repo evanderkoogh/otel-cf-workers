@@ -1,3 +1,4 @@
+import { TextMapPropagator } from '@opentelemetry/api'
 import { ReadableSpan, Sampler, SpanExporter, SpanProcessor } from '@opentelemetry/sdk-trace-base'
 import { OTLPExporterConfig } from './exporter.js'
 import { FetchHandlerConfig, FetcherConfig } from './instrumentation/fetch.js'
@@ -36,6 +37,7 @@ export interface TraceConfig<EC extends ExporterConfig = ExporterConfig> {
 	sampling?: SamplingConfig
 	service: ServiceConfig
 	spanProcessors: SpanProcessor | SpanProcessor[]
+	propagator?: TextMapPropagator
 }
 
 export interface ResolvedTraceConfig extends TraceConfig {
@@ -45,6 +47,7 @@ export interface ResolvedTraceConfig extends TraceConfig {
 	postProcessor: PostProcessorFn
 	sampling: Required<SamplingConfig<Sampler>>
 	spanProcessors: SpanProcessor | SpanProcessor[]
+	propagator: TextMapPropagator
 }
 
 export interface DOConstructorTrigger {
