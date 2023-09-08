@@ -34,11 +34,6 @@ export interface FetchHandlerConfig {
 type FetchHandler = ExportedHandlerFetchHandler
 type FetchHandlerArgs = Parameters<FetchHandler>
 
-export function sanitiseURL(url: string): string {
-	const u = new URL(url)
-	return `${u.protocol}//${u.host}${u.pathname}${u.search}`
-}
-
 const gatherOutgoingCfAttributes = (cf: RequestInitCfProperties): Attributes => {
 	const attrs: Record<string, string | number> = {}
 	Object.keys(cf).forEach((key) => {
@@ -57,7 +52,11 @@ export function gatherRequestAttributes(request: Request): Attributes {
 	const headers = request.headers
 	// attrs[SemanticAttributes.HTTP_CLIENT_IP] = '1.1.1.1'
 	attrs[SemanticAttributes.HTTP_METHOD] = request.method
-	attrs[SemanticAttributes.HTTP_URL] = sanitiseURL(request.url)
+	const u = new URL(request.url)
+	attrs[SemanticAttributes.HTTP_URL] = `${u.protocol}//${u.host}${u.pathname}${u.search}`
+	attrs[SemanticAttributes.HTTP_HOST] = u.host
+	attrs[SemanticAttributes.HTTP_SCHEME] = u.protocol
+	attrs[SemanticAttributes.HTTP_TARGET] = `${u.pathname}${u.search}`
 	attrs[SemanticAttributes.HTTP_USER_AGENT] = headers.get('user-agent')!
 	attrs[SemanticAttributes.HTTP_REQUEST_CONTENT_LENGTH] = headers.get('content-length')!
 	attrs['http.request_content-type'] = headers.get('content-type')!
@@ -75,7 +74,6 @@ export function gatherResponseAttributes(response: Response): Attributes {
 
 export function gatherIncomingCfAttributes(request: Request): Attributes {
 	const attrs: Record<string, string | number> = {}
-	attrs[SemanticAttributes.HTTP_SCHEME] = request.cf?.httpProtocol as string
 	attrs['net.colo'] = request.cf?.colo as string
 	attrs['net.country'] = request.cf?.country as string
 	attrs['net.request_priority'] = request.cf?.requestPriority as string
