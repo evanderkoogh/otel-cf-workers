@@ -17,6 +17,8 @@ export function wrap<T extends object>(item: T, handler: ProxyHandler<T>, autoPa
 		} else {
 			if (handler.get) {
 				return handler.get(target, prop, receiver)
+			} else if (prop === 'bind') {
+				return () => receiver
 			} else if (autoPassthrough) {
 				return passthroughGet(target, prop)
 			}
