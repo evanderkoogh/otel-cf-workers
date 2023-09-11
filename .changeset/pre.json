@@ -1,0 +1,11 @@
+{
+  "mode": "pre",
+  "tag": "rc",
+  "initialVersions": {
+    "@microlabs/otel-cf-workers": "1.0.0-rc.9"
+  },
+  "changesets": [
+    "eight-crabs-applaud",
+    "mighty-timers-float"
+  ]
+}
