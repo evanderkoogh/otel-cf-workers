@@ -29,24 +29,35 @@ export interface SamplingConfig<HS extends HeadSamplerConf = HeadSamplerConf> {
 	tailSampler?: TailSampleFn
 }
 
-export interface TraceConfig<EC extends ExporterConfig = ExporterConfig> {
-	exporter: EC
+interface TraceConfigBase {
+	service: ServiceConfig
 	handlers?: HandlerConfig
 	fetch?: FetcherConfig
 	postProcessor?: PostProcessorFn
 	sampling?: SamplingConfig
-	service: ServiceConfig
-	spanProcessors: SpanProcessor | SpanProcessor[]
 	propagator?: TextMapPropagator
 }
 
-export interface ResolvedTraceConfig extends TraceConfig {
-	exporter: SpanExporter
+interface TraceConfigExporter extends TraceConfigBase {
+	exporter: ExporterConfig
+}
+
+interface TraceConfigSpanProcessors extends TraceConfigBase {
+	spanProcessors: SpanProcessor | SpanProcessor[]
+}
+
+export type TraceConfig = TraceConfigExporter | TraceConfigSpanProcessors
+
+export function isSpanProcessorConfig(config: TraceConfig): config is TraceConfigSpanProcessors {
+	return !!(config as TraceConfigSpanProcessors).spanProcessors
+}
+
+export interface ResolvedTraceConfig extends TraceConfigBase {
 	handlers: Required<HandlerConfig>
 	fetch: Required<FetcherConfig>
 	postProcessor: PostProcessorFn
 	sampling: Required<SamplingConfig<Sampler>>
-	spanProcessors: SpanProcessor | SpanProcessor[]
+	spanProcessors: SpanProcessor[]
 	propagator: TextMapPropagator
 }
 

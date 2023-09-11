@@ -116,6 +116,8 @@ export class BatchTraceSpanProcessor implements SpanProcessor {
 	private traces: Map<string, AnyTraceState> = new Map()
 	private inprogressExports: Map<string, Promise<ExportResult>> = new Map()
 
+	constructor(private exporter: SpanExporter) {}
+
 	private action(traceId: string, action: AnyTraceAction): AnyTraceState {
 		const state = this.traces.get(traceId) || { stateName: 'not_started' }
 		const newState = nextState(state, action)
@@ -128,8 +130,8 @@ export class BatchTraceSpanProcessor implements SpanProcessor {
 	}
 
 	private export(traceId: string) {
-		const { exporter, sampling, postProcessor } = getActiveConfig()
-		const exportArgs = { exporter, tailSampler: sampling.tailSampler, postProcessor }
+		const { sampling, postProcessor } = getActiveConfig()
+		const exportArgs = { exporter: this.exporter, tailSampler: sampling.tailSampler, postProcessor }
 		const newState = this.action(traceId, { actionName: 'startExport', args: exportArgs })
 		if (newState.stateName === 'exporting') {
 			const promise = newState.promise

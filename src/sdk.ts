@@ -16,7 +16,14 @@ import { OTLPExporter } from './exporter.js'
 import { WorkerTracerProvider } from './provider.js'
 import { isHeadSampled, isRootErrorSpan, multiTailSampler } from './sampling.js'
 import { BatchTraceSpanProcessor } from './spanprocessor.js'
-import { Trigger, TraceConfig, ResolvedTraceConfig, ExporterConfig, ParentRatioSamplingConfig } from './types.js'
+import {
+	Trigger,
+	TraceConfig,
+	ResolvedTraceConfig,
+	ExporterConfig,
+	ParentRatioSamplingConfig,
+	isSpanProcessorConfig,
+} from './types.js'
 import { unwrap } from './wrap.js'
 import { createFetchHandler, instrumentGlobalFetch } from './instrumentation/fetch.js'
 import { instrumentGlobalCache } from './instrumentation/cache.js'
@@ -72,9 +79,8 @@ function init(config: ResolvedTraceConfig): void {
 		instrumentGlobalFetch()
 		propagation.setGlobalPropagator(config.propagator)
 		const resource = createResource(config)
-		const spanProcessors = Array.isArray(config.spanProcessors) ? config.spanProcessors : [config.spanProcessors]
 
-		const provider = new WorkerTracerProvider(spanProcessors, resource)
+		const provider = new WorkerTracerProvider(config.spanProcessors, resource)
 		provider.register()
 		initialised = true
 	}
@@ -98,30 +104,42 @@ function createSampler(conf: ParentRatioSamplingConfig): Sampler {
 }
 
 function parseConfig(supplied: TraceConfig): ResolvedTraceConfig {
-	const headSampleConf = supplied.sampling?.headSampler
-	const headSampler = headSampleConf
-		? isSampler(headSampleConf)
-			? headSampleConf
-			: createSampler(headSampleConf)
-		: new AlwaysOnSampler()
-	return {
-		exporter: isSpanExporter(supplied.exporter) ? supplied.exporter : new OTLPExporter(supplied.exporter),
-		fetch: {
-			includeTraceContext: supplied.fetch?.includeTraceContext ?? true,
-		},
-		handlers: {
+	if (isSpanProcessorConfig(supplied)) {
+		const headSampleConf = supplied.sampling?.headSampler
+		const headSampler = headSampleConf
+			? isSampler(headSampleConf)
+				? headSampleConf
+				: createSampler(headSampleConf)
+			: new AlwaysOnSampler()
+		const spanProcessors = Array.isArray(supplied.spanProcessors) ? supplied.spanProcessors : [supplied.spanProcessors]
+		if (spanProcessors.length === 0) {
+			console.log(
+				'Warning! You must either specify an exporter or your own SpanProcessor(s)/Exporter combination in the open-telemetry configuration.'
+			)
+		}
+		return {
 			fetch: {
-				acceptTraceContext: supplied.handlers?.fetch?.acceptTraceContext ?? true,
+				includeTraceContext: supplied.fetch?.includeTraceContext ?? true,
 			},
-		},
-		postProcessor: supplied.postProcessor || ((spans: ReadableSpan[]) => spans),
-		sampling: {
-			headSampler,
-			tailSampler: supplied.sampling?.tailSampler || multiTailSampler([isHeadSampled, isRootErrorSpan]),
-		},
-		service: supplied.service,
-		spanProcessors: supplied.spanProcessors || [],
-		propagator: supplied.propagator || new W3CTraceContextPropagator(),
+			handlers: {
+				fetch: {
+					acceptTraceContext: supplied.handlers?.fetch?.acceptTraceContext ?? true,
+				},
+			},
+			postProcessor: supplied.postProcessor || ((spans: ReadableSpan[]) => spans),
+			sampling: {
+				headSampler,
+				tailSampler: supplied.sampling?.tailSampler || multiTailSampler([isHeadSampled, isRootErrorSpan]),
+			},
+			service: supplied.service,
+			spanProcessors,
+			propagator: supplied.propagator || new W3CTraceContextPropagator(),
+		}
+	} else {
+		const exporter = isSpanExporter(supplied.exporter) ? supplied.exporter : new OTLPExporter(supplied.exporter)
+		const spanProcessors = [new BatchTraceSpanProcessor(exporter)]
+		const newConfig = Object.assign(supplied, { exporter: undefined, spanProcessors }) as TraceConfig
+		return parseConfig(newConfig)
 	}
 }
 
