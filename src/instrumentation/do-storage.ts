@@ -1,7 +1,10 @@
 import { Attributes, SpanKind, SpanOptions, trace } from '@opentelemetry/api'
+import { SemanticAttributes } from '@opentelemetry/semantic-conventions'
 import { wrap } from '../wrap.js'
 
 type ExtraAttributeFn = (argArray: any[], result: any) => Attributes
+
+const dbSystem = 'Cloudflare DO'
 
 const StorageAttributes: Record<string | symbol, ExtraAttributeFn> = {
 	delete(argArray, result) {
@@ -9,14 +12,14 @@ const StorageAttributes: Record<string | symbol, ExtraAttributeFn> = {
 		if (Array.isArray(argArray[0])) {
 			const keys = argArray[0]
 			attrs = {
-				'do.storage.key': keys[0],
-				'do.storage.number_of_keys': keys.length,
-				'do.storage.keys_deleted': result,
+				'db.cf.key': keys[0],
+				'db.cf.number_of_keys': keys.length,
+				'db.cf.keys_deleted': result,
 			}
 		} else {
 			attrs = {
-				'do.storage.key': argArray[0],
-				'do.storage.success': result,
+				'db.cf.key': argArray[0],
+				'db.cf.success': result,
 			}
 		}
 		if (argArray.length > 1) {
@@ -29,12 +32,12 @@ const StorageAttributes: Record<string | symbol, ExtraAttributeFn> = {
 		if (Array.isArray(argArray[0])) {
 			const keys = argArray[0]
 			attrs = {
-				'do.storage.key': keys[0],
-				'do.storage.number_of_keys': keys.length,
+				'db.cf.key': keys[0],
+				'db.cf.number_of_keys': keys.length,
 			}
 		} else {
 			attrs = {
-				'do.storage.key': argArray[0],
+				'db.cf.key': argArray[0],
 			}
 		}
 		if (argArray.length > 1) {
@@ -45,14 +48,14 @@ const StorageAttributes: Record<string | symbol, ExtraAttributeFn> = {
 	list(argArray, result: Map<string, unknown>) {
 		// list may be called with no arguments
 		const attrs: Attributes = {
-			'do.storage.number_of_results': result.size,
+			'db.cf.number_of_results': result.size,
 		}
 		Object.assign(attrs, argArray[0])
 		return attrs
 	},
 	put(argArray) {
 		const attrs = {
-			'do.storage.key': argArray[0],
+			'db.cf.key': argArray[0],
 		}
 
 		if (argArray.length > 2) {
@@ -66,6 +69,11 @@ function instrumentStorageFn(fn: Function, operation: string) {
 	const tracer = trace.getTracer('do_storage')
 	const fnHandler: ProxyHandler<any> = {
 		apply: (target, thisArg, argArray) => {
+			const attributes = {
+				[SemanticAttributes.DB_SYSTEM]: dbSystem,
+				[SemanticAttributes.DB_OPERATION]: operation,
+				[SemanticAttributes.DB_STATEMENT]: `${operation} ${argArray[0]}`,
+			}
 			const options: SpanOptions = {
 				kind: SpanKind.CLIENT,
 				attributes: {
@@ -76,7 +84,7 @@ function instrumentStorageFn(fn: Function, operation: string) {
 				const result = await Reflect.apply(target, thisArg, argArray)
 				const extraAttrs = StorageAttributes[operation] ? StorageAttributes[operation](argArray, result) : {}
 				span.setAttributes(extraAttrs)
-				span.setAttribute('hasResult', !!result)
+				span.setAttribute('db.cf.hasResult', !!result)
 				span.end()
 				return result
 			})
