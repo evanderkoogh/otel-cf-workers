@@ -25,7 +25,6 @@
 	},
 	"homepage": "https://github.com/evanderkoogh/otel-cf-workers#readme",
 	"dependencies": {
-		"@changesets/cli": "^2.26.2",
 		"@opentelemetry/api": "^1.4.1",
 		"@opentelemetry/core": "^1.11.0",
 		"@opentelemetry/exporter-trace-otlp-http": "^0.36.1",
@@ -38,6 +37,7 @@
 		"ts-checked-fsm": "^1.1.0"
 	},
 	"devDependencies": {
+		"@changesets/cli": "^2.26.2",
 		"@cloudflare/workers-types": "^4.20230807.0",
 		"rimraf": "^4.4.1",
 		"typescript": "^5.0.3"
