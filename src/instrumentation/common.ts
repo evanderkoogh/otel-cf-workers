@@ -53,14 +53,17 @@ export async function exportSpans(tracker?: PromiseTracker) {
 		if (tracker) {
 			await tracker.wait()
 		}
-		await tracer.spanProcessors.forEach(sp => { sp.forceFlush() });
+		const promises = tracer.spanProcessors.map(async (spanProcessor) => {
+			await spanProcessor.forceFlush()
+		})
+		await Promise.allSettled(promises)
 	} else {
 		console.error('The global tracer is not of type WorkerTracer and can not export spans')
 	}
 }
 
 /** Like `Promise.allSettled`, but handles modifications to the promises array */
-export async function allSettledMutable(promises: Promise<unknown>[]): Promise<PromiseSettledResult<unknown>[]> {
+async function allSettledMutable(promises: Promise<unknown>[]): Promise<PromiseSettledResult<unknown>[]> {
 	let values: PromiseSettledResult<unknown>[]
 	// when the length of the array changes, there has been a nested call to waitUntil
 	// and we should await the promises again
