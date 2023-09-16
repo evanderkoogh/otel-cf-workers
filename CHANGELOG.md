@@ -1,5 +1,11 @@
 # @microlabs/otel-cf-workers
 
+## 1.0.0-rc.12
+
+### Patch Changes
+
+- 36ccf33: Properly await the export again.
+
 ## 1.0.0-rc.11
 
 ### Patch Changes
