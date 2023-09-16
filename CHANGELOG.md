@@ -1,5 +1,11 @@
 # @microlabs/otel-cf-workers
 
+## 1.0.0-rc.11
+
+### Patch Changes
+
+- 7fd1109: Preliminary support for the fetch method on Service Bindings
+
 ## 1.0.0-rc.10
 
 ### Patch Changes
