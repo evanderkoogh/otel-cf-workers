@@ -6,7 +6,7 @@ import {
 	gatherIncomingCfAttributes,
 	gatherRequestAttributes,
 	gatherResponseAttributes,
-	instrumentFetcher,
+	instrumentClientFetch,
 } from './fetch.js'
 import { instrumentEnv } from './env.js'
 import { Initialiser, setConfig } from '../config.js'
@@ -29,7 +29,7 @@ function instrumentBindingStub(stub: DurableObjectStub, nsName: string): Durable
 					'do.id': target.id.toString(),
 					'do.id.name': target.id.name,
 				}
-				return instrumentFetcher(fetcher, () => ({ includeTraceContext: true }), attrs)
+				return instrumentClientFetch(fetcher, () => ({ includeTraceContext: true }), attrs)
 			} else {
 				return passthroughGet(target, prop)
 			}

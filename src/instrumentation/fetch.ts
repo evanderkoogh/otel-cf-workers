@@ -175,7 +175,7 @@ export function createFetchHandler(fetchFn: FetchHandler, initialiser: Initialis
 }
 
 type getFetchConfig = (config: ResolvedTraceConfig) => FetcherConfig
-export function instrumentFetcher(
+export function instrumentClientFetch(
 	fetchFn: Fetcher['fetch'],
 	configFn: getFetchConfig,
 	attrs?: Attributes
@@ -215,5 +215,5 @@ export function instrumentFetcher(
 }
 
 export function instrumentGlobalFetch(): void {
-	globalThis.fetch = instrumentFetcher(globalThis.fetch, (config) => config.fetch)
+	globalThis.fetch = instrumentClientFetch(globalThis.fetch, (config) => config.fetch)
 }
