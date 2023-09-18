@@ -18,7 +18,7 @@ const isDurableObject = (item?: unknown): item is DurableObjectNamespace => {
 
 const isServiceBinding = (item?: unknown): item is Fetcher => {
 	const binding = item as Fetcher
-	return !!binding.connect || !!binding.fetch || binding.queue || binding.scheduled
+	return !!binding?.connect && !!binding?.fetch && !!binding?.queue && !!binding?.scheduled
 }
 
 const instrumentEnv = (env: Record<string, unknown>): Record<string, unknown> => {
