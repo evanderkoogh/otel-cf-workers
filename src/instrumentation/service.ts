@@ -1,7 +1,7 @@
 import { passthroughGet, wrap } from '../wrap'
 import { instrumentClientFetch } from './fetch'
 
-export function instrumentFetcher(fetcher: Fetcher, envName: string): Fetcher {
+export function instrumentServiceBinding(fetcher: Fetcher, envName: string): Fetcher {
 	const fetcherHandler: ProxyHandler<Fetcher> = {
 		get(target, prop) {
 			if (prop === 'fetch') {

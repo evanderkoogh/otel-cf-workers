@@ -1,5 +1,11 @@
 # @microlabs/otel-cf-workers
 
+## 1.0.0-rc.13
+
+### Patch Changes
+
+- Fix bug with detecting service bindings
+
 ## 1.0.0-rc.12
 
 ### Patch Changes
