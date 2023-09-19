@@ -14,19 +14,19 @@ const KVAttributes: Record<string | symbol, ExtraAttributeFn> = {
 		const attrs: Attributes = {}
 		const opts = argArray[1]
 		if (typeof opts === 'string') {
-			attrs['db.cf.type'] = opts
+			attrs['db.cf.kv.type'] = opts
 		} else if (typeof opts === 'object') {
-			attrs['db.cf.type'] = opts.type
-			attrs['db.cf.cache_ttl'] = opts.cacheTtl
+			attrs['db.cf.kv.type'] = opts.type
+			attrs['db.cf.kv.cache_ttl'] = opts.cacheTtl
 		}
 		return attrs
 	},
 	getWithMetadata(argArray, result) {
 		const attrs = this.get(argArray, result)
-		attrs['db.cf.metadata'] = true
+		attrs['db.cf.kv.metadata'] = true
 		const { cacheStatus } = result as KVNamespaceGetWithMetadataResult<any, any>
 		if (typeof cacheStatus === 'string') {
-		  attrs['db.cf.cache_status'] = cacheStatus
+		  attrs['db.cf.kv.cache_status'] = cacheStatus
 		}
 		return attrs
 	},
@@ -34,15 +34,15 @@ const KVAttributes: Record<string | symbol, ExtraAttributeFn> = {
 		const attrs: Attributes = {}
 		const opts: KVNamespaceListOptions = argArray[0] || {}
 		const { cursor, limit } = opts
-		attrs['db.cf.list_request_cursor'] = cursor || undefined
-		attrs['db.cf.list_limit'] = limit || undefined
+		attrs['db.cf.kv.list_request_cursor'] = cursor || undefined
+		attrs['db.cf.kv.list_limit'] = limit || undefined
 		const { list_complete, cacheStatus } = result as KVNamespaceListResult<any, any>
-		attrs['db.cf.list_complete'] = list_complete || undefined
+		attrs['db.cf.kv.list_complete'] = list_complete || undefined
 		if (!list_complete) {
-			attrs['db.cf.list_response_cursor'] = cursor || undefined
+			attrs['db.cf.kv.list_response_cursor'] = cursor || undefined
 		}
 		if (typeof cacheStatus === 'string') {
-		  attrs['db.cf.cache_status'] = cacheStatus
+		  attrs['db.cf.kv.cache_status'] = cacheStatus
 		}
 		return attrs
 	},
@@ -50,9 +50,9 @@ const KVAttributes: Record<string | symbol, ExtraAttributeFn> = {
 		const attrs: Attributes = {}
 		if (argArray.length > 2 && argArray[2]) {
 			const { expiration, expirationTtl, metadata } = argArray[2] as KVNamespacePutOptions
-			attrs['db.cf.expiration'] = expiration
-			attrs['db.cf.expiration_ttl'] = expirationTtl
-			attrs['db.cf.metadata'] = !!metadata
+			attrs['db.cf.kv.expiration'] = expiration
+			attrs['db.cf.kv.expiration_ttl'] = expirationTtl
+			attrs['db.cf.kv.metadata'] = !!metadata
 		}
 		return attrs
 	},
@@ -82,9 +82,9 @@ function instrumentKVFn(fn: Function, name: string, operation: string) {
 					span.setAttribute(SemanticAttributes.DB_STATEMENT, `${operation} ${prefix || undefined}`)
 				} else {
 					span.setAttribute(SemanticAttributes.DB_STATEMENT, `${operation} ${argArray[0]}`)
-					span.setAttribute('db.cf.key', argArray[0])
+					span.setAttribute('db.cf.kv.key', argArray[0])
 				}
-				span.setAttribute('db.cf.has_result', !!result)
+				span.setAttribute('db.cf.kv.has_result', !!result)
 				span.end()
 				return result
 			})

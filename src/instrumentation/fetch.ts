@@ -57,8 +57,8 @@ export function gatherRequestAttributes(request: Request): Attributes {
 	attrs[SemanticAttributes.HTTP_HOST] = u.host
 	attrs[SemanticAttributes.HTTP_SCHEME] = u.protocol
 	attrs[SemanticAttributes.HTTP_TARGET] = `${u.pathname}${u.search}`
-	// TODO parameterize route?
-	attrs[SemanticAttributes.HTTP_ROUTE] = `${u.pathname}`
+	// TODO Route setting
+	// attrs[SemanticAttributes.HTTP_ROUTE] = `${u.pathname}`
 	attrs[SemanticAttributes.HTTP_USER_AGENT] = headers.get('user-agent')!
 	attrs[SemanticAttributes.HTTP_REQUEST_CONTENT_LENGTH] = headers.get('content-length')!
 	attrs['http.request_content-type'] = headers.get('content-type')!
@@ -133,7 +133,6 @@ export function executeFetchHandler(fetchFn: FetchHandler, [request, env, ctx]: 
 		attributes,
 		kind: SpanKind.SERVER,
 	}
-	const spanName = `${attributes[SemanticAttributes.HTTP_METHOD]} ${attributes[SemanticAttributes.HTTP_ROUTE]}`
 
 	const promise = tracer.startActiveSpan('fetchHandler', options, spanContext, async (span) => {
 		try {

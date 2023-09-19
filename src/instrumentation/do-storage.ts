@@ -12,14 +12,14 @@ const StorageAttributes: Record<string | symbol, ExtraAttributeFn> = {
 		if (Array.isArray(argArray[0])) {
 			const keys = argArray[0]
 			attrs = {
-				'db.cf.key': keys[0],
-				'db.cf.number_of_keys': keys.length,
-				'db.cf.keys_deleted': result,
+				'db.cf.do.key': keys[0],
+				'db.cf.do.number_of_keys': keys.length,
+				'db.cf.do.keys_deleted': result,
 			}
 		} else {
 			attrs = {
-				'db.cf.key': argArray[0],
-				'db.cf.success': result,
+				'db.cf.do.key': argArray[0],
+				'db.cf.do.success': result,
 			}
 		}
 		if (argArray.length > 1) {
@@ -32,12 +32,12 @@ const StorageAttributes: Record<string | symbol, ExtraAttributeFn> = {
 		if (Array.isArray(argArray[0])) {
 			const keys = argArray[0]
 			attrs = {
-				'db.cf.key': keys[0],
-				'db.cf.number_of_keys': keys.length,
+				'db.cf.do.key': keys[0],
+				'db.cf.do.number_of_keys': keys.length,
 			}
 		} else {
 			attrs = {
-				'db.cf.key': argArray[0],
+				'db.cf.do.key': argArray[0],
 			}
 		}
 		if (argArray.length > 1) {
@@ -48,14 +48,14 @@ const StorageAttributes: Record<string | symbol, ExtraAttributeFn> = {
 	list(argArray, result: Map<string, unknown>) {
 		// list may be called with no arguments
 		const attrs: Attributes = {
-			'db.cf.number_of_results': result.size,
+			'db.cf.do.number_of_results': result.size,
 		}
 		Object.assign(attrs, argArray[0])
 		return attrs
 	},
 	put(argArray) {
 		const attrs = {
-			'db.cf.key': argArray[0],
+			'db.cf.do.key': argArray[0],
 		}
 
 		if (argArray.length > 2) {
@@ -84,7 +84,7 @@ function instrumentStorageFn(fn: Function, operation: string) {
 				const result = await Reflect.apply(target, thisArg, argArray)
 				const extraAttrs = StorageAttributes[operation] ? StorageAttributes[operation](argArray, result) : {}
 				span.setAttributes(extraAttrs)
-				span.setAttribute('db.cf.hasResult', !!result)
+				span.setAttribute('db.cf.do.has_result', !!result)
 				span.end()
 				return result
 			})
