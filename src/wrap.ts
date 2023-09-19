@@ -6,7 +6,7 @@ export function isWrapped<T>(item: T): item is Wrapped<T> {
 	return item && !!(item as Wrapped<T>)[unwrapSymbol]
 }
 
-function isProxyable(item: any) {
+export function isProxyable(item: any) {
 	return typeof item === 'object' || typeof item === 'function'
 }
 

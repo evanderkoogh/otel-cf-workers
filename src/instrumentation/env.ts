@@ -1,4 +1,4 @@
-import { wrap } from '../wrap.js'
+import { isProxyable, wrap } from '../wrap.js'
 import { instrumentDOBinding } from './do.js'
 import { instrumentKV } from './kv.js'
 import { instrumentQueueSender } from './queue.js'
@@ -25,6 +25,9 @@ const instrumentEnv = (env: Record<string, unknown>): Record<string, unknown> =>
 	const envHandler: ProxyHandler<Record<string, unknown>> = {
 		get: (target, prop, receiver) => {
 			const item = Reflect.get(target, prop, receiver)
+			if (!isProxyable(item)) {
+				return item
+			}
 			if (isKVNamespace(item)) {
 				return instrumentKV(item, String(prop))
 			} else if (isQueue(item)) {
