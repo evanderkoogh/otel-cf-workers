@@ -1,4 +1,4 @@
-import { Context, Span } from '@opentelemetry/api'
+import { Context, Span, trace } from '@opentelemetry/api'
 import { ReadableSpan, SpanExporter, SpanProcessor } from '@opentelemetry/sdk-trace-base'
 import { ExportResult, ExportResultCode } from '@opentelemetry/core'
 import { Action, State, stateMachine } from 'ts-checked-fsm'
@@ -113,49 +113,61 @@ type AnyTraceState = Parameters<typeof nextState>[0]
 type AnyTraceAction = Parameters<typeof nextState>[1]
 
 export class BatchTraceSpanProcessor implements SpanProcessor {
-	private traces: Map<string, AnyTraceState> = new Map()
+	private traceLookup: Map<string, AnyTraceState> = new Map()
+	private localRootSpanLookup: Map<string, string> = new Map()
 	private inprogressExports: Map<string, Promise<ExportResult>> = new Map()
 
 	constructor(private exporter: SpanExporter) {}
 
-	private action(traceId: string, action: AnyTraceAction): AnyTraceState {
-		const state = this.traces.get(traceId) || { stateName: 'not_started' }
+	private action(localRootSpanId: string, action: AnyTraceAction): AnyTraceState {
+		const state = this.traceLookup.get(localRootSpanId) || { stateName: 'not_started' }
 		const newState = nextState(state, action)
 		if (newState.stateName === 'done') {
-			this.traces.delete(traceId)
+			this.traceLookup.delete(localRootSpanId)
 		} else {
-			this.traces.set(traceId, newState)
+			this.traceLookup.set(localRootSpanId, newState)
 		}
 		return newState
 	}
 
-	private export(traceId: string) {
+	private export(localRootSpanId: string) {
 		const { sampling, postProcessor } = getActiveConfig()
 		const exportArgs = { exporter: this.exporter, tailSampler: sampling.tailSampler, postProcessor }
-		const newState = this.action(traceId, { actionName: 'startExport', args: exportArgs })
+		const newState = this.action(localRootSpanId, { actionName: 'startExport', args: exportArgs })
 		if (newState.stateName === 'exporting') {
 			const promise = newState.promise
-			this.inprogressExports.set(traceId, promise)
+			this.inprogressExports.set(localRootSpanId, promise)
 			promise.then((result) => {
 				if (result.code === ExportResultCode.FAILED) {
 					console.log('Error sending spans to exporter:', result.error)
 				}
-				this.action(traceId, { actionName: 'exportDone' })
-				this.inprogressExports.delete(traceId)
+				this.action(localRootSpanId, { actionName: 'exportDone' })
+				this.inprogressExports.delete(localRootSpanId)
 			})
 		}
 	}
 
-	onStart(span: Span, _parentContext: Context): void {
-		const traceId = span.spanContext().traceId
-		this.action(traceId, { actionName: 'startSpan', span })
+	onStart(span: Span, parentContext: Context): void {
+		const spanId = span.spanContext().spanId
+		const parentSpanId = trace.getSpan(parentContext)?.spanContext()?.spanId
+		const parentRootSpanId = parentSpanId ? this.localRootSpanLookup.get(parentSpanId) : undefined
+		const localRootSpanId = parentRootSpanId || spanId
+		this.localRootSpanLookup.set(spanId, localRootSpanId)
+
+		this.action(localRootSpanId, { actionName: 'startSpan', span })
 	}
 
 	onEnd(span: ReadableSpan): void {
-		const traceId = span.spanContext().traceId
-		const state = this.action(traceId, { actionName: 'endSpan', span })
-		if (state.stateName === 'trace_complete') {
-			this.export(traceId)
+		const spanId = span.spanContext().spanId
+		const localRootSpanId = this.localRootSpanLookup.get(spanId)
+		if (localRootSpanId) {
+			const state = this.action(localRootSpanId, { actionName: 'endSpan', span })
+			if (state.stateName === 'trace_complete') {
+				state.completedSpans.forEach((span) => {
+					this.localRootSpanLookup.delete(span.spanContext().spanId)
+				})
+				this.export(localRootSpanId)
+			}
 		}
 	}
 
