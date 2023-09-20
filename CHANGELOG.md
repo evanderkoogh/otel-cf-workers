@@ -1,5 +1,12 @@
 # @microlabs/otel-cf-workers
 
+## 1.0.0-rc.14
+
+### Patch Changes
+
+- 45547b6: Make instrumentEnv more robust still.
+- 21a18f8: Fix bug where multiple calls to the same service_binding/do would only export the first call
+
 ## 1.0.0-rc.13
 
 ### Patch Changes

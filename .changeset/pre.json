@@ -5,6 +5,8 @@
     "@microlabs/otel-cf-workers": "1.0.0-rc.9"
   },
   "changesets": [
+    "calm-tips-laugh",
+    "early-yaks-sparkle",
     "eight-crabs-applaud",
     "flat-schools-repair",
     "fresh-bees-talk",
