@@ -160,7 +160,7 @@ export class SpanImpl implements Span, ReadableSpan {
 	}
 
 	isRecording(): boolean {
-		return true
+		return !this._ended
 	}
 
 	recordException(exception: Exception, time?: TimeInput): void {
