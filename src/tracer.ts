@@ -58,9 +58,9 @@ export class WorkerTracer implements Tracer {
 			attributes,
 			name,
 			onEnd: (span) => {
-				this.spanProcessors.forEach(sp => {
+				this.spanProcessors.forEach((sp) => {
 					sp.onEnd(span as unknown as ReadableSpan)
-				});
+				})
 			},
 			resource: this.resource,
 			spanContext,
@@ -68,9 +68,11 @@ export class WorkerTracer implements Tracer {
 			spanKind,
 			startTime: options.startTime,
 		})
-		//Do not get me started on the idosyncracies of the Otel JS libraries.
-		//@ts-ignore
-		this.spanProcessors.forEach(sp => { sp.onStart(span, context) })
+		this.spanProcessors.forEach((sp) => {
+			//Do not get me started on the idosyncracies of the Otel JS libraries.
+			//@ts-ignore
+			sp.onStart(span, context)
+		})
 		return span
 	}
 
