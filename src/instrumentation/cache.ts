@@ -1,10 +1,14 @@
 import { SpanKind, SpanOptions, trace } from '@opentelemetry/api'
 import { wrap } from '../wrap.js'
-import { sanitiseURL } from './fetch.js'
 
 type CacheFns = Cache[keyof Cache]
 
 const tracer = trace.getTracer('cache instrumentation')
+
+function sanitiseURL(url: string): string {
+	const u = new URL(url)
+	return `${u.protocol}//${u.host}${u.pathname}${u.search}`
+}
 
 function instrumentFunction<T extends CacheFns>(fn: T, cacheName: string, op: string): T {
 	const handler: ProxyHandler<typeof fn> = {

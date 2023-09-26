@@ -1,62 +1,58 @@
 import { Attributes, SpanKind, SpanOptions, trace } from '@opentelemetry/api'
+import { SemanticAttributes } from '@opentelemetry/semantic-conventions'
 import { wrap } from '../wrap.js'
 
 type ExtraAttributeFn = (argArray: any[], result: any) => Attributes
 
+const dbSystem = 'Cloudflare KV'
+
 const KVAttributes: Record<string | symbol, ExtraAttributeFn> = {
 	delete(argArray) {
-		return {
-			'kv.key': argArray[0],
-		}
+		return {}
 	},
 	get(argArray) {
-		const attrs: Attributes = {
-			'kv.key': argArray[0],
-		}
+		const attrs: Attributes = {}
 		const opts = argArray[1]
 		if (typeof opts === 'string') {
-			attrs['kv.type'] = opts
+			attrs['db.cf.kv.type'] = opts
 		} else if (typeof opts === 'object') {
-			attrs['kv.type'] = opts.type
-			attrs['kv.cacheTtl'] = opts.cacheTtl
+			attrs['db.cf.kv.type'] = opts.type
+			attrs['db.cf.kv.cache_ttl'] = opts.cacheTtl
 		}
 		return attrs
 	},
 	getWithMetadata(argArray, result) {
 		const attrs = this.get(argArray, result)
-		attrs['kv.withMetadata'] = true
+		attrs['db.cf.kv.metadata'] = true
 		const { cacheStatus } = result as KVNamespaceGetWithMetadataResult<any, any>
 		if (typeof cacheStatus === 'string') {
-		  attrs['kv.cacheStatus'] = cacheStatus
+		  attrs['db.cf.kv.cache_status'] = cacheStatus
 		}
 		return attrs
 	},
 	list(argArray, result) {
 		const attrs: Attributes = {}
 		const opts: KVNamespaceListOptions = argArray[0] || {}
-		const { cursor, limit, prefix } = opts
-		attrs['kv.list_prefix'] = prefix || undefined
-		attrs['kv.list_request_cursor'] = cursor || undefined
-		attrs['kv.list_limit'] = limit || undefined
+		const { cursor, limit } = opts
+		attrs['db.cf.kv.list_request_cursor'] = cursor || undefined
+		attrs['db.cf.kv.list_limit'] = limit || undefined
 		const { list_complete, cacheStatus } = result as KVNamespaceListResult<any, any>
-		attrs['kv.list_complete'] = list_complete || undefined
+		attrs['db.cf.kv.list_complete'] = list_complete || undefined
 		if (!list_complete) {
-			attrs['kv.list_response_cursor'] = cursor || undefined
+			attrs['db.cf.kv.list_response_cursor'] = cursor || undefined
 		}
 		if (typeof cacheStatus === 'string') {
-		  attrs['kv.cacheStatus'] = cacheStatus
+		  attrs['db.cf.kv.cache_status'] = cacheStatus
 		}
 		return attrs
 	},
 	put(argArray) {
-		const attrs: Attributes = {
-			'kv.key': argArray[0],
-		}
+		const attrs: Attributes = {}
 		if (argArray.length > 2 && argArray[2]) {
 			const { expiration, expirationTtl, metadata } = argArray[2] as KVNamespacePutOptions
-			attrs['kv.expiration'] = expiration
-			attrs['kv.expirationTtl'] = expirationTtl
-			attrs['kv.withMetadata'] = !!metadata
+			attrs['db.cf.kv.expiration'] = expiration
+			attrs['db.cf.kv.expiration_ttl'] = expirationTtl
+			attrs['db.cf.kv.metadata'] = !!metadata
 		}
 		return attrs
 	},
@@ -66,19 +62,29 @@ function instrumentKVFn(fn: Function, name: string, operation: string) {
 	const tracer = trace.getTracer('KV')
 	const fnHandler: ProxyHandler<any> = {
 		apply: (target, thisArg, argArray) => {
+			const attributes = {
+				binding_type: 'KV',
+				[SemanticAttributes.DB_NAME]: name,
+				[SemanticAttributes.DB_SYSTEM]: dbSystem,
+				[SemanticAttributes.DB_OPERATION]: operation,
+			}
 			const options: SpanOptions = {
 				kind: SpanKind.CLIENT,
-				attributes: {
-					binding_type: 'KV',
-					kv_namespace: name,
-					operation,
-				},
+				attributes,
 			}
-			return tracer.startActiveSpan(`kv:${name}:${operation}`, options, async (span) => {
+			return tracer.startActiveSpan(`${name} ${operation}`, options, async (span) => {
 				const result = await Reflect.apply(target, thisArg, argArray)
 				const extraAttrs = KVAttributes[operation] ? KVAttributes[operation](argArray, result) : {}
 				span.setAttributes(extraAttrs)
-				span.setAttribute('hasResult', !!result)
+				if (operation === 'list') {
+					const opts: KVNamespaceListOptions = argArray[0] || {}
+					const { prefix } = opts
+					span.setAttribute(SemanticAttributes.DB_STATEMENT, `${operation} ${prefix || undefined}`)
+				} else {
+					span.setAttribute(SemanticAttributes.DB_STATEMENT, `${operation} ${argArray[0]}`)
+					span.setAttribute('db.cf.kv.key', argArray[0])
+				}
+				span.setAttribute('db.cf.kv.has_result', !!result)
 				span.end()
 				return result
 			})

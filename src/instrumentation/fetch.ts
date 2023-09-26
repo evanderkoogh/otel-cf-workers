@@ -34,19 +34,31 @@ export interface FetchHandlerConfig {
 type FetchHandler = ExportedHandlerFetchHandler
 type FetchHandlerArgs = Parameters<FetchHandler>
 
-export function sanitiseURL(url: string): string {
-	const u = new URL(url)
-	return `${u.protocol}//${u.host}${u.pathname}${u.search}`
+const netKeysFromCF = new Set([
+	'colo',
+	'country',
+	'request_priority',
+	'tls_cipher',
+	'tls_version',
+	'asn',
+	'tcp_rtt',
+])
+
+const camelToSnakeCase = (s: string): string => {
+	return s.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
 }
 
 const gatherOutgoingCfAttributes = (cf: RequestInitCfProperties): Attributes => {
 	const attrs: Record<string, string | number> = {}
 	Object.keys(cf).forEach((key) => {
 		const value = cf[key]
-		if (typeof value === 'string' || typeof value === 'number') {
-			attrs[`cf.${key}`] = value
-		} else {
-			attrs[`cf.${key}`] = JSON.stringify(value)
+		const destKey = camelToSnakeCase(key)
+		if (!netKeysFromCF.has(destKey)) {
+			if (typeof value === 'string' || typeof value === 'number') {
+				attrs[`cf.${destKey}`] = value
+			} else {
+				attrs[`cf.${destKey}`] = JSON.stringify(value)
+			}
 		}
 	})
 	return attrs
@@ -57,10 +69,16 @@ export function gatherRequestAttributes(request: Request): Attributes {
 	const headers = request.headers
 	// attrs[SemanticAttributes.HTTP_CLIENT_IP] = '1.1.1.1'
 	attrs[SemanticAttributes.HTTP_METHOD] = request.method
-	attrs[SemanticAttributes.HTTP_URL] = sanitiseURL(request.url)
+	const u = new URL(request.url)
+	attrs[SemanticAttributes.HTTP_URL] = `${u.protocol}//${u.host}${u.pathname}${u.search}`
+	attrs[SemanticAttributes.HTTP_HOST] = u.host
+	attrs[SemanticAttributes.HTTP_SCHEME] = u.protocol
+	attrs[SemanticAttributes.HTTP_TARGET] = `${u.pathname}${u.search}`
+	// TODO Route setting
+	// attrs[SemanticAttributes.HTTP_ROUTE] = `${u.pathname}`
 	attrs[SemanticAttributes.HTTP_USER_AGENT] = headers.get('user-agent')!
 	attrs[SemanticAttributes.HTTP_REQUEST_CONTENT_LENGTH] = headers.get('content-length')!
-	attrs['http.request_content-type'] = headers.get('content-type')!
+	attrs['http.mime_type'] = headers.get('content-type')!
 	attrs['http.accepts'] = headers.get('accepts')!
 	return attrs
 }
@@ -68,14 +86,15 @@ export function gatherRequestAttributes(request: Request): Attributes {
 export function gatherResponseAttributes(response: Response): Attributes {
 	const attrs: Record<string, string | number> = {}
 	attrs[SemanticAttributes.HTTP_STATUS_CODE] = response.status
-	attrs[SemanticAttributes.HTTP_RESPONSE_CONTENT_LENGTH] = response.headers.get('content-length')!
-	attrs['http.response_content-type'] = response.headers.get('content-type')!
+	if (response.headers.get('content-length')! == null) {
+		attrs[SemanticAttributes.HTTP_RESPONSE_CONTENT_LENGTH] = response.headers.get('content-length')!
+	}
+	attrs['http.mime_type'] = response.headers.get('content-type')!
 	return attrs
 }
 
 export function gatherIncomingCfAttributes(request: Request): Attributes {
 	const attrs: Record<string, string | number> = {}
-	attrs[SemanticAttributes.HTTP_SCHEME] = request.cf?.httpProtocol as string
 	attrs['net.colo'] = request.cf?.colo as string
 	attrs['net.country'] = request.cf?.country as string
 	attrs['net.request_priority'] = request.cf?.requestPriority as string
