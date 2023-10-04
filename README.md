@@ -260,10 +260,14 @@ One of the advantages of using Open Telemetry is that it makes it easier to do d
 
 Triggers:
 
+- [ ] Email (`handler.email`)
 - [x] HTTP (`handler.fetch`)
 - [x] Queue (`handler.queue`)
 - [ ] Cron (`handler.scheduled`)
-- [x] Durable Objects
+- [ ] Tail (`handler.tail`)
+- [x] Durable Objects fetch
+- [x] Durable Objects alarm
+- [ ] Durable Objects hibernated WebSocket
 - [x] waitUntil (`ctx.waitUntil`)
 
 Globals/built-ins:
@@ -272,6 +276,11 @@ Globals/built-ins:
 - [x] Caches
 - [x] Durable Object Storage
 
+Cloudflare modules
+
+- [ ] `cloudflare:email`
+- [ ] `cloudflare:sockets`
+
 Bindings:
 
 - [x] KV
@@ -279,5 +288,12 @@ Bindings:
 - [x] Durable Objects
 - [ ] R2
 - [ ] D1
-- [ ] Worker Bindings
-- [ ] Workers for Platform Dispatch
+- [ ] Service Bindings
+- [ ] Analytics Engine
+- [ ] Browser Rendering
+- [ ] Workers AI
+- [ ] Email Sending
+- [ ] mTLS
+- [ ] Vectorize
+- [ ] Hyperdrive
+- [ ] Workers for Platforms Dispatch
