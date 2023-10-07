@@ -11,9 +11,9 @@ const AEAttributes: Record<string | symbol, ExtraAttributeFn> = {
 		const attrs: Attributes = {}
 		const opts = argArray[0]
 		if (typeof opts === 'object') {
-			attrs['db.cf.ae.indexes'] = opts.indexes.length,
-			attrs['db.cf.ae.index'] = (opts.indexes[0] as (ArrayBuffer | string)).toString(),
-			attrs['db.cf.ae.doubles'] = opts.doubles.length,
+			attrs['db.cf.ae.indexes'] = opts.indexes.length
+			attrs['db.cf.ae.index'] = (opts.indexes[0] as (ArrayBuffer | string)).toString()
+			attrs['db.cf.ae.doubles'] = opts.doubles.length
 			attrs['db.cf.ae.blobs'] = opts.blobs.length
 		}
 		return attrs
