@@ -29,8 +29,10 @@ import { createFetchHandler, instrumentGlobalFetch } from './instrumentation/fet
 import { instrumentGlobalCache } from './instrumentation/cache.js'
 import { createQueueHandler } from './instrumentation/queue.js'
 import { DOClass, instrumentDOClass } from './instrumentation/do.js'
+import { createScheduledHandler } from './instrumentation/scheduled.js'
 
 type FetchHandler = ExportedHandlerFetchHandler<unknown, unknown>
+type ScheduledHandler = ExportedHandlerScheduledHandler<unknown>
 type QueueHandler = ExportedHandlerQueueHandler
 
 export type ResolveConfigFn = (env: any, trigger: Trigger) => TraceConfig
@@ -168,6 +170,11 @@ export function instrument<E, Q, C>(
 	if (handler.fetch) {
 		const fetcher = unwrap(handler.fetch) as FetchHandler
 		handler.fetch = createFetchHandler(fetcher, initialiser)
+	}
+
+	if (handler.scheduled) {
+		const scheduler = unwrap(handler.scheduled) as ScheduledHandler
+		handler.scheduled = createScheduledHandler(scheduler, initialiser)
 	}
 
 	if (handler.queue) {
