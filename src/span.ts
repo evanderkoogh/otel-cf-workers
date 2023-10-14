@@ -70,9 +70,12 @@ function getHrTime(input?: TimeInput): HrTime {
 	} else if (typeof input === 'number') {
 		//TODO: do something with performance.now something
 		return millisToHr(input)
-	} else {
-		throw new Error('No valid time')
+	} else if (Array.isArray(input)) {
+		return input
 	}
+
+	const v: never = input
+	throw new Error(`unreachable value: ${JSON.stringify(v)}`)
 }
 
 export class SpanImpl implements Span, ReadableSpan {
