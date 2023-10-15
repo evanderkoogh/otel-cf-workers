@@ -1,5 +1,17 @@
 # @microlabs/otel-cf-workers
 
+## 1.0.0-rc.15
+
+### Minor Changes
+
+- 8f83b55: Added instrumentation for scheduled handler
+- 0195525: [Potentially breaking change] Updated all span names and attributes related to HTTP to the latest semantic conventions
+- a1ff053: Add instrumentation for Analytics Engine bindings
+
+### Patch Changes
+
+- a154ddd: Update attr naming convention to db.cf.kv._ and db.cf.do._
+
 ## 1.0.0-rc.14
 
 ### Patch Changes
