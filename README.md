@@ -296,4 +296,4 @@ Bindings:
 - [ ] mTLS
 - [ ] Vectorize
 - [ ] Hyperdrive
-- [ ] Workers for Platforms Dispatch
+- [x] Workers for Platforms Dispatch
