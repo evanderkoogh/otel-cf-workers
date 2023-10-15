@@ -263,7 +263,7 @@ Triggers:
 - [ ] Email (`handler.email`)
 - [x] HTTP (`handler.fetch`)
 - [x] Queue (`handler.queue`)
-- [ ] Cron (`handler.scheduled`)
+- [x] Cron (`handler.scheduled`)
 - [ ] Tail (`handler.tail`)
 - [x] Durable Objects fetch
 - [x] Durable Objects alarm
