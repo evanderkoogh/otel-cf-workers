@@ -9,12 +9,12 @@ import {
 	Context,
 	SpanStatusCode,
 } from '@opentelemetry/api'
-import { SemanticAttributes } from '@opentelemetry/semantic-conventions'
 import { Initialiser, getActiveConfig, setConfig } from '../config.js'
 import { wrap } from '../wrap.js'
 import { instrumentEnv } from './env.js'
 import { exportSpans, proxyExecutionContext } from './common.js'
 import { ResolvedTraceConfig } from '../types.js'
+import { ReadableSpan } from '@opentelemetry/sdk-trace-base'
 
 export type IncludeTraceContextFn = (request: Request) => boolean
 export interface FetcherConfig {
@@ -34,18 +34,10 @@ export interface FetchHandlerConfig {
 type FetchHandler = ExportedHandlerFetchHandler
 type FetchHandlerArgs = Parameters<FetchHandler>
 
-const netKeysFromCF = new Set([
-	'colo',
-	'country',
-	'request_priority',
-	'tls_cipher',
-	'tls_version',
-	'asn',
-	'tcp_rtt',
-])
+const netKeysFromCF = new Set(['colo', 'country', 'request_priority', 'tls_cipher', 'tls_version', 'asn', 'tcp_rtt'])
 
 const camelToSnakeCase = (s: string): string => {
-	return s.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+	return s.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`)
 }
 
 const gatherOutgoingCfAttributes = (cf: RequestInitCfProperties): Attributes => {
@@ -67,27 +59,29 @@ const gatherOutgoingCfAttributes = (cf: RequestInitCfProperties): Attributes => 
 export function gatherRequestAttributes(request: Request): Attributes {
 	const attrs: Record<string, string | number> = {}
 	const headers = request.headers
-	// attrs[SemanticAttributes.HTTP_CLIENT_IP] = '1.1.1.1'
-	attrs[SemanticAttributes.HTTP_METHOD] = request.method
-	const u = new URL(request.url)
-	attrs[SemanticAttributes.HTTP_URL] = `${u.protocol}//${u.host}${u.pathname}${u.search}`
-	attrs[SemanticAttributes.HTTP_HOST] = u.host
-	attrs[SemanticAttributes.HTTP_SCHEME] = u.protocol
-	attrs[SemanticAttributes.HTTP_TARGET] = `${u.pathname}${u.search}`
-	// TODO Route setting
-	// attrs[SemanticAttributes.HTTP_ROUTE] = `${u.pathname}`
-	attrs[SemanticAttributes.HTTP_USER_AGENT] = headers.get('user-agent')!
-	attrs[SemanticAttributes.HTTP_REQUEST_CONTENT_LENGTH] = headers.get('content-length')!
+	attrs['http.request.method'] = request.method.toUpperCase()
+	attrs['network.protocol.name'] = 'http'
+	attrs['network.protocol.version'] = request.cf?.httpProtocol as string
+	attrs['http.request.body.size'] = headers.get('content-length')!
+	attrs['user_agent.original'] = headers.get('user-agent')!
 	attrs['http.mime_type'] = headers.get('content-type')!
-	attrs['http.accepts'] = headers.get('accepts')!
+	attrs['http.accepts'] = request.cf?.clientAcceptEncoding as string
+
+	const u = new URL(request.url)
+	attrs['url.full'] = `${u.protocol}//${u.host}${u.pathname}${u.search}`
+	attrs['server.address'] = u.host
+	attrs['url.scheme'] = u.protocol
+	attrs['url.path'] = u.pathname
+	attrs['url.query'] = u.search
+
 	return attrs
 }
 
 export function gatherResponseAttributes(response: Response): Attributes {
 	const attrs: Record<string, string | number> = {}
-	attrs[SemanticAttributes.HTTP_STATUS_CODE] = response.status
+	attrs['http.response.status_code'] = response.status
 	if (response.headers.get('content-length')! == null) {
-		attrs[SemanticAttributes.HTTP_RESPONSE_CONTENT_LENGTH] = response.headers.get('content-length')!
+		attrs['http.response.body.size'] = response.headers.get('content-length')!
 	}
 	attrs['http.mime_type'] = response.headers.get('content-type')!
 	return attrs
@@ -139,9 +133,9 @@ export function executeFetchHandler(fetchFn: FetchHandler, [request, env, ctx]: 
 
 	const tracer = trace.getTracer('fetchHandler')
 	const attributes = {
-		[SemanticAttributes.FAAS_TRIGGER]: 'http',
-		[SemanticAttributes.FAAS_COLDSTART]: cold_start,
-		[SemanticAttributes.FAAS_EXECUTION]: request.headers.get('cf-ray') ?? undefined,
+		['faas.trigger']: 'http',
+		['faas.coldstart']: cold_start,
+		['faas.invocation_id']: request.headers.get('cf-ray') ?? undefined,
 	}
 	cold_start = false
 	Object.assign(attributes, gatherRequestAttributes(request))
@@ -151,17 +145,22 @@ export function executeFetchHandler(fetchFn: FetchHandler, [request, env, ctx]: 
 		kind: SpanKind.SERVER,
 	}
 
-	const promise = tracer.startActiveSpan('fetchHandler', options, spanContext, async (span) => {
+	const method = request.method.toUpperCase()
+	const promise = tracer.startActiveSpan(method, options, spanContext, async (span) => {
+		const readable = span as unknown as ReadableSpan
 		try {
 			const response: Response = await fetchFn(request, env, ctx)
-			if (response.status < 500) {
-				span.setStatus({ code: SpanStatusCode.OK })
-			}
 			span.setAttributes(gatherResponseAttributes(response))
+			if (readable.attributes['http.route']) {
+				span.updateName(`${method} ${readable.attributes['http.route']}`)
+			}
 			span.end()
 
 			return response
 		} catch (error) {
+			if (readable.attributes['http.route']) {
+				span.updateName(`${method} ${readable.attributes['http.route']}`)
+			}
 			span.recordException(error as Exception)
 			span.setStatus({ code: SpanStatusCode.ERROR })
 			span.end()
@@ -209,7 +208,8 @@ export function instrumentClientFetch(
 			const options: SpanOptions = { kind: SpanKind.CLIENT, attributes: attrs }
 
 			const host = new URL(request.url).host
-			const spanName = typeof attrs?.['name'] === 'string' ? attrs?.['name'] : `fetch: ${host}`
+			const method = request.method.toUpperCase()
+			const spanName = typeof attrs?.['name'] === 'string' ? attrs?.['name'] : `${method}: ${host}`
 			const promise = tracer.startActiveSpan(spanName, options, async (span) => {
 				const includeTraceContext =
 					typeof config.includeTraceContext === 'function'

@@ -10,10 +10,12 @@ const handleDO = async (request: Request, env: Env): Promise<Response> => {
 	const ns = env.Test_Otel_DO
 	const id = ns.idFromName('testing')
 	const stub = ns.get(id)
+	trace.getActiveSpan()?.setAttribute('http.route', '/do')
 	return await stub.fetch('https://does-not-exist.com/blah')
 }
 
 const handleRest = async (request: Request, env: Env, ctx: ExecutionContext): Promise<Response> => {
+	trace.getActiveSpan()?.setAttribute('http.route', '/*')
 	await fetch('https://cloudflare.com')
 
 	const cache = await caches.open('stuff')
