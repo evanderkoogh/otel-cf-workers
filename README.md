@@ -288,8 +288,8 @@ Bindings:
 - [x] Durable Objects
 - [ ] R2
 - [ ] D1
-- [ ] Service Bindings
-- [ ] Analytics Engine
+- [x] Service Bindings
+- [x] Analytics Engine
 - [ ] Browser Rendering
 - [ ] Workers AI
 - [ ] Email Sending
