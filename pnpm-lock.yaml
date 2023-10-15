@@ -43,6 +43,9 @@ devDependencies:
   '@cloudflare/workers-types':
     specifier: ^4.20230807.0
     version: 4.20230807.0
+  prettier:
+    specifier: ^3.0.3
+    version: 3.0.3
   rimraf:
     specifier: ^4.4.1
     version: 4.4.1
@@ -1558,6 +1561,12 @@ packages:
   /prettier@2.8.8:
     resolution: {integrity: sha512-tdN8qQGvNjw4CHbY+XXk0JgCXn9QiF21a55rBe5LJAU+kDyC4WQn4+awm2Xfk2lQMk5fKup9XgzTZtGkjBdP9Q==}
     engines: {node: '>=10.13.0'}
+    hasBin: true
+    dev: true
+
+  /prettier@3.0.3:
+    resolution: {integrity: sha512-L/4pUDMxcNa8R/EthV08Zt42WBO4h1rarVtK0K+QJG0X187OLo7l699jWw0GKuwzkPQ//jMFA/8Xm6Fh3J/DAg==}
+    engines: {node: '>=14'}
     hasBin: true
     dev: true
 

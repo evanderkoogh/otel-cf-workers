@@ -113,7 +113,7 @@ function parseConfig(supplied: TraceConfig): ResolvedTraceConfig {
 		const spanProcessors = Array.isArray(supplied.spanProcessors) ? supplied.spanProcessors : [supplied.spanProcessors]
 		if (spanProcessors.length === 0) {
 			console.log(
-				'Warning! You must either specify an exporter or your own SpanProcessor(s)/Exporter combination in the open-telemetry configuration.'
+				'Warning! You must either specify an exporter or your own SpanProcessor(s)/Exporter combination in the open-telemetry configuration.',
 			)
 		}
 		return {
@@ -160,7 +160,7 @@ function createInitialiser(config: ConfigurationOption): Initialiser {
 
 export function instrument<E, Q, C>(
 	handler: ExportedHandler<E, Q, C>,
-	config: ConfigurationOption
+	config: ConfigurationOption,
 ): ExportedHandler<E, Q, C> {
 	const initialiser = createInitialiser(config)
 

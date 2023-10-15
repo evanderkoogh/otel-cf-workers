@@ -50,7 +50,7 @@ function instrumentAEFn(fn: Function, name: string, operation: string) {
 
 export function instrumentAnalyticsEngineDataset(
 	dataset: AnalyticsEngineDataset,
-	name: string
+	name: string,
 ): AnalyticsEngineDataset {
 	const datasetHandler: ProxyHandler<AnalyticsEngineDataset> = {
 		get: (target, prop, receiver) => {

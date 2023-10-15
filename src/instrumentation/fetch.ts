@@ -196,7 +196,7 @@ type getFetchConfig = (config: ResolvedTraceConfig) => FetcherConfig
 export function instrumentClientFetch(
 	fetchFn: Fetcher['fetch'],
 	configFn: getFetchConfig,
-	attrs?: Attributes
+	attrs?: Attributes,
 ): Fetcher['fetch'] {
 	const handler: ProxyHandler<typeof fetch> = {
 		apply: (target, thisArg, argArray): ReturnType<typeof fetch> => {

@@ -17,8 +17,12 @@
 		}
 	},
 	"scripts": {
+		"clean": "rimraf ./dist",
+		"format": "prettier -w src",
+		"build-esm": "tsc",
+		"build-cjs": "tsc -p tsconfig-cjs.json",
 		"fix-dist": "echo '{\"type\": \"module\"}' > dist/esm/package.json && echo '{\"type\": \"commonjs\"}' > dist/cjs/package.json",
-		"build": "rimraf ./dist && tsc && tsc -p tsconfig-cjs.json && pnpm fix-dist",
+		"build": "pnpm clean && pnpm format && pnpm build-esm && pnpm build-cjs && pnpm fix-dist",
 		"preversion": "pnpm build",
 		"prepublishOnly": "pnpm build",
 		"watch": "tsc --watch"
@@ -39,11 +43,18 @@
 	"devDependencies": {
 		"@changesets/cli": "^2.26.2",
 		"@cloudflare/workers-types": "^4.20230807.0",
+		"prettier": "^3.0.3",
 		"rimraf": "^4.4.1",
 		"typescript": "^5.0.3"
 	},
 	"publishConfig": {
 		"access": "public"
+	},
+	"prettier": {
+		"singleQuote": true,
+		"printWidth": 120,
+		"useTabs": true,
+		"semi": false
 	},
 	"license": "BSD-3-Clause"
 }

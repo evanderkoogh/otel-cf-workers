@@ -35,7 +35,7 @@ export class MultiSpanExporterAsync implements SpanExporter {
 			(exporter) =>
 				new Promise<ExportResult>((resolve) => {
 					exporter.export(items, resolve)
-				})
+				}),
 		)
 
 		Promise.all(promises).then((results) => {
