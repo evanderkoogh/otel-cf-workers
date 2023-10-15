@@ -12,12 +12,12 @@ const AEAttributes: Record<string | symbol, ExtraAttributeFn> = {
 		const opts = argArray[0]
 		if (typeof opts === 'object') {
 			attrs['db.cf.ae.indexes'] = opts.indexes.length
-			attrs['db.cf.ae.index'] = (opts.indexes[0] as (ArrayBuffer | string)).toString()
+			attrs['db.cf.ae.index'] = (opts.indexes[0] as ArrayBuffer | string).toString()
 			attrs['db.cf.ae.doubles'] = opts.doubles.length
 			attrs['db.cf.ae.blobs'] = opts.blobs.length
 		}
 		return attrs
-	}
+	},
 }
 
 function instrumentAEFn(fn: Function, name: string, operation: string) {
@@ -36,7 +36,8 @@ function instrumentAEFn(fn: Function, name: string, operation: string) {
 			}
 			return tracer.startActiveSpan(`${name} ${operation}`, options, async (span) => {
 				const result = await Reflect.apply(target, thisArg, argArray)
-				const extraAttrs = AEAttributes[operation] ? AEAttributes[operation](argArray, result) : {}
+				const extraAttrsFn = AEAttributes[operation]
+				const extraAttrs = extraAttrsFn ? extraAttrsFn(argArray, result) : {}
 				span.setAttributes(extraAttrs)
 				span.setAttribute(SemanticAttributes.DB_STATEMENT, `${operation} ${argArray[0]}`)
 				span.end()
@@ -47,7 +48,10 @@ function instrumentAEFn(fn: Function, name: string, operation: string) {
 	return wrap(fn, fnHandler)
 }
 
-export function instrumentAnalyticsEngineDataset(dataset: AnalyticsEngineDataset, name: string): AnalyticsEngineDataset {
+export function instrumentAnalyticsEngineDataset(
+	dataset: AnalyticsEngineDataset,
+	name: string
+): AnalyticsEngineDataset {
 	const datasetHandler: ProxyHandler<AnalyticsEngineDataset> = {
 		get: (target, prop, receiver) => {
 			const operation = String(prop)

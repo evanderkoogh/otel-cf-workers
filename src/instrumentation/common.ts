@@ -23,7 +23,7 @@ export class PromiseTracker {
 
 function createWaitUntil(fn: WaitUntilFn, context: ExecutionContext, tracker: PromiseTracker): WaitUntilFn {
 	const handler: ProxyHandler<WaitUntilFn> = {
-		apply(target, thisArg, argArray) {
+		apply(target, _thisArg, argArray) {
 			tracker.track(argArray[0])
 			return Reflect.apply(target, context, argArray)
 		},

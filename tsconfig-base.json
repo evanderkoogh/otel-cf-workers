@@ -29,7 +29,7 @@
 		/* Modules */
 		// "module": "esnext" /* Specify what module code is generated. */,
 		// "rootDir": "./",                                  /* Specify the root folder within your source files. */
-		"moduleResolution": "node" /* Specify how TypeScript looks up a file from a given module specifier. */,
+		"moduleResolution": "nodenext" /* Specify how TypeScript looks up a file from a given module specifier. */,
 		// "baseUrl": "./",                                  /* Specify the base directory to resolve non-relative module names. */
 		// "paths": {},                                      /* Specify a set of entries that re-map imports to additional lookup locations. */
 		// "rootDirs": [],                                   /* Allow multiple folders to be treated as one when resolving modules. */
@@ -80,24 +80,17 @@
 
 		/* Type Checking */
 		"strict": true /* Enable all strict type-checking options. */,
-		// "noImplicitAny": true,                            /* Enable error reporting for expressions and declarations with an implied `any` type.. */
-		// "strictNullChecks": true,                         /* When type checking, take into account `null` and `undefined`. */
-		// "strictFunctionTypes": true,                      /* When assigning functions, check to ensure parameters and the return values are subtype-compatible. */
-		// "strictBindCallApply": true,                      /* Check that the arguments for `bind`, `call`, and `apply` methods match the original function. */
-		// "strictPropertyInitialization": true,             /* Check for class properties that are declared but not set in the constructor. */
-		// "noImplicitThis": true,                           /* Enable error reporting when `this` is given the type `any`. */
-		// "useUnknownInCatchVariables": true,               /* Type catch clause variables as 'unknown' instead of 'any'. */
-		// "alwaysStrict": true,                             /* Ensure 'use strict' is always emitted. */
-		// "noUnusedLocals": true,                           /* Enable error reporting when a local variables aren't read. */
-		// "noUnusedParameters": true,                       /* Raise an error when a function parameter isn't read */
-		// "exactOptionalPropertyTypes": true,               /* Interpret optional property types as written, rather than adding 'undefined'. */
-		// "noImplicitReturns": true,                        /* Enable error reporting for codepaths that do not explicitly return in a function. */
-		// "noFallthroughCasesInSwitch": true,               /* Enable error reporting for fallthrough cases in switch statements. */
-		// "noUncheckedIndexedAccess": true,                 /* Include 'undefined' in index signature results */
-		// "noImplicitOverride": true,                       /* Ensure overriding members in derived classes are marked with an override modifier. */
-		// "noPropertyAccessFromIndexSignature": true,       /* Enforces using indexed accessors for keys declared using an indexed type */
-		// "allowUnusedLabels": true,                        /* Disable error reporting for unused labels. */
-		// "allowUnreachableCode": true,                     /* Disable error reporting for unreachable code. */
+		"alwaysStrict": true,
+		"noFallthroughCasesInSwitch": true,
+    "noImplicitAny": true,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "noImplicitThis": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "noUncheckedIndexedAccess": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+		"useUnknownInCatchVariables": true,
 
 		/* Completeness */
 		// "skipDefaultLibCheck": true,                      /* Skip type checking .d.ts files that are included with TypeScript. */

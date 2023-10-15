@@ -86,7 +86,7 @@ const proxyQueueMessage = <Q>(msg: Message<Q>, count: MessageStatusCount): Messa
 	return wrap(msg, msgHandler)
 }
 
-const proxyMessageBatch = <E, Q>(batch: MessageBatch, count: MessageStatusCount) => {
+const proxyMessageBatch = (batch: MessageBatch, count: MessageStatusCount) => {
 	const batchHandler: ProxyHandler<MessageBatch> = {
 		get: (target, prop) => {
 			if (prop === 'messages') {

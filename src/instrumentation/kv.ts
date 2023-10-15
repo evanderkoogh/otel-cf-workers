@@ -7,7 +7,7 @@ type ExtraAttributeFn = (argArray: any[], result: any) => Attributes
 const dbSystem = 'Cloudflare KV'
 
 const KVAttributes: Record<string | symbol, ExtraAttributeFn> = {
-	delete(argArray) {
+	delete(_argArray) {
 		return {}
 	},
 	get(argArray) {
@@ -22,11 +22,11 @@ const KVAttributes: Record<string | symbol, ExtraAttributeFn> = {
 		return attrs
 	},
 	getWithMetadata(argArray, result) {
-		const attrs = this.get(argArray, result)
+		const attrs = this['get']!(argArray, result)
 		attrs['db.cf.kv.metadata'] = true
 		const { cacheStatus } = result as KVNamespaceGetWithMetadataResult<any, any>
 		if (typeof cacheStatus === 'string') {
-		  attrs['db.cf.kv.cache_status'] = cacheStatus
+			attrs['db.cf.kv.cache_status'] = cacheStatus
 		}
 		return attrs
 	},
@@ -42,7 +42,7 @@ const KVAttributes: Record<string | symbol, ExtraAttributeFn> = {
 			attrs['db.cf.kv.list_response_cursor'] = cursor || undefined
 		}
 		if (typeof cacheStatus === 'string') {
-		  attrs['db.cf.kv.cache_status'] = cacheStatus
+			attrs['db.cf.kv.cache_status'] = cacheStatus
 		}
 		return attrs
 	},
@@ -74,7 +74,8 @@ function instrumentKVFn(fn: Function, name: string, operation: string) {
 			}
 			return tracer.startActiveSpan(`${name} ${operation}`, options, async (span) => {
 				const result = await Reflect.apply(target, thisArg, argArray)
-				const extraAttrs = KVAttributes[operation] ? KVAttributes[operation](argArray, result) : {}
+				const extraAttrsFn = KVAttributes[operation]
+				const extraAttrs = extraAttrsFn ? extraAttrsFn(argArray, result) : {}
 				span.setAttributes(extraAttrs)
 				if (operation === 'list') {
 					const opts: KVNamespaceListOptions = argArray[0] || {}

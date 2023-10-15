@@ -77,12 +77,14 @@ function instrumentStorageFn(fn: Function, operation: string) {
 			const options: SpanOptions = {
 				kind: SpanKind.CLIENT,
 				attributes: {
+					...attributes,
 					operation,
 				},
 			}
 			return tracer.startActiveSpan(`do:storage:${operation}`, options, async (span) => {
 				const result = await Reflect.apply(target, thisArg, argArray)
-				const extraAttrs = StorageAttributes[operation] ? StorageAttributes[operation](argArray, result) : {}
+				const extraAttrsFn = StorageAttributes[operation]
+				const extraAttrs = extraAttrsFn ? extraAttrsFn(argArray, result) : {}
 				span.setAttributes(extraAttrs)
 				span.setAttribute('db.cf.do.has_result', !!result)
 				span.end()
