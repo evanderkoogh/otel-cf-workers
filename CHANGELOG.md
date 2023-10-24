@@ -1,5 +1,11 @@
 # @microlabs/otel-cf-workers
 
+## 1.0.0-rc.16
+
+### Patch Changes
+
+- Workaround for bug in puppeteer/browser binding. Detect and disable auto-instrumentation for now.
+
 ## 1.0.0-rc.15
 
 ### Minor Changes

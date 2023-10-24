@@ -200,6 +200,11 @@ export function instrumentClientFetch(
 ): Fetcher['fetch'] {
 	const handler: ProxyHandler<typeof fetch> = {
 		apply: (target, thisArg, argArray): ReturnType<typeof fetch> => {
+			if (argArray[0] === '/v1/acquire') {
+				//Workaround for the puppeteer sending through a non-URL value.
+				//Going to abort for now
+				return Reflect.apply(target, thisArg, argArray)
+			}
 			const workerConfig = getActiveConfig()
 			const config = configFn(workerConfig)
 			const request = new Request(argArray[0], argArray[1])
