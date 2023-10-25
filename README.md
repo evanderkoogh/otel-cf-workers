@@ -244,7 +244,7 @@ Register a custom propagator with:
 ```ts
 const config: ResolveConfigFn = (env: Env, _trigger) => {
 	return {
-		propagator: new MyCoolPropagator,
+		propagator: new MyCoolPropagator(),
 	}
 }
 ```
