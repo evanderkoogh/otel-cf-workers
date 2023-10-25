@@ -192,6 +192,14 @@ export function createFetchHandler(fetchFn: FetchHandler, initialiser: Initialis
 	return wrap(fetchFn, fetchHandler)
 }
 
+function tryRequest(arg1: unknown, arg2: unknown): Request | undefined {
+	try {
+		return new Request(arg1 as RequestInfo, arg2 as RequestInit)
+	} catch (err) {
+		return undefined
+	}
+}
+
 type getFetchConfig = (config: ResolvedTraceConfig) => FetcherConfig
 export function instrumentClientFetch(
 	fetchFn: Fetcher['fetch'],
@@ -200,14 +208,13 @@ export function instrumentClientFetch(
 ): Fetcher['fetch'] {
 	const handler: ProxyHandler<typeof fetch> = {
 		apply: (target, thisArg, argArray): ReturnType<typeof fetch> => {
-			if (argArray[0] === '/v1/acquire') {
-				//Workaround for the puppeteer sending through a non-URL value.
-				//Going to abort for now
+			const request = tryRequest(argArray[0], argArray[1])
+			if (!request) {
 				return Reflect.apply(target, thisArg, argArray)
 			}
+
 			const workerConfig = getActiveConfig()
 			const config = configFn(workerConfig)
-			const request = new Request(argArray[0], argArray[1])
 
 			const tracer = trace.getTracer('fetcher')
 			const options: SpanOptions = { kind: SpanKind.CLIENT, attributes: attrs }
