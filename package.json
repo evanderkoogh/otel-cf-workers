@@ -1,6 +1,6 @@
 {
 	"name": "@microlabs/otel-cf-workers",
-	"version": "1.0.0-rc.16",
+	"version": "1.0.0-rc.17",
 	"main": "dist/cjs/index.js",
 	"module": "dist/esm/index.js",
 	"types": "dist/esm/index.d.ts",
@@ -39,6 +39,8 @@
 		"@opentelemetry/sdk-trace-base": "^1.17.1",
 		"@opentelemetry/semantic-conventions": "^1.17.1",
 		"deepmerge": "^4.3.1",
+		"husky": "^8.0.3",
+		"lint-staged": "^15.0.2",
 		"ts-checked-fsm": "^1.1.0"
 	},
 	"devDependencies": {

@@ -1,5 +1,11 @@
 # @microlabs/otel-cf-workers
 
+## 1.0.0-rc.17
+
+### Patch Changes
+
+- Also have workaround for any other bindings (like AI) that pass in illegal arguments to `fetch`
+
 ## 1.0.0-rc.16
 
 ### Patch Changes
