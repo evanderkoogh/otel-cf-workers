@@ -18,14 +18,15 @@
 	},
 	"scripts": {
 		"clean": "rimraf ./dist",
-		"format": "prettier -w src",
+		"format": "prettier --ignore-unknown --write .",
 		"build-esm": "tsc",
 		"build-cjs": "tsc -p tsconfig-cjs.json",
 		"fix-dist": "echo '{\"type\": \"module\"}' > dist/esm/package.json && echo '{\"type\": \"commonjs\"}' > dist/cjs/package.json",
 		"build": "pnpm clean && pnpm format && pnpm build-esm && pnpm build-cjs && pnpm fix-dist",
 		"preversion": "pnpm build",
 		"prepublishOnly": "pnpm build",
-		"watch": "tsc --watch"
+		"watch": "tsc --watch",
+		"prepare": "husky install"
 	},
 	"homepage": "https://github.com/evanderkoogh/otel-cf-workers#readme",
 	"dependencies": {
@@ -50,11 +51,8 @@
 	"publishConfig": {
 		"access": "public"
 	},
-	"prettier": {
-		"singleQuote": true,
-		"printWidth": 120,
-		"useTabs": true,
-		"semi": false
-	},
-	"license": "BSD-3-Clause"
+	"license": "BSD-3-Clause",
+	"lint-staged": {
+		"*": "prettier --ignore-unknown --write"
+	}
 }
