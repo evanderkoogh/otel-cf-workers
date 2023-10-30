@@ -36,8 +36,9 @@ export function executeScheduledHandler(
 		} catch (error) {
 			span.recordException(error as Exception)
 			span.setStatus({ code: SpanStatusCode.ERROR })
-			span.end()
 			throw error
+		} finally {
+			span.end()
 		}
 	})
 	return promise
