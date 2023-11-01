@@ -1,5 +1,11 @@
 # @microlabs/otel-cf-workers
 
+## 1.0.0-rc.20
+
+### Patch Changes
+
+- Browser Rendering + AI binding send invalid URLs. Disable auto-instrumentation for now.
+
 ## 1.0.0-rc.19
 
 ### Patch Changes

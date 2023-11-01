@@ -192,14 +192,6 @@ export function createFetchHandler(fetchFn: FetchHandler, initialiser: Initialis
 	return wrap(fetchFn, fetchHandler)
 }
 
-function tryRequest(arg1: unknown, arg2: unknown): Request | undefined {
-	try {
-		return new Request(arg1 as RequestInfo, arg2 as RequestInit)
-	} catch (err) {
-		return undefined
-	}
-}
-
 type getFetchConfig = (config: ResolvedTraceConfig) => FetcherConfig
 export function instrumentClientFetch(
 	fetchFn: Fetcher['fetch'],
@@ -208,8 +200,8 @@ export function instrumentClientFetch(
 ): Fetcher['fetch'] {
 	const handler: ProxyHandler<typeof fetch> = {
 		apply: (target, thisArg, argArray): ReturnType<typeof fetch> => {
-			const request = tryRequest(argArray[0], argArray[1])
-			if (!request) {
+			const request = new Request(argArray[0], argArray[1])
+			if (!request.url.startsWith('http')) {
 				return Reflect.apply(target, thisArg, argArray)
 			}
 
