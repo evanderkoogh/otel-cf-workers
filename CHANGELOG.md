@@ -1,5 +1,11 @@
 # @microlabs/otel-cf-workers
 
+## 1.0.0-rc.18
+
+### Patch Changes
+
+- Fix issue with scheduled events and queues not reporting proper durations
+
 ## 1.0.0-rc.17
 
 ### Patch Changes
