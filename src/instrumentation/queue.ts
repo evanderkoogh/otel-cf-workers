@@ -145,8 +145,8 @@ export function executeQueueHandler(queueFn: QueueHandler, [batch, env, ctx]: Qu
 		const traceId = span.spanContext().traceId
 		api_context.active().setValue(traceIdSymbol, traceId)
 		try {
-			const result = queueFn(batch, env, ctx)
-			await span.setAttribute('queue.implicitly_acked', count.total - count.succeeded - count.failed)
+			const result = await queueFn(batch, env, ctx)
+			span.setAttribute('queue.implicitly_acked', count.total - count.succeeded - count.failed)
 			count.ackRemaining()
 			span.setAttributes(count.toAttributes())
 			span.end()
