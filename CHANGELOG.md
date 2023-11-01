@@ -1,5 +1,11 @@
 # @microlabs/otel-cf-workers
 
+## 1.0.0-rc.19
+
+### Patch Changes
+
+- Revert upgrade of OTel exporter dependency because it was borked.
+
 ## 1.0.0-rc.18
 
 ### Patch Changes

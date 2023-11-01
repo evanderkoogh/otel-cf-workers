@@ -1,6 +1,6 @@
 {
 	"name": "@microlabs/otel-cf-workers",
-	"version": "1.0.0-rc.18",
+	"version": "1.0.0-rc.19",
 	"main": "dist/cjs/index.js",
 	"module": "dist/esm/index.js",
 	"types": "dist/esm/index.d.ts",
@@ -32,9 +32,9 @@
 	"dependencies": {
 		"@opentelemetry/api": "^1.6.0",
 		"@opentelemetry/core": "^1.17.1",
-		"@opentelemetry/exporter-trace-otlp-http": "^0.44.0",
-		"@opentelemetry/otlp-exporter-base": "^0.44.0",
-		"@opentelemetry/otlp-transformer": "^0.44.0",
+		"@opentelemetry/exporter-trace-otlp-http": "^0.43.0",
+		"@opentelemetry/otlp-exporter-base": "^0.43.0",
+		"@opentelemetry/otlp-transformer": "^0.43.0",
 		"@opentelemetry/resources": "^1.17.1",
 		"@opentelemetry/sdk-trace-base": "^1.17.1",
 		"@opentelemetry/semantic-conventions": "^1.17.1",
