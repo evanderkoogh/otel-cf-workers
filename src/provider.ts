@@ -28,7 +28,7 @@ export class WorkerTracerProvider implements TracerProvider {
 		if (!this.tracers[key]) {
 			this.tracers[key] = new WorkerTracer(this.spanProcessors, this.resource)
 		}
-		return this.tracers[key]
+		return this.tracers[key]!
 	}
 
 	register(): void {

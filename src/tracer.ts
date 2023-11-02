@@ -82,7 +82,7 @@ export class WorkerTracer implements Tracer {
 		name: string,
 		options: SpanOptions,
 		context: Context,
-		fn: F
+		fn: F,
 	): ReturnType<F>
 	startActiveSpan<F extends (span: Span) => ReturnType<F>>(name: string, ...args: unknown[]): ReturnType<F> {
 		const options = args.length > 1 ? (args[0] as SpanOptions) : undefined

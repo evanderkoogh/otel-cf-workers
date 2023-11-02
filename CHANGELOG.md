@@ -1,5 +1,47 @@
 # @microlabs/otel-cf-workers
 
+## 1.0.0-rc.20
+
+### Patch Changes
+
+- Browser Rendering + AI binding send invalid URLs. Disable auto-instrumentation for now.
+
+## 1.0.0-rc.19
+
+### Patch Changes
+
+- Revert upgrade of OTel exporter dependency because it was borked.
+
+## 1.0.0-rc.18
+
+### Patch Changes
+
+- Fix issue with scheduled events and queues not reporting proper durations
+
+## 1.0.0-rc.17
+
+### Patch Changes
+
+- Also have workaround for any other bindings (like AI) that pass in illegal arguments to `fetch`
+
+## 1.0.0-rc.16
+
+### Patch Changes
+
+- Workaround for bug in puppeteer/browser binding. Detect and disable auto-instrumentation for now.
+
+## 1.0.0-rc.15
+
+### Minor Changes
+
+- 8f83b55: Added instrumentation for scheduled handler
+- 0195525: [Potentially breaking change] Updated all span names and attributes related to HTTP to the latest semantic conventions
+- a1ff053: Add instrumentation for Analytics Engine bindings
+
+### Patch Changes
+
+- a154ddd: Update attr naming convention to db.cf.kv._ and db.cf.do._
+
 ## 1.0.0-rc.14
 
 ### Patch Changes

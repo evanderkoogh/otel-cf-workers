@@ -1,7 +1,6 @@
 import { propagation } from '@opentelemetry/api'
 import { W3CTraceContextPropagator } from '@opentelemetry/core'
 import { Resource } from '@opentelemetry/resources'
-import { SemanticResourceAttributes } from '@opentelemetry/semantic-conventions'
 import {
 	AlwaysOnSampler,
 	ParentBasedSampler,
@@ -52,19 +51,17 @@ export function isAlarm(trigger: Trigger): trigger is 'do-alarm' {
 
 const createResource = (config: ResolvedTraceConfig): Resource => {
 	const workerResourceAttrs = {
-		[SemanticResourceAttributes.CLOUD_PROVIDER]: 'cloudflare',
-		[SemanticResourceAttributes.CLOUD_PLATFORM]: 'cloudflare.workers',
-		[SemanticResourceAttributes.CLOUD_REGION]: 'earth',
-		// [SemanticResourceAttributes.FAAS_NAME]: '//TODO',
-		// [SemanticResourceAttributes.FAAS_VERSION]: '//TODO',
-		[SemanticResourceAttributes.FAAS_MAX_MEMORY]: 128,
-		[SemanticResourceAttributes.TELEMETRY_SDK_LANGUAGE]: 'JavaScript',
-		[SemanticResourceAttributes.TELEMETRY_SDK_NAME]: '@microlabs/otel-workers-sdk',
+		'cloud.provider': 'cloudflare',
+		'cloud.platform': 'cloudflare.workers',
+		'cloud.region': 'earth',
+		'faas.max_memory': 134217728,
+		'telemetry.sdk.language': 'js',
+		'telemetry.sdk.name': '@microlabs/otel-workers-sdk',
 	}
 	const serviceResource = new Resource({
-		[SemanticResourceAttributes.SERVICE_NAME]: config.service.name,
-		[SemanticResourceAttributes.SERVICE_NAMESPACE]: config.service.namespace,
-		[SemanticResourceAttributes.SERVICE_VERSION]: config.service.version,
+		'service.name': config.service.name,
+		'service.namespace': config.service.namespace,
+		'service.version': config.service.version,
 	})
 	const resource = new Resource(workerResourceAttrs)
 	return resource.merge(serviceResource)
@@ -116,7 +113,7 @@ function parseConfig(supplied: TraceConfig): ResolvedTraceConfig {
 		const spanProcessors = Array.isArray(supplied.spanProcessors) ? supplied.spanProcessors : [supplied.spanProcessors]
 		if (spanProcessors.length === 0) {
 			console.log(
-				'Warning! You must either specify an exporter or your own SpanProcessor(s)/Exporter combination in the open-telemetry configuration.'
+				'Warning! You must either specify an exporter or your own SpanProcessor(s)/Exporter combination in the open-telemetry configuration.',
 			)
 		}
 		return {
@@ -163,7 +160,7 @@ function createInitialiser(config: ConfigurationOption): Initialiser {
 
 export function instrument<E, Q, C>(
 	handler: ExportedHandler<E, Q, C>,
-	config: ConfigurationOption
+	config: ConfigurationOption,
 ): ExportedHandler<E, Q, C> {
 	const initialiser = createInitialiser(config)
 

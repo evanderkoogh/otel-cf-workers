@@ -53,7 +53,7 @@ function newSpan(currentState: InProgressTraceState, { span }: StartSpanAction):
 
 function endSpan(
 	currentState: InProgressTraceState,
-	{ span }: EndSpanAction
+	{ span }: EndSpanAction,
 ): InProgressTraceState | TraceCompleteState {
 	currentState.completedSpans.push(span)
 	currentState.inProgressSpanIds.delete(span.spanContext().spanId)
