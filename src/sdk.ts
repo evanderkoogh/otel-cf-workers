@@ -29,6 +29,7 @@ import { instrumentGlobalCache } from './instrumentation/cache.js'
 import { createQueueHandler } from './instrumentation/queue.js'
 import { DOClass, instrumentDOClass } from './instrumentation/do.js'
 import { createScheduledHandler } from './instrumentation/scheduled.js'
+import { patchWebsocketPair } from './instrumentation/ws.js'
 
 type FetchHandler = ExportedHandlerFetchHandler<unknown, unknown>
 type ScheduledHandler = ExportedHandlerScheduledHandler<unknown>
@@ -76,6 +77,8 @@ function init(config: ResolvedTraceConfig): void {
 	if (!initialised) {
 		instrumentGlobalCache()
 		instrumentGlobalFetch()
+		console.log('initialising', config)
+		patchWebsocketPair(config)
 		propagation.setGlobalPropagator(config.propagator)
 		const resource = createResource(config)
 
@@ -146,12 +149,14 @@ function createInitialiser(config: ConfigurationOption): Initialiser {
 	if (typeof config === 'function') {
 		return (env, trigger) => {
 			const conf = parseConfig(config(env, trigger))
+			console.log(conf)
 			init(conf)
 			return conf
 		}
 	} else {
 		return () => {
 			const conf = parseConfig(config)
+			console.log('hi', conf)
 			init(conf)
 			return conf
 		}

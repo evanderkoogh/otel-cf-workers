@@ -27,12 +27,49 @@ const handleRest = async (request: Request, env: Env, ctx: ExecutionContext): Pr
 	ctx.waitUntil(fetch('https://workers.dev'))
 	return new Response(`${greeting}!`)
 }
+let count = 0
+async function handleSession(websocket: WebSocket) {
+	websocket.accept()
+	websocket.addEventListener('message', ({ data }) => {
+		console.log(data)
+		if (data === 'CLICK') {
+			count += 1
+			websocket.send(JSON.stringify({ count, tz: new Date() }))
+		} else {
+			// An unknown message came into the server. Send back an error message
+			websocket.send(JSON.stringify({ error: 'Unknown message received', tz: new Date() }))
+		}
+	})
+
+	websocket.addEventListener('close', (evt) => {
+		// Handle when a client closes the WebSocket connection
+		console.log(evt)
+	})
+}
+
+function handleWS(request: Request, env: Env): Response {
+	const upgradeHeader = request.headers.get('Upgrade')
+	if (upgradeHeader !== 'websocket') {
+		return new Response('Expected websocket', { status: 400 })
+	}
+
+	const [client, server] = Object.values(new WebSocketPair())
+	handleSession(server)
+
+	return new Response(null, {
+		status: 101,
+		webSocket: client,
+	})
+}
 
 export default {
 	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
 		const pathname = new URL(request.url).pathname
 		if (pathname === '/do') {
 			return handleDO(request, env)
+		} else if (pathname === '/ws') {
+			console.log('fetch ws', request.url)
+			return handleWS(request, env)
 		} else if (pathname === '/error') {
 			throw new Error('You asked for it!')
 		} else {

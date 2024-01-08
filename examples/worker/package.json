@@ -5,7 +5,8 @@
 		"@cloudflare/workers-types": "^4.20230321.0",
 		"@opentelemetry/api": "^1.4.1",
 		"typescript": "^5.0.2",
-		"wrangler": "2.13.0"
+		"wrangler": "2.13.0",
+		"ws": "^8.16.0"
 	},
 	"private": true,
 	"scripts": {

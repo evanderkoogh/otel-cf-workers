@@ -178,7 +178,6 @@ export function createFetchHandler(fetchFn: FetchHandler, initialiser: Initialis
 			const env = instrumentEnv(orig_env as Record<string, unknown>)
 			const { ctx, tracker } = proxyExecutionContext(orig_ctx)
 			const context = setConfig(config)
-
 			try {
 				const args: FetchHandlerArgs = [request, env, ctx]
 				return await api_context.with(context, executeFetchHandler, undefined, target, args)
@@ -201,6 +200,10 @@ export function instrumentClientFetch(
 	const handler: ProxyHandler<typeof fetch> = {
 		apply: (target, thisArg, argArray): ReturnType<typeof fetch> => {
 			const request = new Request(argArray[0], argArray[1])
+			if (request.url === 'https://api.honeycomb.io/v1/traces') {
+				return Reflect.apply(target, thisArg, argArray)
+			}
+			console.log('fetch', request.url)
 			if (!request.url.startsWith('http')) {
 				return Reflect.apply(target, thisArg, argArray)
 			}
