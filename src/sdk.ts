@@ -77,7 +77,6 @@ function init(config: ResolvedTraceConfig): void {
 	if (!initialised) {
 		instrumentGlobalCache()
 		instrumentGlobalFetch()
-		console.log('initialising', config)
 		patchWebsocketPair(config)
 		propagation.setGlobalPropagator(config.propagator)
 		const resource = createResource(config)
@@ -149,14 +148,12 @@ function createInitialiser(config: ConfigurationOption): Initialiser {
 	if (typeof config === 'function') {
 		return (env, trigger) => {
 			const conf = parseConfig(config(env, trigger))
-			console.log(conf)
 			init(conf)
 			return conf
 		}
 	} else {
 		return () => {
 			const conf = parseConfig(config)
-			console.log('hi', conf)
 			init(conf)
 			return conf
 		}

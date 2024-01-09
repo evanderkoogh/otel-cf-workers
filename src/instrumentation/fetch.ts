@@ -203,7 +203,6 @@ export function instrumentClientFetch(
 			if (request.url === 'https://api.honeycomb.io/v1/traces') {
 				return Reflect.apply(target, thisArg, argArray)
 			}
-			console.log('fetch', request.url)
 			if (!request.url.startsWith('http')) {
 				return Reflect.apply(target, thisArg, argArray)
 			}
