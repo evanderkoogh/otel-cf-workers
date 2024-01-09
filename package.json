@@ -38,14 +38,13 @@
 		"@opentelemetry/resources": "^1.17.1",
 		"@opentelemetry/sdk-trace-base": "^1.17.1",
 		"@opentelemetry/semantic-conventions": "^1.17.1",
-		"deepmerge": "^4.3.1",
-		"husky": "^8.0.3",
-		"lint-staged": "^15.0.2",
 		"ts-checked-fsm": "^1.1.0"
 	},
 	"devDependencies": {
 		"@changesets/cli": "^2.26.2",
 		"@cloudflare/workers-types": "^4.20231016.0",
+		"husky": "^8.0.3",
+		"lint-staged": "^15.0.2",
 		"prettier": "^3.0.3",
 		"rimraf": "^4.4.1",
 		"typescript": "^5.2.2"
