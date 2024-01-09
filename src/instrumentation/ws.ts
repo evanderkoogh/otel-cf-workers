@@ -48,7 +48,7 @@ function wrapWSServer(server: WebSocket, config: ResolvedTraceConfig) {
 				return wrap(method.bind(target), {
 					apply: async (target, thisArg, argArray) => {
 						const span = trace.getActiveSpan()
-						span?.addEvent(p.toString())
+						span?.addEvent(p.toString(), { [p]: argArray[0] })
 						return Reflect.apply(target, thisArg, argArray)
 					},
 				})
