@@ -111,8 +111,8 @@ export function instrumentD1Fn(fn: Function, dbName: string, operation: string) 
 				const statements = argArray[0] as D1StatementInternals[]
 				return tracer.startActiveSpan(`${dbName} ${operation}`, async (span) => {
 					// Create a span per query in the batch
-					const subSpans = statements.map((_s) =>
-						tracer.startSpan(`${dbName} ${operation} > query`, spanOptions(dbName, operation)),
+					const subSpans = statements.map((s) =>
+						tracer.startSpan(`${dbName} ${operation} > query`, spanOptions(dbName, operation, s.statement)),
 					)
 
 					try {
