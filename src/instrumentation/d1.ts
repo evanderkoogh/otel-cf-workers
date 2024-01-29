@@ -42,6 +42,11 @@ function instrumentD1StatementFn(fn: Function, dbName: string, operation: string
 	const tracer = trace.getTracer('D1')
 	const fnHandler: ProxyHandler<any> = {
 		apply: (target, thisArg, argArray) => {
+			if (operation === 'bind') {
+				const newStmt = Reflect.apply(target, thisArg, argArray) as D1PreparedStatement
+				return instrumentD1PreparedStatement(newStmt, dbName, sql)
+			}
+
 			const options = spanOptions(dbName, operation, sql)
 			return tracer.startActiveSpan(`${dbName} ${operation}`, options, async (span) => {
 				try {
@@ -74,7 +79,7 @@ function instrumentD1PreparedStatement(
 			const operation = String(prop)
 			const fn = Reflect.get(target, prop, receiver)
 			if (typeof fn === 'function') {
-				return instrumentD1StatementFn(fn, dbName, operation, statement as string)
+				return instrumentD1StatementFn(fn, dbName, operation, statement)
 			}
 			return fn
 		},
