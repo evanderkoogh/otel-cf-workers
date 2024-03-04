@@ -1,4 +1,4 @@
-name: Pull Request
+name: Main branch
 
 # This flow will re-run tests on the main branch after a PR has been merged.
 
