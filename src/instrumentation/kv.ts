@@ -22,7 +22,15 @@ const KVAttributes: Record<string | symbol, ExtraAttributeFn> = {
 		return attrs
 	},
 	getWithMetadata(argArray, result) {
-		const attrs = this['get']!(argArray, result)
+		const attrs: Attributes = {}
+		const opts = argArray[1]
+		if (typeof opts === 'string') {
+			attrs['db.cf.kv.type'] = opts
+		} else if (typeof opts === 'object') {
+			attrs['db.cf.kv.type'] = opts.type
+			attrs['db.cf.kv.cache_ttl'] = opts.cacheTtl
+		}
+
 		attrs['db.cf.kv.metadata'] = true
 		const { cacheStatus } = result as KVNamespaceGetWithMetadataResult<any, any>
 		if (typeof cacheStatus === 'string') {
