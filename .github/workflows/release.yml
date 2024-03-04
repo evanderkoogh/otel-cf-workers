@@ -48,6 +48,6 @@ jobs:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           set -eux
-          PUBLISHED_VERSION=$(echo ${{ steps.changesets.outputs.publishedPackages }} \
+          PUBLISHED_VERSION=$(echo '${{ steps.changesets.outputs.publishedPackages }}' \
             | jq -er '[.[] | select(.name=="@microlabs/otel-cf-workers")][0].version')
           npm dist-tag add @microlabs/otel-cf-workers@${PUBLISHED_VERSION} latest
