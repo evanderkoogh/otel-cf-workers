@@ -22,9 +22,13 @@
 		"build-esm": "tsc",
 		"build-cjs": "tsc -p tsconfig-cjs.json",
 		"fix-dist": "echo '{\"type\": \"module\"}' > dist/esm/package.json && echo '{\"type\": \"commonjs\"}' > dist/cjs/package.json",
-		"build": "pnpm clean && pnpm format && pnpm build-esm && pnpm build-cjs && pnpm fix-dist",
-		"preversion": "pnpm build",
-		"prepublishOnly": "pnpm build",
+		"build": "run-s -l clean build-esm build-cjs fix-dist",
+		"preversion": "run-s -l check:* build",
+		"prepublishOnly": "run-s -l check:* build",
+		"check": "run-s -l check:*",
+		"check:format": "prettier . --check --ignore-unknown",
+		"check:type-esm": "tsc --noEmit",
+		"check:type-cjs": "tsc --noEmit -p tsconfig-cjs.json",
 		"watch": "tsc --watch",
 		"prepare": "husky install"
 	},
@@ -46,6 +50,7 @@
 	"devDependencies": {
 		"@changesets/cli": "^2.26.2",
 		"@cloudflare/workers-types": "^4.20231016.0",
+		"npm-run-all": "^4.1.5",
 		"prettier": "^3.0.3",
 		"rimraf": "^4.4.1",
 		"typescript": "^5.2.2"

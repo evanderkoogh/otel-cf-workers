@@ -1,0 +1,26 @@
+name: Pull Request
+
+on: pull_request
+
+jobs:
+  check:
+    timeout-minutes: 5
+    runs-on: ubuntu-latest
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-checks
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Install Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 8
+          run_install: |
+            - args: [--frozen-lockfile --child-concurrency=10]
+      - name: 'Check for Errors'
+        run: 'pnpm check'

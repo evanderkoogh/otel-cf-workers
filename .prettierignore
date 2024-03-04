@@ -3,3 +3,4 @@ node_modules
 .changeset
 package-lock.json
 pnpm-lock.yaml
+.pnpm-store
