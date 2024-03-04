@@ -5,6 +5,7 @@
     "@microlabs/otel-cf-workers": "1.0.0-rc.9"
   },
   "changesets": [
+    "big-news-lick",
     "calm-tips-laugh",
     "cool-buttons-melt",
     "early-yaks-sparkle",

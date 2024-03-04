@@ -1,5 +1,14 @@
 # @microlabs/otel-cf-workers
 
+## 1.0.0-rc.22
+
+### Patch Changes
+
+- 1e46f13: fix: Inline kv.getWithMetadata() attributes to prevent exception
+
+  KVAttributes functions don't have access to other functions, so we
+  needed to inline functionality from get(argArray)
+
 ## 1.0.0-rc.21
 
 ### Patch Changes
