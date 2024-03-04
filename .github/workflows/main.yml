@@ -1,15 +1,21 @@
 name: Pull Request
 
-on: pull_request
+# This flow will re-run tests on the main branch after a PR has been merged.
+
+on:
+  push:
+    branches:
+      - main
 
 jobs:
-  check:
-    name: 'Checks'
+  test:
+    name: 'Tests'
     timeout-minutes: 5
     runs-on: ubuntu-latest
     concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}-checks
+      group: ${{ github.workflow }}-${{ github.ref }}
       cancel-in-progress: true
+    if: ${{ github.repository_owner == 'evanderkoogh' }}
     steps:
       - uses: actions/checkout@v2
         with:
