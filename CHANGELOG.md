@@ -1,5 +1,11 @@
 # @microlabs/otel-cf-workers
 
+## 1.0.0-rc.21
+
+### Patch Changes
+
+- d2f5aa2: fix: correct `cache.hit` attribute (#84)
+
 ## 1.0.0-rc.20
 
 ### Patch Changes
