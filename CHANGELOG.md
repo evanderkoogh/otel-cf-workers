@@ -1,5 +1,11 @@
 # @microlabs/otel-cf-workers
 
+## 1.0.0-rc.23
+
+### Patch Changes
+
+- 7a7a46e: chore: Update @cloudflare/workers-types
+
 ## 1.0.0-rc.22
 
 ### Patch Changes
