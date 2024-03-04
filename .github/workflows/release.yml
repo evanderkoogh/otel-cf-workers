@@ -1,0 +1,55 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
+jobs:
+  release:
+    name: Release
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: true
+    if: ${{ github.repository_owner == 'evanderkoogh' }}
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 8
+      - name: Use Node.js 20
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+          cache: 'pnpm'
+      - name: 'Install NPM Dependencies'
+        run: 'pnpm install --frozen-lockfile --child-concurrency=10'
+      - name: Check the build
+        run: pnpm build
+      - name: 'Check for Errors'
+        run: 'pnpm check'
+      - name: Create Release Pull Request or Publish to npm
+        id: changesets
+        uses: changesets/action@v1
+        with:
+          publish: pnpm release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Update NPM Tags
+        # Changesets does not publish RC as latest. This will
+        # tag RC to latest until we get to a stable release.
+        if: steps.changesets.outputs.published == 'true'
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -eux
+          PUBLISHED_VERSION=$(echo ${{ steps.changesets.outputs.publishedPackages }} \
+            | jq -er '[.[] | select(.name=="@microlabs/otel-cf-workers")][0].version')
+          npm dist-tag add @microlabs/otel-cf-workers@${PUBLISHED_VERSION} latest

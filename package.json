@@ -23,6 +23,8 @@
 		"build-cjs": "tsc -p tsconfig-cjs.json",
 		"fix-dist": "echo '{\"type\": \"module\"}' > dist/esm/package.json && echo '{\"type\": \"commonjs\"}' > dist/cjs/package.json",
 		"build": "run-s -l clean build-esm build-cjs fix-dist",
+		"release": "run-s build publish",
+		"publish": "changeset publish",
 		"preversion": "run-s -l check:* build",
 		"prepublishOnly": "run-s -l check:* build",
 		"check": "run-s -l check:*",
