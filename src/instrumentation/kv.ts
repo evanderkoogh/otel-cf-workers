@@ -93,7 +93,12 @@ function instrumentKVFn(fn: Function, name: string, operation: string) {
 					span.setAttribute(SemanticAttributes.DB_STATEMENT, `${operation} ${argArray[0]}`)
 					span.setAttribute('db.cf.kv.key', argArray[0])
 				}
-				span.setAttribute('db.cf.kv.has_result', !!result)
+				if (operation === 'getWithMetadata') {
+					const hasResults = !!result && !!(result as KVNamespaceGetWithMetadataResult<string, unknown>).value
+					span.setAttribute('db.cf.kv.has_result', hasResults)
+				} else {
+					span.setAttribute('db.cf.kv.has_result', !!result)
+				}
 				span.end()
 				return result
 			})
