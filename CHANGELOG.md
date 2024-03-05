@@ -1,5 +1,11 @@
 # @microlabs/otel-cf-workers
 
+## 1.0.0-rc.24
+
+### Patch Changes
+
+- 23363aa: fix: Set has_result to false when there is no value returned in kv.getWithMetadata()
+
 ## 1.0.0-rc.23
 
 ### Patch Changes
