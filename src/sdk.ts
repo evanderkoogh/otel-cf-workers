@@ -144,7 +144,7 @@ function parseConfig(supplied: TraceConfig): ResolvedTraceConfig {
 	}
 }
 
-function createInitialiser(config: ConfigurationOption): Initialiser {
+export function createInitialiser(config: ConfigurationOption): Initialiser {
 	if (typeof config === 'function') {
 		return (env, trigger) => {
 			const conf = parseConfig(config(env, trigger))
@@ -158,6 +158,18 @@ function createInitialiser(config: ConfigurationOption): Initialiser {
 			return conf
 		}
 	}
+}
+
+export function instrumentPage<
+	E = unknown,
+	P extends string = any,
+	D extends Record<string, unknown> = Record<string, unknown>,
+>(handler: PagesFunction<E, P, D>, config: ConfigurationOption): PagesFunction<E, P, D> {
+	const initialiser = createInitialiser(config)
+
+	handler = createPageHandler(handler, initialiser)
+
+	return handler
 }
 
 export function instrument<E, Q, C>(
