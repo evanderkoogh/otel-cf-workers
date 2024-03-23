@@ -1,5 +1,11 @@
 # @microlabs/otel-cf-workers
 
+## 1.0.0-rc.29
+
+### Patch Changes
+
+- 3a3d089: chore: Update @changesets/cli
+
 ## 1.0.0-rc.28
 
 ### Patch Changes
