@@ -6,7 +6,7 @@ settings:
 
 dependencies:
   '@opentelemetry/api':
-    specifier: ^1.6.0
+    specifier: ~1.6.0
     version: 1.6.0
   '@opentelemetry/core':
     specifier: ^1.17.1
