@@ -1,5 +1,13 @@
 # @microlabs/otel-cf-workers
 
+## 1.0.0-rc.25
+
+### Patch Changes
+
+- 8c196ee: fix: Use extensions in all imports
+
+  This fixes unit tests not working due to non-ESM imports.
+
 ## 1.0.0-rc.24
 
 ### Patch Changes
