@@ -1,5 +1,11 @@
 # @microlabs/otel-cf-workers
 
+## 1.0.0-rc.27
+
+### Patch Changes
+
+- b51bf4d: chore: Lock @opentelemetry/api at 1.6.x
+
 ## 1.0.0-rc.26
 
 ### Patch Changes
