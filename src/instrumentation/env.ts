@@ -3,7 +3,7 @@ import { instrumentDOBinding } from './do.js'
 import { instrumentKV } from './kv.js'
 import { instrumentQueueSender } from './queue.js'
 import { instrumentServiceBinding } from './service.js'
-import { instrumentAnalyticsEngineDataset } from './analytics-engine'
+import { instrumentAnalyticsEngineDataset } from './analytics-engine.js'
 
 const isKVNamespace = (item?: unknown): item is KVNamespace => {
 	return !!(item as KVNamespace)?.getWithMetadata
