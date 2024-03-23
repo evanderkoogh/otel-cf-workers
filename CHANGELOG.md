@@ -1,5 +1,11 @@
 # @microlabs/otel-cf-workers
 
+## 1.0.0-rc.28
+
+### Patch Changes
+
+- b52545f: fix: Don't try to publish packages twice
+
 ## 1.0.0-rc.27
 
 ### Patch Changes
