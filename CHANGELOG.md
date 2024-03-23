@@ -1,5 +1,11 @@
 # @microlabs/otel-cf-workers
 
+## 1.0.0-rc.26
+
+### Patch Changes
+
+- a2b04cd: chore: Bump release version
+
 ## 1.0.0-rc.25
 
 ### Patch Changes
