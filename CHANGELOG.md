@@ -1,5 +1,11 @@
 # @microlabs/otel-cf-workers
 
+## 1.0.0-rc.28
+
+### Patch Changes
+
+- ebf918c: chore: Remove pnpm cache in release action
+
 ## 1.0.0-rc.27
 
 ### Patch Changes
