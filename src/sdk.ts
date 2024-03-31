@@ -29,6 +29,7 @@ import { instrumentGlobalCache } from './instrumentation/cache.js'
 import { createQueueHandler } from './instrumentation/queue.js'
 import { DOClass, instrumentDOClass } from './instrumentation/do.js'
 import { createScheduledHandler } from './instrumentation/scheduled.js'
+import { name, version } from '../package.json'
 
 type FetchHandler = ExportedHandlerFetchHandler<unknown, unknown>
 type ScheduledHandler = ExportedHandlerScheduledHandler<unknown>
@@ -56,7 +57,8 @@ const createResource = (config: ResolvedTraceConfig): Resource => {
 		'cloud.region': 'earth',
 		'faas.max_memory': 134217728,
 		'telemetry.sdk.language': 'js',
-		'telemetry.sdk.name': '@microlabs/otel-workers-sdk',
+		'telemetry.sdk.name': name,
+		'telemetry.sdk.version': version,
 	}
 	const serviceResource = new Resource({
 		'service.name': config.service.name,
