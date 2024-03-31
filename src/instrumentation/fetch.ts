@@ -15,6 +15,7 @@ import { instrumentEnv } from './env.js'
 import { exportSpans, proxyExecutionContext } from './common.js'
 import { ResolvedTraceConfig } from '../types.js'
 import { ReadableSpan } from '@opentelemetry/sdk-trace-base'
+import { versionAttributes } from './version.js'
 
 export type IncludeTraceContextFn = (request: Request) => boolean
 export interface FetcherConfig {
@@ -140,6 +141,7 @@ export function executeFetchHandler(fetchFn: FetchHandler, [request, env, ctx]: 
 	cold_start = false
 	Object.assign(attributes, gatherRequestAttributes(request))
 	Object.assign(attributes, gatherIncomingCfAttributes(request))
+	Object.assign(attributes, versionAttributes(env))
 	const options: SpanOptions = {
 		attributes,
 		kind: SpanKind.SERVER,

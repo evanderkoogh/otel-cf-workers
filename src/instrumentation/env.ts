@@ -22,6 +22,10 @@ const isServiceBinding = (item?: unknown): item is Fetcher => {
 	return !!binding.connect || !!binding.fetch || binding.queue || binding.scheduled
 }
 
+const isVersionMetadata = (item?: unknown): item is WorkerVersionMetadata => {
+	return !!(item as WorkerVersionMetadata).id && !!(item as WorkerVersionMetadata).tag
+}
+
 const isAnalyticsEngineDataset = (item?: unknown): item is AnalyticsEngineDataset => {
 	return !!(item as AnalyticsEngineDataset)?.writeDataPoint
 }
@@ -41,6 +45,9 @@ const instrumentEnv = (env: Record<string, unknown>): Record<string, unknown> =>
 				return instrumentDOBinding(item, String(prop))
 			} else if (isServiceBinding(item)) {
 				return instrumentServiceBinding(item, String(prop))
+			} else if (isVersionMetadata(item)) {
+				// we do not need to log accesses to the metadata
+				return item
 			} else if (isAnalyticsEngineDataset(item)) {
 				return instrumentAnalyticsEngineDataset(item, String(prop))
 			} else {
@@ -51,4 +58,4 @@ const instrumentEnv = (env: Record<string, unknown>): Record<string, unknown> =>
 	return wrap(env, envHandler)
 }
 
-export { instrumentEnv }
+export { instrumentEnv, isVersionMetadata }
