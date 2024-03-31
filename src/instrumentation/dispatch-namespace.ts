@@ -41,7 +41,7 @@ function instrumentWFPFn(fn: Function, name: string, operation: string) {
 			}
 			return tracer.startActiveSpan(`${name} ${operation}`, options, async (span) => {
 				const result: Fetcher = await Reflect.apply(target, thisArg, argArray)
-				const extraAttrs = WFPAttributes[operation] ? WFPAttributes[operation](argArray, result) : {}
+				const extraAttrs = WFPAttributes[operation] ? WFPAttributes[operation]!(argArray, result) : {}
 				span.setAttributes(extraAttrs)
 				span.end()
 				return instrumentUserWorkerFetcher(result, name, argArray[0])
