@@ -74,11 +74,36 @@ const StorageAttributes: Record<string | symbol, ExtraAttributeFn> = {
 		return attrs
 	},
 	list(argArray, result: Map<string, unknown>) {
-		// list may be called with no arguments
 		const attrs: Attributes = {
 			'db.cf.do.number_of_results': result.size,
 		} as Record<string, string | number | boolean | undefined>
-		Object.assign(attrs, argArray[0])
+		if (argArray.length > 0) {
+			const options = argArray[0] as DurableObjectPutOptions
+			if ('allowConcurrency' in options) {
+				attrs['db.cf.do.allow_concurrency'] = options.allowConcurrency
+			}
+			if ('noCache' in options) {
+				attrs['db.cf.do.no_cache'] = options.noCache
+			}
+			if ('start' in options) {
+				attrs['db.cf.do.start'] = options.noCache
+			}
+			if ('startAfter' in options) {
+				attrs['db.cf.do.start_after'] = options.noCache
+			}
+			if ('end' in options) {
+				attrs['db.cf.do.end'] = options.noCache
+			}
+			if ('prefix' in options) {
+				attrs['db.cf.do.prefix'] = options.noCache
+			}
+			if ('reverse' in options) {
+				attrs['db.cf.do.reverse'] = options.noCache
+			}
+			if ('limit' in options) {
+				attrs['db.cf.do.limit'] = options.noCache
+			}
+		}
 		return attrs
 	},
 	put(argArray) {
@@ -122,6 +147,11 @@ const StorageAttributes: Record<string | symbol, ExtraAttributeFn> = {
 	},
 	setAlarm(argArray) {
 		const attrs = {} as Record<string, string | number | boolean | undefined>
+		if (argArray[0] instanceof Date) {
+			attrs['db.cf.do.alarm_time'] = argArray[0].getTime()
+		} else {
+			attrs['db.cf.do.alarm_time'] = argArray[0]
+		}
 		if (argArray.length > 1) {
 			const options = argArray[1] as DurableObjectPutOptions
 			if ('allowConcurrency' in options) {
