@@ -8,7 +8,7 @@ const dbSystem = 'Cloudflare DO'
 
 const StorageAttributes: Record<string | symbol, ExtraAttributeFn> = {
 	delete(argArray, result) {
-		let attrs = {}
+		let attrs = {} as Record<string, string | number | boolean | undefined>
 		if (Array.isArray(argArray[0])) {
 			const keys = argArray[0]
 			attrs = {
@@ -23,12 +23,34 @@ const StorageAttributes: Record<string | symbol, ExtraAttributeFn> = {
 			}
 		}
 		if (argArray.length > 1) {
-			Object.assign(attrs, argArray[1])
+			const options = argArray[1] as DurableObjectPutOptions
+			if ('allowConcurrency' in options) {
+				attrs['db.cf.do.allow_concurrency'] = options.allowConcurrency
+			}
+			if ('allowUnconfirmed' in options) {
+				attrs['db.cf.do.allow_unconfirmed'] = options.allowUnconfirmed
+			}
+			if ('noCache' in options) {
+				attrs['db.cf.do.no_cache'] = options.noCache
+			}
+		}
+		return attrs
+	},
+	deleteAll(argArray) {
+		let attrs = {} as Record<string, string | number | boolean | undefined>
+		if (argArray.length > 0) {
+			const options = argArray[0] as DurableObjectPutOptions
+			if ('allowUnconfirmed' in options) {
+				attrs['db.cf.do.allow_unconfirmed'] = options.allowUnconfirmed
+			}
+			if ('noCache' in options) {
+				attrs['db.cf.do.no_cache'] = options.noCache
+			}
 		}
 		return attrs
 	},
 	get(argArray) {
-		let attrs = {}
+		let attrs = {} as Record<string, string | number | boolean | undefined>
 		if (Array.isArray(argArray[0])) {
 			const keys = argArray[0]
 			attrs = {
@@ -41,7 +63,13 @@ const StorageAttributes: Record<string | symbol, ExtraAttributeFn> = {
 			}
 		}
 		if (argArray.length > 1) {
-			Object.assign(attrs, argArray[1])
+			const options = argArray[1] as DurableObjectPutOptions
+			if ('allowConcurrency' in options) {
+				attrs['db.cf.do.allow_concurrency'] = options.allowConcurrency
+			}
+			if ('noCache' in options) {
+				attrs['db.cf.do.no_cache'] = options.noCache
+			}
 		}
 		return attrs
 	},
@@ -49,17 +77,72 @@ const StorageAttributes: Record<string | symbol, ExtraAttributeFn> = {
 		// list may be called with no arguments
 		const attrs: Attributes = {
 			'db.cf.do.number_of_results': result.size,
-		}
+		} as Record<string, string | number | boolean | undefined>
 		Object.assign(attrs, argArray[0])
 		return attrs
 	},
 	put(argArray) {
 		const attrs = {
 			'db.cf.do.key': argArray[0],
+		} as Record<string, string | number | boolean | undefined>
+
+		if (typeof argArray[0] === 'string') {
+			attrs['db.cf.do.key'] = argArray[0]
+		} else {
+			const keys = Object.keys(argArray[0])
+			attrs['db.cf.do.key'] = keys[0]
+			attrs['db.cf.do.number_of_keys'] = keys.length
 		}
 
-		if (argArray.length > 2) {
-			Object.assign(attrs, argArray[2])
+		const optionsIndex = typeof argArray[1] === 'object' ? 1 : 2
+
+		if (argArray.length > optionsIndex) {
+			const options = argArray[optionsIndex] as DurableObjectPutOptions
+			if ('allowConcurrency' in options) {
+				attrs['db.cf.do.allow_concurrency'] = options.allowConcurrency
+			}
+			if ('allowUnconfirmed' in options) {
+				attrs['db.cf.do.allow_unconfirmed'] = options.allowUnconfirmed
+			}
+			if ('noCache' in options) {
+				attrs['db.cf.do.no_cache'] = options.noCache
+			}
+		}
+		return attrs
+	},
+	getAlarm(argArray) {
+		let attrs = {} as Record<string, string | number | boolean | undefined>
+		if (argArray.length > 0) {
+			const options = argArray[0] as DurableObjectPutOptions
+			if ('allowConcurrency' in options) {
+				attrs['db.cf.do.allow_concurrency'] = options.allowConcurrency
+			}
+		}
+		return attrs
+	},
+	setAlarm(argArray) {
+		const attrs = {} as Record<string, string | number | boolean | undefined>
+		if (argArray.length > 1) {
+			const options = argArray[1] as DurableObjectPutOptions
+			if ('allowConcurrency' in options) {
+				attrs['db.cf.do.allow_concurrency'] = options.allowConcurrency
+			}
+			if ('allowUnconfirmed' in options) {
+				attrs['db.cf.do.allow_unconfirmed'] = options.allowUnconfirmed
+			}
+		}
+		return attrs
+	},
+	deleteAlarm(argArray) {
+		const attrs = {} as Record<string, string | number | boolean | undefined>
+		if (argArray.length > 0) {
+			const options = argArray[0] as DurableObjectPutOptions
+			if ('allowConcurrency' in options) {
+				attrs['db.cf.do.allow_concurrency'] = options.allowConcurrency
+			}
+			if ('allowUnconfirmed' in options) {
+				attrs['db.cf.do.allow_unconfirmed'] = options.allowUnconfirmed
+			}
 		}
 		return attrs
 	},
