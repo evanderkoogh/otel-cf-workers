@@ -24,7 +24,7 @@ const WFPAttributes: Record<string | symbol, ExtraAttributeFn> = {
 			}
 		}
 		return attrs
-	}
+	},
 }
 
 function instrumentWFPFn(fn: Function, name: string, operation: string) {
@@ -33,7 +33,7 @@ function instrumentWFPFn(fn: Function, name: string, operation: string) {
 		apply: (target, thisArg, argArray) => {
 			const attributes = {
 				binding_type: 'WorkersForPlatforms',
-				[SemanticAttributes.CODE_NAMESPACE]: name
+				[SemanticAttributes.CODE_NAMESPACE]: name,
 			}
 			const options: SpanOptions = {
 				kind: SpanKind.INTERNAL,
@@ -62,14 +62,18 @@ export function instrumentDispatchNamespace(dataset: DispatchNamespace, name: st
 	return wrap(dataset, datasetHandler)
 }
 
-export function instrumentUserWorkerFetcher(fetcher: Fetcher, dispatch_namespace: string, worker_name: string): Fetcher {
+export function instrumentUserWorkerFetcher(
+	fetcher: Fetcher,
+	dispatch_namespace: string,
+	worker_name: string,
+): Fetcher {
 	const fetcherHandler: ProxyHandler<Fetcher> = {
 		get(target, prop) {
 			if (prop === 'fetch') {
 				const fetcher = Reflect.get(target, prop)
 				const attrs = {
 					dispatch_namespace,
-					worker_name
+					worker_name,
 				}
 				return instrumentClientFetch(fetcher, () => ({ includeTraceContext: false }), attrs)
 			} else {

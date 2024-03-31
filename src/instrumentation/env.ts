@@ -29,7 +29,10 @@ const isAnalyticsEngineDataset = (item?: unknown): item is AnalyticsEngineDatase
 
 const isDispatchNamespace = (item?: unknown): item is DispatchNamespace => {
 	// KV Namespaces and R2 buckets also have .get, but also .put
-	return !!(item as DispatchNamespace)?.get && !(item as KVNamespace & R2Bucket & DurableObjectState & DurableObjectNamespace)?.put
+	return (
+		!!(item as DispatchNamespace)?.get &&
+		!(item as KVNamespace & R2Bucket & DurableObjectState & DurableObjectNamespace)?.put
+	)
 }
 
 const instrumentEnv = (env: Record<string, unknown>): Record<string, unknown> => {
