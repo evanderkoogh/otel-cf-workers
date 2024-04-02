@@ -1,12 +1,20 @@
 import { Attributes, SpanKind, SpanOptions, trace } from '@opentelemetry/api'
 import { SemanticAttributes } from '@opentelemetry/semantic-conventions'
 import { wrap } from '../wrap.js'
+import { Overloads } from './common.js'
 
 type ExtraAttributeFn = (argArray: any[], result: any) => Attributes
 
 const dbSystem = 'Cloudflare DO'
 
 type DurableObjectCommonOptions = Pick<DurableObjectPutOptions, 'allowConcurrency' | 'allowUnconfirmed' | 'noCache'>
+function isDurableObjectCommonOptions(options: any): options is DurableObjectCommonOptions {
+	return (
+		typeof options === 'object' &&
+		('allowConcurrency' in options || 'allowUnconfirmed' in options || 'noCache' in options)
+	)
+}
+
 /** Applies attributes for common Durable Objects options:
  * `allowConcurrency`, `allowUnconfirmed`, and `noCache`
  */
@@ -23,10 +31,11 @@ function applyOptionsAttributes(attrs: Attributes, options: DurableObjectCommonO
 }
 
 const StorageAttributes: Record<string | symbol, ExtraAttributeFn> = {
-	delete(argArray, result) {
+	delete(argArray, result: Awaited<ReturnType<Overloads<DurableObjectStorage['delete']>>>) {
+		const args = argArray as Parameters<Overloads<DurableObjectStorage['delete']>>
 		let attrs: Attributes = {}
-		if (Array.isArray(argArray[0])) {
-			const keys = argArray[0]
+		if (Array.isArray(args[0])) {
+			const keys = args[0]
 			attrs = {
 				// todo: Maybe set db.cf.do.keys to the whole array here?
 				'db.cf.do.key': keys[0],
@@ -35,28 +44,28 @@ const StorageAttributes: Record<string | symbol, ExtraAttributeFn> = {
 			}
 		} else {
 			attrs = {
-				'db.cf.do.key': argArray[0],
+				'db.cf.do.key': args[0],
 				'db.cf.do.success': result,
 			}
 		}
-		if (argArray.length > 1) {
-			const options = argArray[1] as DurableObjectPutOptions
-			applyOptionsAttributes(attrs, options)
+		if (args[1]) {
+			applyOptionsAttributes(attrs, args[1])
 		}
 		return attrs
 	},
 	deleteAll(argArray) {
+		const args = argArray as Parameters<Overloads<DurableObjectStorage['deleteAll']>>
 		let attrs: Attributes = {}
-		if (argArray.length > 0) {
-			const options = argArray[0] as DurableObjectPutOptions
-			applyOptionsAttributes(attrs, options)
+		if (args[0]) {
+			applyOptionsAttributes(attrs, args[0])
 		}
 		return attrs
 	},
 	get(argArray) {
+		const args = argArray as Parameters<Overloads<DurableObjectStorage['get']>>
 		let attrs: Attributes = {}
-		if (Array.isArray(argArray[0])) {
-			const keys = argArray[0]
+		if (Array.isArray(args[0])) {
+			const keys = args[0]
 			attrs = {
 				// todo: Maybe set db.cf.do.keys to the whole array here?
 				'db.cf.do.key': keys[0],
@@ -64,21 +73,21 @@ const StorageAttributes: Record<string | symbol, ExtraAttributeFn> = {
 			}
 		} else {
 			attrs = {
-				'db.cf.do.key': argArray[0],
+				'db.cf.do.key': args[0],
 			}
 		}
-		if (argArray.length > 1) {
-			const options = argArray[1] as DurableObjectGetOptions
-			applyOptionsAttributes(attrs, options)
+		if (args[1]) {
+			applyOptionsAttributes(attrs, args[1])
 		}
 		return attrs
 	},
-	list(argArray, result: Map<string, unknown>) {
+	list(argArray, result: Awaited<ReturnType<Overloads<DurableObjectStorage['list']>>>) {
+		const args = argArray as Parameters<Overloads<DurableObjectStorage['list']>>
 		const attrs: Attributes = {
 			'db.cf.do.number_of_results': result.size,
 		}
-		if (argArray.length > 0) {
-			const options = argArray[0] as DurableObjectListOptions
+		if (args[0]) {
+			const options = args[0]
 			applyOptionsAttributes(attrs, options)
 			if ('start' in options) {
 				attrs['db.cf.do.start'] = options.start
@@ -102,52 +111,50 @@ const StorageAttributes: Record<string | symbol, ExtraAttributeFn> = {
 		return attrs
 	},
 	put(argArray) {
-		const attrs: Attributes = {
-			'db.cf.do.key': argArray[0],
-		}
-		let optionsIndex = 1 // put(entries, options)
-		if (typeof argArray[0] === 'string') {
-			attrs['db.cf.do.key'] = argArray[0]
-			optionsIndex = 2 // put(key, value, options)
+		const args = argArray as Parameters<Overloads<DurableObjectStorage['put']>>
+		const attrs: Attributes = {}
+		if (typeof args[0] === 'string') {
+			attrs['db.cf.do.key'] = args[0]
+			if (args[2]) {
+				applyOptionsAttributes(attrs, args[2])
+			}
 		} else {
-			const keys = Object.keys(argArray[0])
+			const keys = Object.keys(args[0])
 			// todo: Maybe set db.cf.do.keys to the whole array here?
 			attrs['db.cf.do.key'] = keys[0]
 			attrs['db.cf.do.number_of_keys'] = keys.length
-		}
-
-		if (argArray.length > optionsIndex) {
-			const options = argArray[optionsIndex] as DurableObjectPutOptions
-			applyOptionsAttributes(attrs, options)
+			if (isDurableObjectCommonOptions(args[1])) {
+				applyOptionsAttributes(attrs, args[1])
+			}
 		}
 		return attrs
 	},
 	getAlarm(argArray) {
+		const args = argArray as Parameters<Overloads<DurableObjectStorage['getAlarm']>>
 		const attrs: Attributes = {}
-		if (argArray.length > 0) {
-			const options = argArray[0] as DurableObjectGetAlarmOptions
-			applyOptionsAttributes(attrs, options)
+		if (args[0]) {
+			applyOptionsAttributes(attrs, args[0])
 		}
 		return attrs
 	},
 	setAlarm(argArray) {
+		const args = argArray as Parameters<Overloads<DurableObjectStorage['setAlarm']>>
 		const attrs: Attributes = {}
-		if (argArray[0] instanceof Date) {
-			attrs['db.cf.do.alarm_time'] = argArray[0].getTime()
+		if (args[0] instanceof Date) {
+			attrs['db.cf.do.alarm_time'] = args[0].getTime()
 		} else {
-			attrs['db.cf.do.alarm_time'] = argArray[0]
+			attrs['db.cf.do.alarm_time'] = args[0]
 		}
-		if (argArray.length > 1) {
-			const options = argArray[1] as DurableObjectSetAlarmOptions
-			applyOptionsAttributes(attrs, options)
+		if (args[1]) {
+			applyOptionsAttributes(attrs, args[1])
 		}
 		return attrs
 	},
 	deleteAlarm(argArray) {
+		const args = argArray as Parameters<Overloads<DurableObjectStorage['deleteAlarm']>>
 		const attrs: Attributes = {}
-		if (argArray.length > 0) {
-			const options = argArray[0] as DurableObjectSetAlarmOptions
-			applyOptionsAttributes(attrs, options)
+		if (args[0]) {
+			applyOptionsAttributes(attrs, args[0])
 		}
 		return attrs
 	},
