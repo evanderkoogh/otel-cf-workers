@@ -105,17 +105,16 @@ const StorageAttributes: Record<string | symbol, ExtraAttributeFn> = {
 		const attrs: Attributes = {
 			'db.cf.do.key': argArray[0],
 		}
-
+		let optionsIndex = 1 // put(entries, options)
 		if (typeof argArray[0] === 'string') {
 			attrs['db.cf.do.key'] = argArray[0]
+			optionsIndex = 2 // put(key, value, options)
 		} else {
 			const keys = Object.keys(argArray[0])
 			// todo: Maybe set db.cf.do.keys to the whole array here?
 			attrs['db.cf.do.key'] = keys[0]
 			attrs['db.cf.do.number_of_keys'] = keys.length
 		}
-
-		const optionsIndex = typeof argArray[1] === 'object' ? 1 : 2
 
 		if (argArray.length > optionsIndex) {
 			const options = argArray[optionsIndex] as DurableObjectPutOptions
