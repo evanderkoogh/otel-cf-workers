@@ -1,5 +1,18 @@
 # @microlabs/otel-cf-workers
 
+## 1.0.0-rc.30
+
+### Minor Changes
+
+- c53aafa: Add instrumentation for DO storage alarm methods and deleteAll
+
+### Patch Changes
+
+- d107ae8: Fix telemetry sdk attributes
+- c53aafa: Fix DO storage instrumentation extra attributes
+- c53aafa: Fix DO storage put when providing an object with multiple values
+- 97aa141: Make ResolveConfigFn generic
+
 ## 1.0.0-rc.29
 
 ### Patch Changes
