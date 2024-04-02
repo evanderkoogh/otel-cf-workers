@@ -1,65 +1,160 @@
 import { Attributes, SpanKind, SpanOptions, trace } from '@opentelemetry/api'
 import { SemanticAttributes } from '@opentelemetry/semantic-conventions'
 import { wrap } from '../wrap.js'
+import { Overloads } from './common.js'
 
 type ExtraAttributeFn = (argArray: any[], result: any) => Attributes
 
 const dbSystem = 'Cloudflare DO'
 
+type DurableObjectCommonOptions = Pick<DurableObjectPutOptions, 'allowConcurrency' | 'allowUnconfirmed' | 'noCache'>
+function isDurableObjectCommonOptions(options: any): options is DurableObjectCommonOptions {
+	return (
+		typeof options === 'object' &&
+		('allowConcurrency' in options || 'allowUnconfirmed' in options || 'noCache' in options)
+	)
+}
+
+/** Applies attributes for common Durable Objects options:
+ * `allowConcurrency`, `allowUnconfirmed`, and `noCache`
+ */
+function applyOptionsAttributes(attrs: Attributes, options: DurableObjectCommonOptions) {
+	if ('allowConcurrency' in options) {
+		attrs['db.cf.do.allow_concurrency'] = options.allowConcurrency
+	}
+	if ('allowUnconfirmed' in options) {
+		attrs['db.cf.do.allow_unconfirmed'] = options.allowUnconfirmed
+	}
+	if ('noCache' in options) {
+		attrs['db.cf.do.no_cache'] = options.noCache
+	}
+}
+
 const StorageAttributes: Record<string | symbol, ExtraAttributeFn> = {
-	delete(argArray, result) {
-		let attrs = {}
-		if (Array.isArray(argArray[0])) {
-			const keys = argArray[0]
+	delete(argArray, result: Awaited<ReturnType<Overloads<DurableObjectStorage['delete']>>>) {
+		const args = argArray as Parameters<Overloads<DurableObjectStorage['delete']>>
+		let attrs: Attributes = {}
+		if (Array.isArray(args[0])) {
+			const keys = args[0]
 			attrs = {
+				// todo: Maybe set db.cf.do.keys to the whole array here?
 				'db.cf.do.key': keys[0],
 				'db.cf.do.number_of_keys': keys.length,
 				'db.cf.do.keys_deleted': result,
 			}
 		} else {
 			attrs = {
-				'db.cf.do.key': argArray[0],
+				'db.cf.do.key': args[0],
 				'db.cf.do.success': result,
 			}
 		}
-		if (argArray.length > 1) {
-			Object.assign(attrs, argArray[1])
+		if (args[1]) {
+			applyOptionsAttributes(attrs, args[1])
+		}
+		return attrs
+	},
+	deleteAll(argArray) {
+		const args = argArray as Parameters<Overloads<DurableObjectStorage['deleteAll']>>
+		let attrs: Attributes = {}
+		if (args[0]) {
+			applyOptionsAttributes(attrs, args[0])
 		}
 		return attrs
 	},
 	get(argArray) {
-		let attrs = {}
-		if (Array.isArray(argArray[0])) {
-			const keys = argArray[0]
+		const args = argArray as Parameters<Overloads<DurableObjectStorage['get']>>
+		let attrs: Attributes = {}
+		if (Array.isArray(args[0])) {
+			const keys = args[0]
 			attrs = {
+				// todo: Maybe set db.cf.do.keys to the whole array here?
 				'db.cf.do.key': keys[0],
 				'db.cf.do.number_of_keys': keys.length,
 			}
 		} else {
 			attrs = {
-				'db.cf.do.key': argArray[0],
+				'db.cf.do.key': args[0],
 			}
 		}
-		if (argArray.length > 1) {
-			Object.assign(attrs, argArray[1])
+		if (args[1]) {
+			applyOptionsAttributes(attrs, args[1])
 		}
 		return attrs
 	},
-	list(argArray, result: Map<string, unknown>) {
-		// list may be called with no arguments
+	list(argArray, result: Awaited<ReturnType<Overloads<DurableObjectStorage['list']>>>) {
+		const args = argArray as Parameters<Overloads<DurableObjectStorage['list']>>
 		const attrs: Attributes = {
 			'db.cf.do.number_of_results': result.size,
 		}
-		Object.assign(attrs, argArray[0])
+		if (args[0]) {
+			const options = args[0]
+			applyOptionsAttributes(attrs, options)
+			if ('start' in options) {
+				attrs['db.cf.do.start'] = options.start
+			}
+			if ('startAfter' in options) {
+				attrs['db.cf.do.start_after'] = options.startAfter
+			}
+			if ('end' in options) {
+				attrs['db.cf.do.end'] = options.end
+			}
+			if ('prefix' in options) {
+				attrs['db.cf.do.prefix'] = options.prefix
+			}
+			if ('reverse' in options) {
+				attrs['db.cf.do.reverse'] = options.reverse
+			}
+			if ('limit' in options) {
+				attrs['db.cf.do.limit'] = options.limit
+			}
+		}
 		return attrs
 	},
 	put(argArray) {
-		const attrs = {
-			'db.cf.do.key': argArray[0],
+		const args = argArray as Parameters<Overloads<DurableObjectStorage['put']>>
+		const attrs: Attributes = {}
+		if (typeof args[0] === 'string') {
+			attrs['db.cf.do.key'] = args[0]
+			if (args[2]) {
+				applyOptionsAttributes(attrs, args[2])
+			}
+		} else {
+			const keys = Object.keys(args[0])
+			// todo: Maybe set db.cf.do.keys to the whole array here?
+			attrs['db.cf.do.key'] = keys[0]
+			attrs['db.cf.do.number_of_keys'] = keys.length
+			if (isDurableObjectCommonOptions(args[1])) {
+				applyOptionsAttributes(attrs, args[1])
+			}
 		}
-
-		if (argArray.length > 2) {
-			Object.assign(attrs, argArray[2])
+		return attrs
+	},
+	getAlarm(argArray) {
+		const args = argArray as Parameters<Overloads<DurableObjectStorage['getAlarm']>>
+		const attrs: Attributes = {}
+		if (args[0]) {
+			applyOptionsAttributes(attrs, args[0])
+		}
+		return attrs
+	},
+	setAlarm(argArray) {
+		const args = argArray as Parameters<Overloads<DurableObjectStorage['setAlarm']>>
+		const attrs: Attributes = {}
+		if (args[0] instanceof Date) {
+			attrs['db.cf.do.alarm_time'] = args[0].getTime()
+		} else {
+			attrs['db.cf.do.alarm_time'] = args[0]
+		}
+		if (args[1]) {
+			applyOptionsAttributes(attrs, args[1])
+		}
+		return attrs
+	},
+	deleteAlarm(argArray) {
+		const args = argArray as Parameters<Overloads<DurableObjectStorage['deleteAlarm']>>
+		const attrs: Attributes = {}
+		if (args[0]) {
+			applyOptionsAttributes(attrs, args[0])
 		}
 		return attrs
 	},
