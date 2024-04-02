@@ -34,7 +34,7 @@ type FetchHandler = ExportedHandlerFetchHandler<unknown, unknown>
 type ScheduledHandler = ExportedHandlerScheduledHandler<unknown>
 type QueueHandler = ExportedHandlerQueueHandler
 
-export type ResolveConfigFn = (env: any, trigger: Trigger) => TraceConfig
+export type ResolveConfigFn<Env = any> = (env: Env, trigger: Trigger) => TraceConfig
 export type ConfigurationOption = TraceConfig | ResolveConfigFn
 
 export function isRequest(trigger: Trigger): trigger is Request {
