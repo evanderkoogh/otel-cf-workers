@@ -32,7 +32,7 @@
 		"check:type-esm": "tsc --noEmit",
 		"check:type-cjs": "tsc --noEmit -p tsconfig-cjs.json",
 		"watch": "tsc --watch",
-		"prepare": "husky install"
+		"prepare": "husky"
 	},
 	"homepage": "https://github.com/evanderkoogh/otel-cf-workers#readme",
 	"dependencies": {
@@ -48,13 +48,13 @@
 	},
 	"devDependencies": {
 		"@changesets/cli": "^2.27.1",
-		"@cloudflare/workers-types": "^4.20240222.0",
-		"husky": "^8.0.3",
-		"lint-staged": "^15.0.2",
+		"@cloudflare/workers-types": "^4.20240329.0",
+		"husky": "^9.0.11",
+		"lint-staged": "^15.2.2",
 		"npm-run-all": "^4.1.5",
-		"prettier": "^3.0.3",
-		"rimraf": "^4.4.1",
-		"typescript": "^5.2.2"
+		"prettier": "^3.2.5",
+		"rimraf": "^5.0.5",
+		"typescript": "^5.4.3"
 	},
 	"publishConfig": {
 		"access": "public"
