@@ -1,5 +1,11 @@
 # @microlabs/otel-cf-workers
 
+## 1.0.0-rc.31
+
+### Patch Changes
+
+- 10376e2: fix: Remove publish script to prevent double publish
+
 ## 1.0.0-rc.30
 
 ### Minor Changes
