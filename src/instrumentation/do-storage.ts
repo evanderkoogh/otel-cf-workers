@@ -63,7 +63,7 @@ const StorageAttributes: Record<string | symbol, ExtraAttributeFn> = {
 			}
 		}
 		if (argArray.length > 1) {
-			const options = argArray[1] as DurableObjectPutOptions
+			const options = argArray[1] as DurableObjectGetOptions
 			if ('allowConcurrency' in options) {
 				attrs['db.cf.do.allow_concurrency'] = options.allowConcurrency
 			}
@@ -78,7 +78,7 @@ const StorageAttributes: Record<string | symbol, ExtraAttributeFn> = {
 			'db.cf.do.number_of_results': result.size,
 		} as Record<string, string | number | boolean | undefined>
 		if (argArray.length > 0) {
-			const options = argArray[0] as DurableObjectPutOptions
+			const options = argArray[0] as DurableObjectListOptions
 			if ('allowConcurrency' in options) {
 				attrs['db.cf.do.allow_concurrency'] = options.allowConcurrency
 			}
@@ -86,22 +86,22 @@ const StorageAttributes: Record<string | symbol, ExtraAttributeFn> = {
 				attrs['db.cf.do.no_cache'] = options.noCache
 			}
 			if ('start' in options) {
-				attrs['db.cf.do.start'] = options.noCache
+				attrs['db.cf.do.start'] = options.start
 			}
 			if ('startAfter' in options) {
-				attrs['db.cf.do.start_after'] = options.noCache
+				attrs['db.cf.do.start_after'] = options.startAfter
 			}
 			if ('end' in options) {
-				attrs['db.cf.do.end'] = options.noCache
+				attrs['db.cf.do.end'] = options.end
 			}
 			if ('prefix' in options) {
-				attrs['db.cf.do.prefix'] = options.noCache
+				attrs['db.cf.do.prefix'] = options.prefix
 			}
 			if ('reverse' in options) {
-				attrs['db.cf.do.reverse'] = options.noCache
+				attrs['db.cf.do.reverse'] = options.reverse
 			}
 			if ('limit' in options) {
-				attrs['db.cf.do.limit'] = options.noCache
+				attrs['db.cf.do.limit'] = options.limit
 			}
 		}
 		return attrs
@@ -153,7 +153,7 @@ const StorageAttributes: Record<string | symbol, ExtraAttributeFn> = {
 			attrs['db.cf.do.alarm_time'] = argArray[0]
 		}
 		if (argArray.length > 1) {
-			const options = argArray[1] as DurableObjectPutOptions
+			const options = argArray[1] as DurableObjectSetAlarmOptions
 			if ('allowConcurrency' in options) {
 				attrs['db.cf.do.allow_concurrency'] = options.allowConcurrency
 			}
@@ -166,7 +166,7 @@ const StorageAttributes: Record<string | symbol, ExtraAttributeFn> = {
 	deleteAlarm(argArray) {
 		const attrs = {} as Record<string, string | number | boolean | undefined>
 		if (argArray.length > 0) {
-			const options = argArray[0] as DurableObjectPutOptions
+			const options = argArray[0] as DurableObjectSetAlarmOptions
 			if ('allowConcurrency' in options) {
 				attrs['db.cf.do.allow_concurrency'] = options.allowConcurrency
 			}
