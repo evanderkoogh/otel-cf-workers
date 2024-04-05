@@ -1,5 +1,11 @@
 # @microlabs/otel-cf-workers
 
+## 1.0.0-rc.32
+
+### Patch Changes
+
+- 1390b74: fix: Revert import of packge.json breaking module resolution
+
 ## 1.0.0-rc.31
 
 ### Patch Changes
