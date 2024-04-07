@@ -1,5 +1,11 @@
 # @microlabs/otel-cf-workers
 
+## 1.0.0-rc.34
+
+### Patch Changes
+
+- 051118f: Add version metadata to attributes if found
+
 ## 1.0.0-rc.33
 
 ### Patch Changes
