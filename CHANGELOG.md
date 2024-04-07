@@ -1,5 +1,11 @@
 # @microlabs/otel-cf-workers
 
+## 1.0.0-rc.33
+
+### Patch Changes
+
+- 660e4a7: Prevent incorrect detection of rpc bindings
+
 ## 1.0.0-rc.32
 
 ### Patch Changes
