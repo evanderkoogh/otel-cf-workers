@@ -4,6 +4,7 @@ import { Initialiser, setConfig } from '../config.js'
 import { exportSpans, proxyExecutionContext } from './common.js'
 import { instrumentEnv } from './env.js'
 import { unwrap, wrap } from '../wrap.js'
+import { versionAttributes } from './version.js'
 
 type QueueHandler = ExportedHandlerQueueHandler<unknown, unknown>
 export type QueueHandlerArgs = Parameters<QueueHandler>
@@ -141,6 +142,7 @@ export function executeQueueHandler(queueFn: QueueHandler, [batch, env, ctx]: Qu
 		},
 		kind: SpanKind.CONSUMER,
 	}
+	Object.assign(options.attributes!, versionAttributes(env))
 	const promise = tracer.startActiveSpan(`queueHandler:${batch.queue}`, options, async (span) => {
 		const traceId = span.spanContext().traceId
 		api_context.active().setValue(traceIdSymbol, traceId)
