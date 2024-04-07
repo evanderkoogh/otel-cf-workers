@@ -22,7 +22,7 @@ const isServiceBinding = (item?: unknown): item is Fetcher => {
 	return !!binding.connect || !!binding.fetch || binding.queue || binding.scheduled
 }
 
-const isVersionMetadata = (item?: unknown): item is WorkerVersionMetadata => {
+export const isVersionMetadata = (item?: unknown): item is WorkerVersionMetadata => {
 	return !!(item as WorkerVersionMetadata).id && !!(item as WorkerVersionMetadata).tag
 }
 
