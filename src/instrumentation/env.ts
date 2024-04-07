@@ -5,6 +5,11 @@ import { instrumentQueueSender } from './queue.js'
 import { instrumentServiceBinding } from './service.js'
 import { instrumentAnalyticsEngineDataset } from './analytics-engine.js'
 
+const isJSRPC = (item?: unknown): item is Service => {
+	// @ts-expect-error The point of RPC types is to block non-existent properties, but that's the goal here
+	return !!(item as Service)?.['__some_property_that_will_never_exist' + Math.random()]
+}
+
 const isKVNamespace = (item?: unknown): item is KVNamespace => {
 	return !!(item as KVNamespace)?.getWithMetadata
 }
@@ -33,7 +38,10 @@ const instrumentEnv = (env: Record<string, unknown>): Record<string, unknown> =>
 			if (!isProxyable(item)) {
 				return item
 			}
-			if (isKVNamespace(item)) {
+			if (isJSRPC(item)) {
+				// TODO instrument JSRPC and maybe remove serviceBinding?
+				return item
+			} else if (isKVNamespace(item)) {
 				return instrumentKV(item, String(prop))
 			} else if (isQueue(item)) {
 				return instrumentQueueSender(item, String(prop))
