@@ -1,5 +1,11 @@
 # @microlabs/otel-cf-workers
 
+## 1.0.0-rc.35
+
+### Patch Changes
+
+- dc8e389: fix: Rename version metadata attribute to match binding name
+
 ## 1.0.0-rc.34
 
 ### Patch Changes
