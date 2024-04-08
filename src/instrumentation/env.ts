@@ -11,20 +11,20 @@ const isJSRPC = (item?: unknown): item is Service => {
 }
 
 const isKVNamespace = (item?: unknown): item is KVNamespace => {
-	return !!(item as KVNamespace)?.getWithMetadata
+	return !isJSRPC(item) && !!(item as KVNamespace)?.getWithMetadata
 }
 
 const isQueue = (item?: unknown): item is Queue<unknown> => {
-	return !!(item as Queue<unknown>)?.sendBatch
+	return !isJSRPC(item) && !!(item as Queue<unknown>)?.sendBatch
 }
 
 const isDurableObject = (item?: unknown): item is DurableObjectNamespace => {
-	return !!(item as DurableObjectNamespace)?.idFromName
+	return !isJSRPC(item) && !!(item as DurableObjectNamespace)?.idFromName
 }
 
 const isServiceBinding = (item?: unknown): item is Fetcher => {
 	const binding = item as Fetcher
-	return !!binding.connect || !!binding.fetch || binding.queue || binding.scheduled
+	return (!isJSRPC(item) && !!binding.connect) || !!binding.fetch || binding.queue || binding.scheduled
 }
 
 export const isVersionMetadata = (item?: unknown): item is WorkerVersionMetadata => {
@@ -36,7 +36,7 @@ export const isVersionMetadata = (item?: unknown): item is WorkerVersionMetadata
 }
 
 const isAnalyticsEngineDataset = (item?: unknown): item is AnalyticsEngineDataset => {
-	return !!(item as AnalyticsEngineDataset)?.writeDataPoint
+	return !isJSRPC(item) && !!(item as AnalyticsEngineDataset)?.writeDataPoint
 }
 
 const instrumentEnv = (env: Record<string, unknown>): Record<string, unknown> => {
