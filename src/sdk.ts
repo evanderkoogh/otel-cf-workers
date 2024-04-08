@@ -190,3 +190,5 @@ export function instrumentDO(doClass: DOClass, config: ConfigurationOption) {
 }
 
 export { waitUntilTrace } from './instrumentation/fetch.js'
+
+export const __unwrappedFetch = unwrap(fetch)
