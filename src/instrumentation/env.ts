@@ -28,7 +28,11 @@ const isServiceBinding = (item?: unknown): item is Fetcher => {
 }
 
 export const isVersionMetadata = (item?: unknown): item is WorkerVersionMetadata => {
-	return !!(item as WorkerVersionMetadata).id && !!(item as WorkerVersionMetadata).tag
+	return (
+		!isJSRPC(item) &&
+		typeof (item as WorkerVersionMetadata).id === 'string' &&
+		typeof (item as WorkerVersionMetadata).tag === 'string'
+	)
 }
 
 const isAnalyticsEngineDataset = (item?: unknown): item is AnalyticsEngineDataset => {
