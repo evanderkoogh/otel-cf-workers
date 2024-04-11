@@ -1,5 +1,15 @@
 # @microlabs/otel-cf-workers
 
+## 1.0.0-rc.36
+
+### Minor Changes
+
+- 0bfd65c: Export unwrapped global fetch for various advanced use cases
+
+### Patch Changes
+
+- 39d448c: Correctly detect version metadata when tag is an empty string. Also, check for RPC bindings in all cases as `isVersionMetadata` was incorrectly picking up rpc bindings too when searching for version bindings.
+
 ## 1.0.0-rc.35
 
 ### Patch Changes
