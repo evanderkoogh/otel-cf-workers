@@ -1,7 +1,6 @@
 import { ReadableSpan } from '@opentelemetry/sdk-trace-base'
 import { Initialiser, setConfig } from '../config'
 import { exportSpans, proxyExecutionContext } from './common'
-// import { instrumentEnv } from "./env"
 import { Exception, SpanKind, SpanOptions, SpanStatusCode, context as api_context, trace } from '@opentelemetry/api'
 import { wrap } from '../wrap'
 import {
@@ -30,8 +29,6 @@ export function executePageHandler(pagesFn: PagesFunction, [request]: PageHandle
 		attributes,
 		kind: SpanKind.SERVER,
 	}
-
-	console.log(request.data)
 
 	const promise = tracer.startActiveSpan(
 		`${request.request.method} ${request.functionPath}`,
@@ -71,7 +68,6 @@ export function createPageHandler<
 		apply: async (target, _thisArg, argArray: Parameters<PagesFunction>): Promise<Response> => {
 			const [orig_ctx] = argArray
 			const config = initialiser(orig_ctx.env as Record<string, unknown>, orig_ctx.request)
-			// const env = instrumentEnv(orig_ctx.env as Record<string, unknown>)
 			const { ctx, tracker } = proxyExecutionContext(orig_ctx)
 			const context = setConfig(config)
 

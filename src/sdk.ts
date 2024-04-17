@@ -144,7 +144,7 @@ function parseConfig(supplied: TraceConfig): ResolvedTraceConfig {
 	}
 }
 
-export function createInitialiser(config: ConfigurationOption): Initialiser {
+function createInitialiser(config: ConfigurationOption): Initialiser {
 	if (typeof config === 'function') {
 		return (env, trigger) => {
 			const conf = parseConfig(config(env, trigger))
