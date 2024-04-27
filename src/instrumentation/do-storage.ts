@@ -176,7 +176,7 @@ function instrumentStorageFn(fn: Function, operation: string) {
 					operation,
 				},
 			}
-			return tracer.startActiveSpan(`do:storage:${operation}`, options, async (span) => {
+			return tracer.startActiveSpan(`Durable Object Storage ${operation}`, options, async (span) => {
 				const result = await Reflect.apply(target, thisArg, argArray)
 				const extraAttrsFn = StorageAttributes[operation]
 				const extraAttrs = extraAttrsFn ? extraAttrsFn(argArray, result) : {}

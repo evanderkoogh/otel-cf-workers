@@ -30,7 +30,7 @@ export function executeScheduledHandler(
 		kind: SpanKind.SERVER,
 	}
 
-	const promise = tracer.startActiveSpan('scheduledHandler', options, async (span) => {
+	const promise = tracer.startActiveSpan(`scheduledHandler ${controller.cron}`, options, async (span) => {
 		const traceId = span.spanContext().traceId
 		api_context.active().setValue(traceIdSymbol, traceId)
 		try {

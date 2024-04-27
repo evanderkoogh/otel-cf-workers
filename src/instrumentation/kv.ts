@@ -80,7 +80,7 @@ function instrumentKVFn(fn: Function, name: string, operation: string) {
 				kind: SpanKind.CLIENT,
 				attributes,
 			}
-			return tracer.startActiveSpan(`${name} ${operation}`, options, async (span) => {
+			return tracer.startActiveSpan(`KV ${name} ${operation}`, options, async (span) => {
 				const result = await Reflect.apply(target, thisArg, argArray)
 				const extraAttrsFn = KVAttributes[operation]
 				const extraAttrs = extraAttrsFn ? extraAttrsFn(argArray, result) : {}

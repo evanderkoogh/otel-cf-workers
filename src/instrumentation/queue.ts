@@ -143,7 +143,7 @@ export function executeQueueHandler(queueFn: QueueHandler, [batch, env, ctx]: Qu
 		kind: SpanKind.CONSUMER,
 	}
 	Object.assign(options.attributes!, versionAttributes(env))
-	const promise = tracer.startActiveSpan(`queueHandler:${batch.queue}`, options, async (span) => {
+	const promise = tracer.startActiveSpan(`queueHandler ${batch.queue}`, options, async (span) => {
 		const traceId = span.spanContext().traceId
 		api_context.active().setValue(traceIdSymbol, traceId)
 		try {
@@ -191,7 +191,7 @@ function instrumentQueueSend(fn: Queue<unknown>['send'], name: string): Queue<un
 	const tracer = trace.getTracer('queueSender')
 	const handler: ProxyHandler<Queue<unknown>['send']> = {
 		apply: (target, thisArg, argArray) => {
-			return tracer.startActiveSpan(`queueSend: ${name}`, async (span) => {
+			return tracer.startActiveSpan(`Queues ${name} send`, async (span) => {
 				span.setAttribute('queue.operation', 'send')
 				await Reflect.apply(target, unwrap(thisArg), argArray)
 				span.end()
@@ -205,7 +205,7 @@ function instrumentQueueSendBatch(fn: Queue<unknown>['sendBatch'], name: string)
 	const tracer = trace.getTracer('queueSender')
 	const handler: ProxyHandler<Queue<unknown>['sendBatch']> = {
 		apply: (target, thisArg, argArray) => {
-			return tracer.startActiveSpan(`queueSendBatch: ${name}`, async (span) => {
+			return tracer.startActiveSpan(`Queues ${name} sendBatch`, async (span) => {
 				span.setAttribute('queue.operation', 'sendBatch')
 				await Reflect.apply(target, unwrap(thisArg), argArray)
 				span.end()
