@@ -1,5 +1,12 @@
 # @microlabs/otel-cf-workers
 
+## 1.0.0-rc.37
+
+### Minor Changes
+
+- 285d0c0: [Breaking] Rename some instrumented spans for consistency
+- f10e4cd: Add option to disable auto-instrumentation of global fetch and cache API
+
 ## 1.0.0-rc.36
 
 ### Minor Changes
