@@ -34,7 +34,7 @@ function instrumentAEFn(fn: Function, name: string, operation: string) {
 				kind: SpanKind.CLIENT,
 				attributes,
 			}
-			return tracer.startActiveSpan(`${name} ${operation}`, options, async (span) => {
+			return tracer.startActiveSpan(`Analytics Engine ${name} ${operation}`, options, async (span) => {
 				const result = await Reflect.apply(target, thisArg, argArray)
 				const extraAttrsFn = AEAttributes[operation]
 				const extraAttrs = extraAttrsFn ? extraAttrsFn(argArray, result) : {}

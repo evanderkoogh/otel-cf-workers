@@ -19,7 +19,7 @@ function instrumentFunction<T extends CacheFns>(fn: T, cacheName: string, op: st
 				'cache.operation': op,
 			}
 			const options: SpanOptions = { kind: SpanKind.CLIENT, attributes }
-			return tracer.startActiveSpan(`cache:${cacheName}:${op}`, options, async (span) => {
+			return tracer.startActiveSpan(`Cache ${cacheName} ${op}`, options, async (span) => {
 				const result = await Reflect.apply(target, thisArg, argArray)
 				if (op === 'match') {
 					span.setAttribute('cache.hit', !!result)

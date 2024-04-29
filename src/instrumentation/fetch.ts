@@ -148,20 +148,20 @@ export function executeFetchHandler(fetchFn: FetchHandler, [request, env, ctx]: 
 	}
 
 	const method = request.method.toUpperCase()
-	const promise = tracer.startActiveSpan(method, options, spanContext, async (span) => {
+	const promise = tracer.startActiveSpan(`fetchHandler ${method}`, options, spanContext, async (span) => {
 		const readable = span as unknown as ReadableSpan
 		try {
 			const response: Response = await fetchFn(request, env, ctx)
 			span.setAttributes(gatherResponseAttributes(response))
 			if (readable.attributes['http.route']) {
-				span.updateName(`${method} ${readable.attributes['http.route']}`)
+				span.updateName(`fetchHandler ${method} ${readable.attributes['http.route']}`)
 			}
 			span.end()
 
 			return response
 		} catch (error) {
 			if (readable.attributes['http.route']) {
-				span.updateName(`${method} ${readable.attributes['http.route']}`)
+				span.updateName(`fetchHandler ${method} ${readable.attributes['http.route']}`)
 			}
 			span.recordException(error as Exception)
 			span.setStatus({ code: SpanStatusCode.ERROR })
@@ -215,7 +215,7 @@ export function instrumentClientFetch(
 
 			const host = new URL(request.url).host
 			const method = request.method.toUpperCase()
-			const spanName = typeof attrs?.['name'] === 'string' ? attrs?.['name'] : `${method}: ${host}`
+			const spanName = typeof attrs?.['name'] === 'string' ? attrs?.['name'] : `fetch ${method} ${host}`
 			const promise = tracer.startActiveSpan(spanName, options, async (span) => {
 				const includeTraceContext =
 					typeof config.includeTraceContext === 'function'
