@@ -76,8 +76,12 @@ function isSpanExporter(exporterConfig: ExporterConfig): exporterConfig is SpanE
 let initialised = false
 function init(config: ResolvedTraceConfig): void {
 	if (!initialised) {
-		instrumentGlobalCache()
-		instrumentGlobalFetch()
+		if (config.instrumentation.instrumentGlobalCache) {
+			instrumentGlobalCache()
+		}
+		if (config.instrumentation.instrumentGlobalFetch) {
+			instrumentGlobalFetch()
+		}
 		propagation.setGlobalPropagator(config.propagator)
 		const resource = createResource(config)
 
@@ -135,6 +139,10 @@ function parseConfig(supplied: TraceConfig): ResolvedTraceConfig {
 			service: supplied.service,
 			spanProcessors,
 			propagator: supplied.propagator || new W3CTraceContextPropagator(),
+			instrumentation: {
+				instrumentGlobalCache: supplied.instrumentation?.instrumentGlobalCache ?? true,
+				instrumentGlobalFetch: supplied.instrumentation?.instrumentGlobalFetch ?? true,
+			},
 		}
 	} else {
 		const exporter = isSpanExporter(supplied.exporter) ? supplied.exporter : new OTLPExporter(supplied.exporter)
