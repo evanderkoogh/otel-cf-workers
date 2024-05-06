@@ -1,5 +1,11 @@
 # @microlabs/otel-cf-workers
 
+## 1.0.0-rc.38
+
+### Patch Changes
+
+- 0fdf245: Add back instrumentation of fetch in service bindings
+
 ## 1.0.0-rc.37
 
 ### Minor Changes
