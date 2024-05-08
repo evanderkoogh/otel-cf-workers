@@ -2,4 +2,4 @@
 "@microlabs/otel-cf-workers": minor
 ---
 
-[Breaking] Rename client fetch and service binding spans
+[Breaking] Rename durable object fetch, client fetch and service binding spans
