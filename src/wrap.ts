@@ -45,11 +45,14 @@ export function unwrap<T extends object>(item: T): T {
 }
 
 export function passthroughGet(target: any, prop: string | symbol, thisArg?: any) {
-	const value = Reflect.get(unwrap(target), prop)
+	const unwrappedTarget = unwrap(target)
+	const value = Reflect.get(unwrappedTarget, prop)
 	if (typeof value === 'function') {
-		thisArg = thisArg || unwrap(target)
-		const bound = value.bind(thisArg)
-		return bound
+		if (value.constructor.name === 'RpcProperty') {
+			return (...args: unknown[]) => unwrappedTarget[prop](...args)
+		}
+		thisArg = thisArg || unwrappedTarget
+		return value.bind(thisArg)
 	} else {
 		return value
 	}
