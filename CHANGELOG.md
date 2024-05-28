@@ -1,5 +1,19 @@
 # @microlabs/otel-cf-workers
 
+## 1.0.0-rc.39
+
+### Minor Changes
+
+- 52100b5: [Breaking] Rename durable object fetch, client fetch and service binding spans
+
+### Patch Changes
+
+- 360e3bd: fix: Avoid calling bind on instances of RpcProperty
+
+  This PR inspects the unwrapped value, and if it's constructor is of RpcProperty, it handles binding by returning a different function that calls the RPC property as if it was bound.
+
+  Thanks @JacobMarshallPP !
+
 ## 1.0.0-rc.38
 
 ### Patch Changes
