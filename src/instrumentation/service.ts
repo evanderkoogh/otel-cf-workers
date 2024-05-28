@@ -7,7 +7,7 @@ export function instrumentServiceBinding(fetcher: Fetcher, envName: string): Fet
 			if (prop === 'fetch') {
 				const fetcher = Reflect.get(target, prop)
 				const attrs = {
-					name: `service_binding:${envName}`,
+					name: `Service Binding ${envName}`,
 				}
 				return instrumentClientFetch(fetcher, () => ({ includeTraceContext: true }), attrs)
 			} else {

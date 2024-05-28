@@ -24,7 +24,7 @@ function instrumentBindingStub(stub: DurableObjectStub, nsName: string): Durable
 			if (prop === 'fetch') {
 				const fetcher = Reflect.get(target, prop)
 				const attrs = {
-					name: `durable_object:${nsName}`,
+					name: `Durable Object ${nsName}`,
 					'do.namespace': nsName,
 					'do.id': target.id.toString(),
 					'do.id.name': target.id.name,
