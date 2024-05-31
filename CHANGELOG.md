@@ -1,5 +1,11 @@
 # @microlabs/otel-cf-workers
 
+## 1.0.0-rc.40
+
+### Patch Changes
+
+- 226d7d3: fix(#143): Inline ts-checked-fsm due to module issues
+
 ## 1.0.0-rc.39
 
 ### Minor Changes
