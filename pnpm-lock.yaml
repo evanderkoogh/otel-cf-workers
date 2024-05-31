@@ -29,9 +29,6 @@ dependencies:
   '@opentelemetry/semantic-conventions':
     specifier: ^1.17.1
     version: 1.17.1
-  ts-checked-fsm:
-    specifier: ^1.1.0
-    version: 1.1.0
 
 devDependencies:
   '@changesets/cli':
@@ -2389,10 +2386,6 @@ packages:
     resolution: {integrity: sha512-c1PTsA3tYrIsLGkJkzHF+w9F2EyxfXGo4UyJc4pFL++FMjnq0HJS69T3M7d//gKrFKwy429bouPescbjecU+Zw==}
     engines: {node: '>=8'}
     dev: true
-
-  /ts-checked-fsm@1.1.0:
-    resolution: {integrity: sha512-kYbLNv4/orTm6TA0mdQmDy3k9teMmhyvzwtgYo3a0/TFjwDXi/g/3LkJlQd99fqqH5NxhWYLanNrwovb/r9PWA==}
-    dev: false
 
   /tty-table@4.2.2:
     resolution: {integrity: sha512-2gvCArMZLxgvpZ2NvQKdnYWIFLe7I/z5JClMuhrDXunmKgSZcQKcZRjN9XjAFiToMz2pUo1dEIXyrm0AwgV5Tw==}

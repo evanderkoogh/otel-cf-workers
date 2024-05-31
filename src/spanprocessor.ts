@@ -1,7 +1,7 @@
 import { Context, Span, trace } from '@opentelemetry/api'
 import { ReadableSpan, SpanExporter, SpanProcessor } from '@opentelemetry/sdk-trace-base'
 import { ExportResult, ExportResultCode } from '@opentelemetry/core'
-import { Action, State, stateMachine } from 'ts-checked-fsm'
+import { Action, State, stateMachine } from './vendor/ts-checked-fsm/StateMachine.js'
 
 import { getActiveConfig } from './config.js'
 import { TailSampleFn } from './sampling.js'
