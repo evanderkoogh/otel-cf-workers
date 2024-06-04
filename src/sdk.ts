@@ -65,7 +65,8 @@ const createResource = (config: ResolvedTraceConfig): Resource => {
 		'service.namespace': config.service.namespace,
 		'service.version': config.service.version,
 	})
-	const resource = new Resource(workerResourceAttrs)
+	const resourceAttributes = Object.assign({}, workerResourceAttrs, config.extraResourceAttributes)
+	const resource = new Resource(resourceAttributes)
 	return resource.merge(serviceResource)
 }
 

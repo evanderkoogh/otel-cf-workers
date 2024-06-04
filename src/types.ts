@@ -1,4 +1,5 @@
 import { TextMapPropagator } from '@opentelemetry/api'
+import { ResourceAttributes } from '@opentelemetry/resources'
 import { ReadableSpan, Sampler, SpanExporter, SpanProcessor } from '@opentelemetry/sdk-trace-base'
 import { OTLPExporterConfig } from './exporter.js'
 import { FetchHandlerConfig, FetcherConfig } from './instrumentation/fetch.js'
@@ -36,6 +37,7 @@ export interface InstrumentationOptions {
 
 interface TraceConfigBase {
 	service: ServiceConfig
+	extraResourceAttributes?: ResourceAttributes
 	handlers?: HandlerConfig
 	fetch?: FetcherConfig
 	postProcessor?: PostProcessorFn
