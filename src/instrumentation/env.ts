@@ -25,8 +25,8 @@ const isDurableObject = (item?: unknown): item is DurableObjectNamespace => {
 export const isVersionMetadata = (item?: unknown): item is WorkerVersionMetadata => {
 	return (
 		!isJSRPC(item) &&
-		typeof (item as WorkerVersionMetadata).id === 'string' &&
-		typeof (item as WorkerVersionMetadata).tag === 'string'
+		typeof (item as WorkerVersionMetadata)?.id === 'string' &&
+		typeof (item as WorkerVersionMetadata)?.tag === 'string'
 	)
 }
 
