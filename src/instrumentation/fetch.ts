@@ -111,7 +111,7 @@ export function getParentContextFromHeaders(headers: Headers): Context {
 	})
 }
 
-function getParentContextFromRequest(request: Request) {
+export function getParentContextFromRequest(request: Request) {
 	const workerConfig = getActiveConfig()
 	const acceptTraceContext =
 		typeof workerConfig.handlers.fetch.acceptTraceContext === 'function'
