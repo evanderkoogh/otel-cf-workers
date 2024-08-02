@@ -215,9 +215,9 @@ Tail Sampling on the other hand is done at the end. Because we record every sing
 Example:
 
 ```typescript
-const tailSampler = (localTrace: LocalTrace): boolean => {
+const tailSampler = (traceInfo: LocalTrace): boolean => {
 	const localRootSpan = traceInfo.localRootSpan as unknown as ReadableSpan
-	return localRootSpan.spanContext().traceFlags === TraceFlags.SAMPLED
+	return (localRootSpan.spanContext().traceFlags & TraceFlags.SAMPLED) === TraceFlags.SAMPLED
 }
 ```
 
