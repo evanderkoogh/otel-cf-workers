@@ -14,7 +14,6 @@ import { SpanProcessor, RandomIdGenerator, ReadableSpan, SamplingDecision } from
 
 import { SpanImpl } from './span.js'
 import { getActiveConfig } from './config.js'
-import { ResolvedTraceConfig } from './types.js'
 
 export class WorkerTracer implements Tracer {
 	private readonly _spanProcessors: SpanProcessor[]

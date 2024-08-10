@@ -5,7 +5,7 @@ import { Action, State, stateMachine } from './vendor/ts-checked-fsm/StateMachin
 
 import { getActiveConfig } from './config.js'
 import { TailSampleFn } from './sampling.js'
-import { PostProcessorFn, ResolvedTraceConfig } from './types.js'
+import { PostProcessorFn } from './types.js'
 
 type CompletedTrace = {
 	traceId: string
