@@ -131,7 +131,10 @@ export class BatchTraceSpanProcessor implements SpanProcessor {
 	}
 
 	private export(localRootSpanId: string) {
-		const { sampling, postProcessor } = getActiveConfig()
+		const config = getActiveConfig()
+		if (!config) throw new Error('Config is undefined. This is a bug in the instrumentation logic')
+
+		const { sampling, postProcessor } = config
 		const exportArgs = { exporter: this.exporter, tailSampler: sampling.tailSampler, postProcessor }
 		const newState = this.action(localRootSpanId, { actionName: 'startExport', args: exportArgs })
 		if (newState.stateName === 'exporting') {
