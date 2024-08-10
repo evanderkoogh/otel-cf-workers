@@ -5,7 +5,7 @@ import { Action, State, stateMachine } from './vendor/ts-checked-fsm/StateMachin
 
 import { getActiveConfig } from './config.js'
 import { TailSampleFn } from './sampling.js'
-import { PostProcessorFn } from './types.js'
+import { PostProcessorFn, ResolvedTraceConfig } from './types.js'
 
 type CompletedTrace = {
 	traceId: string
@@ -131,7 +131,7 @@ export class BatchTraceSpanProcessor implements SpanProcessor {
 	}
 
 	private export(localRootSpanId: string) {
-		const { sampling, postProcessor } = getActiveConfig()
+		const { sampling, postProcessor } = getActiveConfig() as ResolvedTraceConfig //Config should always be available
 		const exportArgs = { exporter: this.exporter, tailSampler: sampling.tailSampler, postProcessor }
 		const newState = this.action(localRootSpanId, { actionName: 'startExport', args: exportArgs })
 		if (newState.stateName === 'exporting') {

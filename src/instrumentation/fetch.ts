@@ -112,7 +112,7 @@ export function getParentContextFromHeaders(headers: Headers): Context {
 }
 
 function getParentContextFromRequest(request: Request) {
-	const workerConfig = getActiveConfig()
+	const workerConfig = getActiveConfig() as ResolvedTraceConfig //Config should always be available
 	const acceptTraceContext =
 		typeof workerConfig.handlers.fetch.acceptTraceContext === 'function'
 			? workerConfig.handlers.fetch.acceptTraceContext(request)
@@ -208,6 +208,9 @@ export function instrumentClientFetch(
 			}
 
 			const workerConfig = getActiveConfig()
+			if (!workerConfig) {
+				return Reflect.apply(target, thisArg, [request])
+			}
 			const config = configFn(workerConfig)
 
 			const tracer = trace.getTracer('fetcher')
