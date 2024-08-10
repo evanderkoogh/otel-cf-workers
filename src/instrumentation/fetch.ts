@@ -112,7 +112,12 @@ export function getParentContextFromHeaders(headers: Headers): Context {
 }
 
 function getParentContextFromRequest(request: Request) {
-	const workerConfig = getActiveConfig() as ResolvedTraceConfig //Config should always be available
+	const workerConfig = getActiveConfig()
+
+	if (workerConfig === undefined) {
+		return api_context.active()
+	}
+
 	const acceptTraceContext =
 		typeof workerConfig.handlers.fetch.acceptTraceContext === 'function'
 			? workerConfig.handlers.fetch.acceptTraceContext(request)

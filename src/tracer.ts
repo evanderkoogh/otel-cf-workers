@@ -45,7 +45,9 @@ export class WorkerTracer implements Tracer {
 		const spanKind = options.kind || SpanKind.INTERNAL
 		const sanitisedAttrs = sanitizeAttributes(options.attributes)
 
-		const config = getActiveConfig() as ResolvedTraceConfig //Config should always be available
+		const config = getActiveConfig()
+		if (!config) throw new Error('Config is undefined. This is a bug in the instrumentation logic')
+
 		const sampler = config.sampling.headSampler
 		const samplingDecision = sampler.shouldSample(context, traceId, name, spanKind, sanitisedAttrs, [])
 		const { decision, traceState, attributes: attrs } = samplingDecision
