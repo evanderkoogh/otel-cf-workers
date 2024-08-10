@@ -1,5 +1,11 @@
 # @microlabs/otel-cf-workers
 
+## 1.0.0-rc.41
+
+### Patch Changes
+
+- Fix config being undefined in some uninstrumented functions
+
 ## 1.0.0-rc.40
 
 ### Patch Changes
