@@ -35,24 +35,26 @@
 	},
 	"homepage": "https://github.com/evanderkoogh/otel-cf-workers#readme",
 	"dependencies": {
-		"@opentelemetry/api": "~1.6.0",
-		"@opentelemetry/core": "^1.17.1",
-		"@opentelemetry/exporter-trace-otlp-http": "^0.43.0",
-		"@opentelemetry/otlp-exporter-base": "^0.43.0",
-		"@opentelemetry/otlp-transformer": "^0.43.0",
-		"@opentelemetry/resources": "^1.17.1",
-		"@opentelemetry/sdk-trace-base": "^1.17.1",
-		"@opentelemetry/semantic-conventions": "^1.17.1"
+		"@opentelemetry/core": "^1.25.1",
+		"@opentelemetry/exporter-trace-otlp-http": "^0.52.1",
+		"@opentelemetry/otlp-exporter-base": "^0.52.1",
+		"@opentelemetry/otlp-transformer": "^0.52.1",
+		"@opentelemetry/resources": "^1.25.1",
+		"@opentelemetry/sdk-trace-base": "^1.25.1",
+		"@opentelemetry/semantic-conventions": "^1.25.1"
 	},
 	"devDependencies": {
-		"@changesets/cli": "^2.27.1",
-		"@cloudflare/workers-types": "^4.20240329.0",
-		"husky": "^9.0.11",
-		"lint-staged": "^15.2.2",
+		"@changesets/cli": "^2.27.7",
+		"@cloudflare/workers-types": "^4.20240806.0",
+		"husky": "^9.1.4",
+		"lint-staged": "^15.2.8",
 		"npm-run-all": "^4.1.5",
-		"prettier": "^3.2.5",
-		"rimraf": "^5.0.5",
-		"typescript": "^5.4.3"
+		"prettier": "^3.3.3",
+		"rimraf": "^5.0.10",
+		"typescript": "^5.5.4"
+	},
+	"peerDependencies": {
+		"@opentelemetry/api": "~1.9.0"
 	},
 	"publishConfig": {
 		"access": "public"

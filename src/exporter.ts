@@ -43,7 +43,7 @@ export class OTLPExporter implements SpanExporter {
 	}
 
 	send(items: any[], onSuccess: () => void, onError: (error: OTLPExporterError) => void): void {
-		const exportMessage = createExportTraceServiceRequest(items, true)
+		const exportMessage = createExportTraceServiceRequest(items)
 		const body = JSON.stringify(exportMessage)
 		const params: RequestInit = {
 			method: 'POST',
