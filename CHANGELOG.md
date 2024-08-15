@@ -1,5 +1,11 @@
 # @microlabs/otel-cf-workers
 
+## 1.0.0-rc.44
+
+### Patch Changes
+
+- bd0a46a: Upgrade dependencies and make @open-telemetry/api a peer-dependency to guard against different otel api implementations.
+
 ## 1.0.0-rc.41
 
 ### Patch Changes
