@@ -112,6 +112,15 @@ export class SpanImpl implements Span, ReadableSpan {
 		this.onEnd = init.onEnd
 	}
 
+	addLink(link: Link): this {
+		this.links.push(link)
+		return this
+	}
+	addLinks(links: Link[]): this {
+		this.links.push(...links)
+		return this
+	}
+
 	spanContext(): SpanContext {
 		return this._spanContext
 	}
