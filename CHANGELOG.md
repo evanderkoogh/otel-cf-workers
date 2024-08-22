@@ -1,5 +1,11 @@
 # @microlabs/otel-cf-workers
 
+## 1.0.0-rc.45
+
+### Patch Changes
+
+- 8c9be82: Fix regression in OTLP json encoding (thx @gdaszuta)
+
 ## 1.0.0-rc.44
 
 ### Patch Changes
