@@ -1,5 +1,10 @@
 import { Attributes, SpanKind, SpanOptions, trace } from '@opentelemetry/api'
-import { SemanticAttributes } from '@opentelemetry/semantic-conventions'
+import {
+	ATTR_DB_NAMESPACE,
+	ATTR_DB_OPERATION_NAME,
+	ATTR_DB_QUERY_TEXT,
+	ATTR_DB_SYSTEM,
+} from '@opentelemetry/semantic-conventions/incubating'
 import { wrap } from '../wrap.js'
 
 type ExtraAttributeFn = (argArray: any[], result: any) => Attributes
@@ -26,9 +31,9 @@ function instrumentAEFn(fn: Function, name: string, operation: string) {
 		apply: (target, thisArg, argArray) => {
 			const attributes = {
 				binding_type: 'AnalyticsEngine',
-				[SemanticAttributes.DB_NAME]: name,
-				[SemanticAttributes.DB_SYSTEM]: dbSystem,
-				[SemanticAttributes.DB_OPERATION]: operation,
+				[ATTR_DB_NAMESPACE]: name,
+				[ATTR_DB_SYSTEM]: dbSystem,
+				[ATTR_DB_OPERATION_NAME]: operation,
 			}
 			const options: SpanOptions = {
 				kind: SpanKind.CLIENT,
@@ -39,7 +44,7 @@ function instrumentAEFn(fn: Function, name: string, operation: string) {
 				const extraAttrsFn = AEAttributes[operation]
 				const extraAttrs = extraAttrsFn ? extraAttrsFn(argArray, result) : {}
 				span.setAttributes(extraAttrs)
-				span.setAttribute(SemanticAttributes.DB_STATEMENT, `${operation} ${argArray[0]}`)
+				span.setAttribute(ATTR_DB_QUERY_TEXT, `${operation} ${argArray[0]}`)
 				span.end()
 				return result
 			})

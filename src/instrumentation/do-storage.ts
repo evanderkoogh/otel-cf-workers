@@ -1,5 +1,9 @@
 import { Attributes, SpanKind, SpanOptions, trace } from '@opentelemetry/api'
-import { SemanticAttributes } from '@opentelemetry/semantic-conventions'
+import {
+	ATTR_DB_OPERATION_NAME,
+	ATTR_DB_QUERY_TEXT,
+	ATTR_DB_SYSTEM,
+} from '@opentelemetry/semantic-conventions/incubating'
 import { wrap } from '../wrap.js'
 import { Overloads } from './common.js'
 
@@ -164,15 +168,12 @@ function instrumentStorageFn(fn: Function, operation: string) {
 	const tracer = trace.getTracer('do_storage')
 	const fnHandler: ProxyHandler<any> = {
 		apply: (target, thisArg, argArray) => {
-			const attributes = {
-				[SemanticAttributes.DB_SYSTEM]: dbSystem,
-				[SemanticAttributes.DB_OPERATION]: operation,
-				[SemanticAttributes.DB_STATEMENT]: `${operation} ${argArray[0]}`,
-			}
 			const options: SpanOptions = {
 				kind: SpanKind.CLIENT,
 				attributes: {
-					...attributes,
+					[ATTR_DB_SYSTEM]: dbSystem,
+					[ATTR_DB_OPERATION_NAME]: operation,
+					[ATTR_DB_QUERY_TEXT]: `${operation} ${argArray[0]}`,
 					operation,
 				},
 			}
