@@ -1,6 +1,7 @@
 import { TextMapPropagator } from '@opentelemetry/api'
 import { ReadableSpan, Sampler, SpanExporter, SpanProcessor } from '@opentelemetry/sdk-trace-base'
-import * as SemConv from '@opentelemetry/semantic-conventions'
+import { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } from '@opentelemetry/semantic-conventions'
+import { ATTR_SERVICE_NAMESPACE } from '@opentelemetry/semantic-conventions/incubating'
 
 import { OTLPExporterConfig } from './exporter.js'
 import { FetchHandlerConfig, FetcherConfig } from './instrumentation/fetch.js'
@@ -37,9 +38,9 @@ export interface InstrumentationOptions {
 }
 
 export interface ResourceConfig {
-	[SemConv.SEMRESATTRS_SERVICE_NAME]: string
-	[SemConv.SEMRESATTRS_SERVICE_NAMESPACE]: string
-	[SemConv.SEMRESATTRS_SERVICE_VERSION]: string | number
+	[ATTR_SERVICE_NAME]: string
+	[ATTR_SERVICE_NAMESPACE]: string
+	[ATTR_SERVICE_VERSION]: string | number
 	[k: string]: string | number
 }
 

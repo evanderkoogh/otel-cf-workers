@@ -9,6 +9,29 @@ import {
 	Context,
 	SpanStatusCode,
 } from '@opentelemetry/api'
+import {
+	ATTR_HTTP_REQUEST_HEADER,
+	ATTR_HTTP_REQUEST_METHOD,
+	ATTR_HTTP_RESPONSE_STATUS_CODE,
+	ATTR_NETWORK_PROTOCOL_NAME,
+	ATTR_SERVER_ADDRESS,
+	ATTR_SERVER_PORT,
+	ATTR_URL_FULL,
+	ATTR_URL_PATH,
+	ATTR_URL_QUERY,
+	ATTR_URL_SCHEME,
+	ATTR_USER_AGENT_ORIGINAL,
+} from '@opentelemetry/semantic-conventions/'
+import {
+	ATTR_FAAS_COLDSTART,
+	ATTR_FAAS_INVOCATION_ID,
+	ATTR_FAAS_TRIGGER,
+	ATTR_TLS_CIPHER,
+	ATTR_TLS_PROTOCOL_VERSION,
+	ATTR_URL_DOMAIN,
+	FAAS_TRIGGER_VALUE_HTTP,
+} from '@opentelemetry/semantic-conventions/incubating'
+
 import { Initialiser, getActiveConfig, setConfig } from '../config.js'
 import { wrap } from '../wrap.js'
 import { instrumentEnv } from './env.js'
@@ -58,33 +81,32 @@ const gatherOutgoingCfAttributes = (cf: RequestInitCfProperties): Attributes => 
 }
 
 export function gatherRequestAttributes(request: Request): Attributes {
-	const attrs: Record<string, string | number> = {}
 	const headers = request.headers
-	attrs['http.request.method'] = request.method.toUpperCase()
-	attrs['network.protocol.name'] = 'http'
-	attrs['network.protocol.version'] = request.cf?.httpProtocol as string
-	attrs['http.request.body.size'] = headers.get('content-length')!
-	attrs['user_agent.original'] = headers.get('user-agent')!
-	attrs['http.mime_type'] = headers.get('content-type')!
-	attrs['http.accepts'] = request.cf?.clientAcceptEncoding as string
-
 	const u = new URL(request.url)
-	attrs['url.full'] = `${u.protocol}//${u.host}${u.pathname}${u.search}`
-	attrs['server.address'] = u.host
-	attrs['url.scheme'] = u.protocol
-	attrs['url.path'] = u.pathname
-	attrs['url.query'] = u.search
+	const attrs: Record<string, string | number> = {
+		[ATTR_NETWORK_PROTOCOL_NAME]: 'http',
+		[ATTR_HTTP_REQUEST_METHOD]: request.method.toUpperCase(),
+		[ATTR_URL_FULL]: `${u.protocol}//${u.host}${u.pathname}${u.search}`,
+		[ATTR_URL_SCHEME]: u.protocol,
+		[ATTR_URL_DOMAIN]: u.host,
+		[ATTR_SERVER_ADDRESS]: u.host,
+		[ATTR_URL_PATH]: u.pathname,
+		[ATTR_URL_QUERY]: u.search,
+		[ATTR_USER_AGENT_ORIGINAL]: headers.get('user-agent')!,
+	}
+	const port = u.port || u.protocol === 'https' ? 443 : 80
+	attrs[ATTR_SERVER_PORT] = port
+	attrs[`${ATTR_HTTP_REQUEST_HEADER}.accepts`] = headers.get('accepts')!
+	attrs[`${ATTR_HTTP_REQUEST_HEADER}.content-length`] = headers.get('content-length')!
 
 	return attrs
 }
 
 export function gatherResponseAttributes(response: Response): Attributes {
-	const attrs: Record<string, string | number> = {}
-	attrs['http.response.status_code'] = response.status
-	if (response.headers.get('content-length')! == null) {
-		attrs['http.response.body.size'] = response.headers.get('content-length')!
+	const attrs: Record<string, string | number> = {
+		[ATTR_HTTP_RESPONSE_STATUS_CODE]: response.status,
 	}
-	attrs['http.mime_type'] = response.headers.get('content-type')!
+	attrs[`${ATTR_HTTP_REQUEST_HEADER}.mime-type`] = response.headers.get('mime-type')!
 	return attrs
 }
 
@@ -93,8 +115,8 @@ export function gatherIncomingCfAttributes(request: Request): Attributes {
 	attrs['net.colo'] = request.cf?.colo as string
 	attrs['net.country'] = request.cf?.country as string
 	attrs['net.request_priority'] = request.cf?.requestPriority as string
-	attrs['net.tls_cipher'] = request.cf?.tlsCipher as string
-	attrs['net.tls_version'] = request.cf?.tlsVersion as string
+	attrs[ATTR_TLS_CIPHER] = request.cf?.tlsCipher as string
+	attrs[ATTR_TLS_PROTOCOL_VERSION] = request.cf?.tlsVersion as string
 	attrs['net.asn'] = request.cf?.asn as number
 	attrs['net.tcp_rtt'] = request.cf?.clientTcpRtt as number
 	return attrs
@@ -139,9 +161,9 @@ export function executeFetchHandler(fetchFn: FetchHandler, [request, env, ctx]: 
 
 	const tracer = trace.getTracer('fetchHandler')
 	const attributes = {
-		['faas.trigger']: 'http',
-		['faas.coldstart']: cold_start,
-		['faas.invocation_id']: request.headers.get('cf-ray') ?? undefined,
+		[ATTR_FAAS_TRIGGER]: FAAS_TRIGGER_VALUE_HTTP,
+		[ATTR_FAAS_COLDSTART]: cold_start,
+		[ATTR_FAAS_INVOCATION_ID]: request.headers.get('cf-ray') ?? undefined,
 	}
 	cold_start = false
 	Object.assign(attributes, gatherRequestAttributes(request))

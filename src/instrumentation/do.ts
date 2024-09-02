@@ -1,5 +1,10 @@
 import { context as api_context, trace, SpanOptions, SpanKind, Exception, SpanStatusCode } from '@opentelemetry/api'
-import { SemanticAttributes } from '@opentelemetry/semantic-conventions'
+import {
+	ATTR_FAAS_TRIGGER,
+	ATTR_FAAS_COLDSTART,
+	FAAS_TRIGGER_VALUE_HTTP,
+} from '@opentelemetry/semantic-conventions/incubating'
+
 import { passthroughGet, unwrap, wrap } from '../wrap.js'
 import {
 	getParentContextFromHeaders,
@@ -85,8 +90,8 @@ export function executeDOFetch(fetchFn: FetchFn, request: Request, id: DurableOb
 
 	const tracer = trace.getTracer('DO fetchHandler')
 	const attributes = {
-		[SemanticAttributes.FAAS_TRIGGER]: 'http',
-		[SemanticAttributes.FAAS_COLDSTART]: cold_start,
+		[ATTR_FAAS_TRIGGER]: FAAS_TRIGGER_VALUE_HTTP,
+		[ATTR_FAAS_COLDSTART]: cold_start,
 	}
 	cold_start = false
 	Object.assign(attributes, gatherRequestAttributes(request))
@@ -122,7 +127,7 @@ export function executeDOAlarm(alarmFn: NonNullable<AlarmFn>, id: DurableObjectI
 
 	const name = id.name || ''
 	const promise = tracer.startActiveSpan(`Durable Object Alarm ${name}`, async (span) => {
-		span.setAttribute(SemanticAttributes.FAAS_COLDSTART, cold_start)
+		span.setAttribute(ATTR_FAAS_COLDSTART, cold_start)
 		cold_start = false
 		span.setAttribute('do.id', id.toString())
 		if (id.name) span.setAttribute('do.name', id.name)

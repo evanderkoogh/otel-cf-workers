@@ -1,5 +1,5 @@
 import { trace, SpanOptions, SpanKind, Attributes, Exception, context as api_context } from '@opentelemetry/api'
-import { SemanticAttributes } from '@opentelemetry/semantic-conventions'
+import { ATTR_FAAS_TRIGGER, FAAS_TRIGGER_VALUE_PUBSUB } from '@opentelemetry/semantic-conventions/incubating'
 import { Initialiser, setConfig } from '../config.js'
 import { exportSpans, proxyExecutionContext } from './common.js'
 import { instrumentEnv } from './env.js'
@@ -137,7 +137,7 @@ export function executeQueueHandler(queueFn: QueueHandler, [batch, env, ctx]: Qu
 	const tracer = trace.getTracer('queueHandler')
 	const options: SpanOptions = {
 		attributes: {
-			[SemanticAttributes.FAAS_TRIGGER]: 'pubsub',
+			[ATTR_FAAS_TRIGGER]: FAAS_TRIGGER_VALUE_PUBSUB,
 			'queue.name': batch.queue,
 		},
 		kind: SpanKind.CONSUMER,

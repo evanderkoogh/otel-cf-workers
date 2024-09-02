@@ -1,4 +1,6 @@
 import { SpanKind, SpanOptions, trace } from '@opentelemetry/api'
+import { ATTR_URL_FULL } from '@opentelemetry/semantic-conventions'
+
 import { wrap } from '../wrap.js'
 
 type CacheFns = Cache[keyof Cache]
@@ -15,7 +17,7 @@ function instrumentFunction<T extends CacheFns>(fn: T, cacheName: string, op: st
 		async apply(target, thisArg, argArray) {
 			const attributes = {
 				'cache.name': cacheName,
-				'http.url': argArray[0].url ? sanitiseURL(argArray[0].url) : undefined,
+				[ATTR_URL_FULL]: argArray[0].url ? sanitiseURL(argArray[0].url) : undefined,
 				'cache.operation': op,
 			}
 			const options: SpanOptions = { kind: SpanKind.CLIENT, attributes }

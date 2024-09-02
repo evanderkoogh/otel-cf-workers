@@ -9,6 +9,18 @@ import {
 	SpanExporter,
 	TraceIdRatioBasedSampler,
 } from '@opentelemetry/sdk-trace-base'
+import {
+	ATTR_TELEMETRY_SDK_LANGUAGE,
+	ATTR_TELEMETRY_SDK_NAME,
+	ATTR_TELEMETRY_SDK_VERSION,
+} from '@opentelemetry/semantic-conventions'
+
+import {
+	ATTR_CLOUD_PROVIDER,
+	ATTR_CLOUD_PLATFORM,
+	ATTR_CLOUD_REGION,
+	ATTR_FAAS_MAX_MEMORY,
+} from '@opentelemetry/semantic-conventions/incubating'
 
 import { Initialiser } from './config.js'
 import { OTLPExporter } from './exporter.js'
@@ -52,13 +64,13 @@ export function isAlarm(trigger: Trigger): trigger is 'do-alarm' {
 
 const createResource = (config: ResolvedTraceConfig): Resource => {
 	const workerResourceAttrs = {
-		'cloud.provider': 'cloudflare',
-		'cloud.platform': 'cloudflare.workers',
-		'cloud.region': 'earth',
-		'faas.max_memory': 134217728,
-		'telemetry.sdk.language': 'js',
-		'telemetry.sdk.name': '@microlabs/otel-cf-workers',
-		'telemetry.sdk.version': '1.0.0-rc.X',
+		[ATTR_CLOUD_PROVIDER]: 'cloudflare',
+		[ATTR_CLOUD_PLATFORM]: 'cloudflare.workers',
+		[ATTR_CLOUD_REGION]: 'earth',
+		[ATTR_FAAS_MAX_MEMORY]: 134217728,
+		[ATTR_TELEMETRY_SDK_LANGUAGE]: 'js',
+		[ATTR_TELEMETRY_SDK_NAME]: '@microlabs/otel-cf-workers',
+		[ATTR_TELEMETRY_SDK_VERSION]: '1.0.0-rc.X',
 	}
 	const serviceResource = new Resource(config.resource)
 	const resource = new Resource(workerResourceAttrs)

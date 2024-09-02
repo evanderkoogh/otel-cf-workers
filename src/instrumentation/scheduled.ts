@@ -1,5 +1,11 @@
 import { trace, SpanOptions, SpanKind, Exception, context as api_context, SpanStatusCode } from '@opentelemetry/api'
-import { SemanticAttributes } from '@opentelemetry/semantic-conventions'
+import {
+	ATTR_FAAS_COLDSTART,
+	ATTR_FAAS_CRON,
+	ATTR_FAAS_TIME,
+	ATTR_FAAS_TRIGGER,
+	FAAS_TRIGGER_VALUE_TIMER,
+} from '@opentelemetry/semantic-conventions/incubating'
 import { Initialiser, setConfig } from '../config.js'
 import { exportSpans, proxyExecutionContext } from './common.js'
 import { instrumentEnv } from './env.js'
@@ -18,10 +24,10 @@ export function executeScheduledHandler(
 ): Promise<void> {
 	const tracer = trace.getTracer('scheduledHandler')
 	const attributes = {
-		[SemanticAttributes.FAAS_TRIGGER]: 'timer',
-		[SemanticAttributes.FAAS_COLDSTART]: cold_start,
-		[SemanticAttributes.FAAS_CRON]: controller.cron,
-		[SemanticAttributes.FAAS_TIME]: new Date(controller.scheduledTime).toISOString(),
+		[ATTR_FAAS_TRIGGER]: FAAS_TRIGGER_VALUE_TIMER,
+		[ATTR_FAAS_COLDSTART]: cold_start,
+		[ATTR_FAAS_CRON]: controller.cron,
+		[ATTR_FAAS_TIME]: new Date(controller.scheduledTime).toISOString(),
 	}
 	cold_start = false
 	Object.assign(attributes, versionAttributes(env))
