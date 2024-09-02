@@ -1,5 +1,10 @@
 import { Attributes, SpanKind, SpanOptions, trace } from '@opentelemetry/api'
-import { SemanticAttributes } from '@opentelemetry/semantic-conventions'
+import {
+	SEMATTRS_DB_NAME,
+	SEMATTRS_DB_OPERATION,
+	SEMATTRS_DB_STATEMENT,
+	SEMATTRS_DB_SYSTEM,
+} from '@opentelemetry/semantic-conventions'
 import { wrap } from '../wrap.js'
 
 type ExtraAttributeFn = (argArray: any[], result: any) => Attributes
@@ -72,9 +77,9 @@ function instrumentKVFn(fn: Function, name: string, operation: string) {
 		apply: (target, thisArg, argArray) => {
 			const attributes = {
 				binding_type: 'KV',
-				[SemanticAttributes.DB_NAME]: name,
-				[SemanticAttributes.DB_SYSTEM]: dbSystem,
-				[SemanticAttributes.DB_OPERATION]: operation,
+				[SEMATTRS_DB_NAME]: name,
+				[SEMATTRS_DB_SYSTEM]: dbSystem,
+				[SEMATTRS_DB_OPERATION]: operation,
 			}
 			const options: SpanOptions = {
 				kind: SpanKind.CLIENT,
@@ -88,9 +93,9 @@ function instrumentKVFn(fn: Function, name: string, operation: string) {
 				if (operation === 'list') {
 					const opts: KVNamespaceListOptions = argArray[0] || {}
 					const { prefix } = opts
-					span.setAttribute(SemanticAttributes.DB_STATEMENT, `${operation} ${prefix || undefined}`)
+					span.setAttribute(SEMATTRS_DB_STATEMENT, `${operation} ${prefix || undefined}`)
 				} else {
-					span.setAttribute(SemanticAttributes.DB_STATEMENT, `${operation} ${argArray[0]}`)
+					span.setAttribute(SEMATTRS_DB_STATEMENT, `${operation} ${argArray[0]}`)
 					span.setAttribute('db.cf.kv.key', argArray[0])
 				}
 				if (operation === 'getWithMetadata') {
