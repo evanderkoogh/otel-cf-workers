@@ -1,5 +1,7 @@
 import { TextMapPropagator } from '@opentelemetry/api'
 import { ReadableSpan, Sampler, SpanExporter, SpanProcessor } from '@opentelemetry/sdk-trace-base'
+import * as SemConv from '@opentelemetry/semantic-conventions'
+
 import { OTLPExporterConfig } from './exporter.js'
 import { FetchHandlerConfig, FetcherConfig } from './instrumentation/fetch.js'
 import { TailSampleFn } from './sampling.js'
@@ -34,8 +36,15 @@ export interface InstrumentationOptions {
 	instrumentGlobalCache?: boolean
 }
 
+export interface ResourceConfig {
+	[SemConv.SEMRESATTRS_SERVICE_NAME]: string
+	[SemConv.SEMRESATTRS_SERVICE_NAMESPACE]: string
+	[SemConv.SEMRESATTRS_SERVICE_VERSION]: string | number
+	[k: string]: string | number
+}
+
 interface TraceConfigBase {
-	service: ServiceConfig
+	resource: ResourceConfig
 	handlers?: HandlerConfig
 	fetch?: FetcherConfig
 	postProcessor?: PostProcessorFn

@@ -60,11 +60,7 @@ const createResource = (config: ResolvedTraceConfig): Resource => {
 		'telemetry.sdk.name': '@microlabs/otel-cf-workers',
 		'telemetry.sdk.version': '1.0.0-rc.X',
 	}
-	const serviceResource = new Resource({
-		'service.name': config.service.name,
-		'service.namespace': config.service.namespace,
-		'service.version': config.service.version,
-	})
+	const serviceResource = new Resource(config.resource)
 	const resource = new Resource(workerResourceAttrs)
 	return resource.merge(serviceResource)
 }
@@ -136,7 +132,7 @@ function parseConfig(supplied: TraceConfig): ResolvedTraceConfig {
 				headSampler,
 				tailSampler: supplied.sampling?.tailSampler || multiTailSampler([isHeadSampled, isRootErrorSpan]),
 			},
-			service: supplied.service,
+			resource: supplied.resource,
 			spanProcessors,
 			propagator: supplied.propagator || new W3CTraceContextPropagator(),
 			instrumentation: {
