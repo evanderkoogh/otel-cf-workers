@@ -1,5 +1,13 @@
 # @microlabs/otel-cf-workers
 
+## 1.0.0-rc.46
+
+### Patch Changes
+
+- 7834157: Include correct version number in the outputted telemetry
+- 1969866: EXPERIMENTAL: implement withNextSpan(attrs: Attributes) that will includes those attributes in the next span that is created.
+  This is useful for adding additional information to spans created by libraries such as when using `fetch` for example.
+
 ## 1.0.0-rc.45
 
 ### Patch Changes
