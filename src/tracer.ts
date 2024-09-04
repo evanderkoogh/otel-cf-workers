@@ -1,4 +1,5 @@
 import {
+	Attributes,
 	Tracer,
 	TraceFlags,
 	Span,
@@ -14,6 +15,8 @@ import { SpanProcessor, RandomIdGenerator, ReadableSpan, SamplingDecision } from
 
 import { SpanImpl } from './span.js'
 import { getActiveConfig } from './config.js'
+
+let withNextSpanAttributes: Attributes
 
 export class WorkerTracer implements Tracer {
 	private readonly _spanProcessors: SpanProcessor[]
@@ -50,7 +53,9 @@ export class WorkerTracer implements Tracer {
 		const sampler = config.sampling.headSampler
 		const samplingDecision = sampler.shouldSample(context, traceId, name, spanKind, sanitisedAttrs, [])
 		const { decision, traceState, attributes: attrs } = samplingDecision
-		const attributes = Object.assign({}, sanitisedAttrs, attrs)
+
+		const attributes = Object.assign({}, sanitisedAttrs, attrs, withNextSpanAttributes)
+		withNextSpanAttributes = {}
 
 		const spanId = this.idGenerator.generateSpanId()
 		const parentSpanId = hasParentContext ? parentSpanContext.spanId : undefined
@@ -97,4 +102,8 @@ export class WorkerTracer implements Tracer {
 
 		return api_context.with(contextWithSpanSet, fn, undefined, span)
 	}
+}
+
+export function withNextSpan(attrs: Attributes) {
+	withNextSpanAttributes = Object.assign({}, withNextSpanAttributes, attrs)
 }
