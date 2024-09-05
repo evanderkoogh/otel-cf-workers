@@ -2,13 +2,6 @@
 	"extends": "./tsconfig-base.json",
 	"compilerOptions": {
 		"module": "CommonJS",
-		"target": "ES6",
-		"outDir": "./dist/cjs",
-		"rootDir": "./src",
-		"moduleResolution": "node",
-		"esModuleInterop": true,
-		"skipLibCheck": true,
-		"forceConsistentCasingInFileNames": true,
-		"declaration": true
+		"outDir": "./dist/cjs"
 	}
 }
