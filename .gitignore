@@ -106,3 +106,4 @@ dist
 examples/worker/.dev.vars
 */.dev.vars
 examples/queue/.dev.vars
+src/package-info.ts
