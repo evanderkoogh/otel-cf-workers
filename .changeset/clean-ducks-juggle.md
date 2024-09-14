@@ -2,4 +2,4 @@
 '@microlabs/otel-cf-workers': patch
 ---
 
-chore: refactor to modern build tooling
+fix: refactor to modern build tooling and resolve import issues
