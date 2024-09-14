@@ -30,6 +30,9 @@
 		"watch": "tsc --watch",
 		"prepare": "husky"
 	},
+	"files": [
+		"dist"
+	],
 	"homepage": "https://github.com/evanderkoogh/otel-cf-workers#readme",
 	"dependencies": {
 		"@opentelemetry/core": "^1.26.0",
