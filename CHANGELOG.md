@@ -1,5 +1,11 @@
 # @microlabs/otel-cf-workers
 
+## 1.0.0-rc.48
+
+### Patch Changes
+
+- d0dcc83: Fix importing issues. Fixes #162
+
 ## 1.0.0-rc.46
 
 ### Patch Changes
