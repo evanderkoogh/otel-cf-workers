@@ -19,9 +19,10 @@
 	"scripts": {
 		"clean": "rimraf ./dist versions.json",
 		"format": "prettier --ignore-unknown --write .",
-		"build-src": "tsup src/index.ts --format cjs,esm --dts --clean --sourcemap",
-		"build": "run-s -l cs-version build-src",
-		"cs-version": "changeset version && pnpm version --json > versions.json",
+		"build:src": "pnpm run build:versions && tsup src/index.ts --format cjs,esm --dts --clean --sourcemap",
+		"build:versions": "pnpm version --json > versions.json",
+		"build": "run-s -l cs-version build:src",
+		"cs-version": "changeset version",
 		"cs-publish": "changeset publish",
 		"release": "run-s -l clean cs-version build cs-publish",
 		"check": "run-s -l check:*",
