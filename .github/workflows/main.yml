@@ -30,3 +30,5 @@ jobs:
         run: 'pnpm install --frozen-lockfile --child-concurrency=10'
       - name: 'Check for Errors'
         run: 'pnpm check'
+      - name: 'Run Tests'
+        run: 'pnpm test'
