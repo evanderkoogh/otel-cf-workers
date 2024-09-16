@@ -3,7 +3,6 @@ import { trace } from '@opentelemetry/api'
 
 export interface Env {
 	HONEYCOMB_API_KEY: string
-	HONEYCOMB_SERVICE_NAME: string
 }
 
 const handler = {
@@ -28,13 +27,13 @@ const handler = {
 	},
 }
 
-const config: ResolveConfigFn = (env: Env, _trigger) => {
+const config: ResolveConfigFn = (env: Env, _trigger: any) => {
 	return {
 		exporter: {
 			url: 'https://api.honeycomb.io/v1/traces',
 			headers: { 'x-honeycomb-team': env.HONEYCOMB_API_KEY },
 		},
-		service: { name: env.HONEYCOMB_SERVICE_NAME },
+		service: { name: 'my-service-name' },
 	}
 }
 

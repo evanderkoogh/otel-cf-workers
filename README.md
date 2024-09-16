@@ -4,12 +4,18 @@ An OpenTelemetry compatible library for instrumenting and exporting traces from 
 
 ## Getting started
 
+```bash
+npm install @microlabs/otel-cf-workers @opentelemetry/api
+```
+
 > [!IMPORTANT]
 > To be able to use the Open Telemetry library you have to add the NodeJS compatibility flag in your `wrangler.toml` file.
 
 ```
 compatibility_flags = [ "nodejs_compat" ]
 ```
+
+For a simple setup example with configuration examples, have a look at the [Quickstart Example](https://github.com/evanderkoogh/otel-cf-workers/tree/main/examples/worker)
 
 ### Code example
 

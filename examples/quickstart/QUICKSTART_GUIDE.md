@@ -3,13 +3,17 @@
 This is a very simple example of how to get started with the OpenTelemetry cf-worker package.
 
 It wraps your worker in an OpenTelemetry span and sends it to Honeycomb.
-You just need to provide your Honeycomb API key and dataset name.
+You just need to provide your Honeycomb API key as a secret.
 
 ## Installation
 
 ```bash
 npm install @microlabs/otel-cf-workers @opentelemetry/api
+npx wrangler secret put HONEYCOMB_API_KEY
 ```
+
+And set the Node Compatibility flag by adding `compatibility_flags = [ "nodejs_compat" ]`
+in your `wrangler.toml`
 
 ## Example
 
@@ -19,7 +23,6 @@ import { trace } from '@opentelemetry/api'
 
 export interface Env {
 	HONEYCOMB_API_KEY: string
-	HONEYCOMB_SERVICE_NAME: string
 }
 
 const handler = {
@@ -44,13 +47,13 @@ const handler = {
 	},
 }
 
-const config: ResolveConfigFn = (env: Env, _trigger) => {
+const config: ResolveConfigFn = (env: Env, _trigger: any) => {
 	return {
 		exporter: {
 			url: 'https://api.honeycomb.io/v1/traces',
 			headers: { 'x-honeycomb-team': env.HONEYCOMB_API_KEY },
 		},
-		service: { name: env.HONEYCOMB_SERVICE_NAME },
+		service: { name: 'my-service-name' },
 	}
 }
 
@@ -58,8 +61,3 @@ export default instrument(handler, config)
 ```
 
 With this setup, you can run your worker as usual with `wrangler dev` or `wrangler run src/index.ts`.
-This gets you most of the way there, but you'll need to add the env variables to send the tracing information to Honeycomb.
-
-## Issues
-
-Some versions of this package will have various issues. I had the most success with rc.45

@@ -7,7 +7,7 @@
 		"deploy": "wrangler publish"
 	},
 	"dependencies": {
-		"@microlabs/otel-cf-workers": "1.0.0-rc.45",
+		"@microlabs/otel-cf-workers": "^1.0.0-rc.45",
 		"@opentelemetry/api": "^1.6.0"
 	},
 	"devDependencies": {
