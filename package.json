@@ -1,57 +1,63 @@
 {
 	"name": "@microlabs/otel-cf-workers",
-	"version": "1.0.0-rc.46",
-	"main": "dist/cjs/index.js",
-	"module": "dist/esm/index.js",
-	"types": "dist/esm/index.d.ts",
+	"version": "1.0.0-rc.47",
+	"main": "dist/index.js",
+	"module": "dist/index.mjs",
+	"types": "dist/index.d.mts",
 	"exports": {
 		".": {
 			"import": {
-				"types": "./dist/esm/index.d.ts",
-				"default": "./dist/esm/index.js"
+				"types": "./dist/index.d.mts",
+				"default": "./dist/index.mjs"
 			},
 			"require": {
-				"types": "./dist/cjs/index.d.ts",
-				"default": "./dist/cjs/index.js"
+				"types": "./dist/index.d.ts",
+				"default": "./dist/index.js"
 			}
 		}
 	},
 	"scripts": {
 		"clean": "rimraf ./dist versions.json",
 		"format": "prettier --ignore-unknown --write .",
-		"build-esm": "tsc",
-		"build-cjs": "tsc -p tsconfig-cjs.json",
-		"fix-dist": "echo '{\"type\": \"module\"}' > dist/esm/package.json && echo '{\"type\": \"commonjs\"}' > dist/cjs/package.json",
-		"build": "run-s -l cs-version build-esm build-cjs fix-dist",
-		"cs-version": "changeset version && pnpm version --json > versions.json",
+		"build:src": "tsup src/index.ts --format cjs,esm --dts --clean --sourcemap",
+		"build:versions": "pnpm version --json > versions.json",
+		"build": "run-s -l build:versions build:src",
+		"cs-version": "changeset version",
 		"cs-publish": "changeset publish",
-		"release": "run-s -l clean cs-version build cs-publish",
+		"release": "run-s -l clean cs-version build check cs-publish",
 		"check": "run-s -l check:*",
 		"check:format": "prettier . --check --ignore-unknown",
-		"check:type-esm": "tsc --noEmit",
-		"check:type-cjs": "tsc --noEmit -p tsconfig-cjs.json",
+		"check:types": "tsc --noEmit",
 		"watch": "tsc --watch",
-		"prepare": "husky"
+		"prepare": "husky",
+		"test": "vitest run",
+		"test:dev": "vitest",
+		"ci": "run-s -l clean build check && pnpm test"
 	},
+	"files": [
+		"dist"
+	],
 	"homepage": "https://github.com/evanderkoogh/otel-cf-workers#readme",
 	"dependencies": {
-		"@opentelemetry/core": "^1.25.1",
-		"@opentelemetry/exporter-trace-otlp-http": "^0.52.1",
-		"@opentelemetry/otlp-exporter-base": "^0.52.1",
-		"@opentelemetry/otlp-transformer": "^0.52.1",
-		"@opentelemetry/resources": "^1.25.1",
-		"@opentelemetry/sdk-trace-base": "^1.25.1",
-		"@opentelemetry/semantic-conventions": "^1.25.1"
+		"@opentelemetry/core": "^1.26.0",
+		"@opentelemetry/exporter-trace-otlp-http": "^0.53.0",
+		"@opentelemetry/otlp-exporter-base": "^0.53.0",
+		"@opentelemetry/otlp-transformer": "^0.53.0",
+		"@opentelemetry/resources": "^1.26.0",
+		"@opentelemetry/sdk-trace-base": "^1.26.0",
+		"@opentelemetry/semantic-conventions": "^1.27.0"
 	},
 	"devDependencies": {
-		"@changesets/cli": "^2.27.7",
-		"@cloudflare/workers-types": "^4.20240806.0",
-		"husky": "^9.1.4",
-		"lint-staged": "^15.2.8",
+		"@changesets/cli": "^2.27.8",
+		"@cloudflare/workers-types": "^4.20240909.0",
+		"husky": "^9.1.6",
+		"lint-staged": "^15.2.10",
 		"npm-run-all": "^4.1.5",
 		"prettier": "^3.3.3",
-		"rimraf": "^5.0.10",
-		"typescript": "^5.5.4"
+		"rimraf": "^6.0.1",
+		"tsup": "^8.2.4",
+		"typescript": "^5.6.2",
+		"vitest": "^2.1.1"
 	},
 	"peerDependencies": {
 		"@opentelemetry/api": "~1.9.0"
@@ -63,5 +69,5 @@
 	"lint-staged": {
 		"*": "prettier --ignore-unknown --write"
 	},
-	"packageManager": "pnpm@8.15.6+sha512.77b89e9be77a2b06ad8f403a19cae5e22976f61023f98ad323d5c30194958ebc02ee0a6ae5d13ee454f6134e4e8caf29a05f0b1a0e1d2b17bca6b6a1f1159f86"
+	"packageManager": "pnpm@9.10.0"
 }
