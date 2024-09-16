@@ -1,5 +1,16 @@
 # @microlabs/otel-cf-workers
 
+## 1.0.0-rc.47
+
+### Minor Changes
+
+- 0a41148: Complete overhaul of the build system thanks to @Cherry
+
+### Patch Changes
+
+- 1aa4d2c: fix: refactor to modern build tooling and resolve import issues
+- d0dcc83: Fix importing issues. Fixes #162
+
 ## 1.0.0-rc.46
 
 ### Patch Changes
