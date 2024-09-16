@@ -14,9 +14,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: pnpm/action-setup@v3
-        with:
-          version: 8
+      - uses: pnpm/action-setup@v4
       - name: Use Node.js 20
         uses: actions/setup-node@v4
         with:
@@ -24,5 +22,5 @@ jobs:
           cache: 'pnpm'
       - name: 'Install NPM Dependencies'
         run: 'pnpm install --frozen-lockfile --child-concurrency=10'
-      - name: 'Check for Errors'
-        run: 'pnpm check'
+      - name: 'Run Tests'
+        run: 'pnpm run ci'
