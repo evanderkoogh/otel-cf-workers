@@ -14,7 +14,7 @@ const config: ResolveConfigFn = (env: Env, _trigger) => {
 	}
 }
 
-const doConfig: ResolveConfigFn = (env: Env, _trigger) => {
+const doConfig: ResolveConfigFn = (env: Env) => {
 	return {
 		exporter: {
 			url: 'https://api.honeycomb.io/v1/traces',
