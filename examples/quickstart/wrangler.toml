@@ -1,0 +1,8 @@
+#:schema node_modules/wrangler/config-schema.json
+name = "otel-quickstart-example"
+main = "src/index.ts"
+compatibility_date = "2024-09-09"
+compatibility_flags = [ "nodejs_compat" ]
+
+# [vars]
+HONEYCOMB_API_KEY = "example"
