@@ -3,6 +3,7 @@ import { instrumentDOBinding } from './do.js'
 import { instrumentKV } from './kv.js'
 import { instrumentQueueSender } from './queue.js'
 import { instrumentServiceBinding } from './service.js'
+import { instrumentD1 } from './d1'
 import { instrumentAnalyticsEngineDataset } from './analytics-engine.js'
 
 const isJSRPC = (item?: unknown): item is Service => {
@@ -34,6 +35,10 @@ const isAnalyticsEngineDataset = (item?: unknown): item is AnalyticsEngineDatase
 	return !isJSRPC(item) && !!(item as AnalyticsEngineDataset)?.writeDataPoint
 }
 
+const isD1Database = (item?: unknown): item is D1Database => {
+	return !!(item as D1Database)?.exec && !!(item as D1Database)?.prepare
+}
+
 const instrumentEnv = (env: Record<string, unknown>): Record<string, unknown> => {
 	const envHandler: ProxyHandler<Record<string, unknown>> = {
 		get: (target, prop, receiver) => {
@@ -54,6 +59,8 @@ const instrumentEnv = (env: Record<string, unknown>): Record<string, unknown> =>
 				return item
 			} else if (isAnalyticsEngineDataset(item)) {
 				return instrumentAnalyticsEngineDataset(item, String(prop))
+			} else if (isD1Database(item)) {
+				return instrumentD1(item, String(prop))
 			} else {
 				return item
 			}
