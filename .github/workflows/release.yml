@@ -25,12 +25,6 @@ jobs:
           node-version: 20
       - name: 'Install NPM Dependencies'
         run: 'pnpm install --frozen-lockfile --child-concurrency=10'
-      - name: Check the build
-        run: pnpm build
-      - name: 'Check for Errors'
-        run: 'pnpm check'
-      - name: 'Run Tests'
-        run: 'pnpm test'
       - name: Create Release Pull Request or Publish to npm
         id: changesets
         uses: changesets/action@v1

@@ -24,14 +24,15 @@
 		"build": "run-s -l build:versions build:src",
 		"cs-version": "changeset version",
 		"cs-publish": "changeset publish",
-		"release": "run-s -l clean cs-version build cs-publish",
+		"release": "run-s -l clean cs-version build check cs-publish",
 		"check": "run-s -l check:*",
 		"check:format": "prettier . --check --ignore-unknown",
 		"check:types": "tsc --noEmit",
 		"watch": "tsc --watch",
 		"prepare": "husky",
 		"test": "vitest run",
-		"test:dev": "vitest"
+		"test:dev": "vitest",
+		"ci": "run-s -l clean build check && pnpm test"
 	},
 	"files": [
 		"dist"
