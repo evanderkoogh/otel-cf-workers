@@ -1,4 +1,5 @@
 import { trace } from '@opentelemetry/api'
+import { withNextSpan } from '../../../src/index'
 
 export interface Env {
 	OTEL_TEST: KVNamespace
@@ -16,6 +17,7 @@ const handleDO = async (request: Request, env: Env): Promise<Response> => {
 
 const handleRest = async (request: Request, env: Env, ctx: ExecutionContext): Promise<Response> => {
 	trace.getActiveSpan()?.setAttribute('http.route', '/*')
+	withNextSpan({ destination: 'cloudflare' })
 	await fetch('https://cloudflare.com')
 
 	const cache = await caches.open('stuff')
@@ -24,6 +26,7 @@ const handleRest = async (request: Request, env: Env, ctx: ExecutionContext): Pr
 
 	const greeting = "G'day World"
 	trace.getActiveSpan()?.setAttribute('greeting', greeting)
+	withNextSpan({ waitUntil: true })
 	ctx.waitUntil(fetch('https://workers.dev'))
 	return new Response(`${greeting}!`)
 }

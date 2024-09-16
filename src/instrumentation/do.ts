@@ -24,7 +24,7 @@ function instrumentBindingStub(stub: DurableObjectStub, nsName: string): Durable
 			if (prop === 'fetch') {
 				const fetcher = Reflect.get(target, prop)
 				const attrs = {
-					name: `durable_object:${nsName}`,
+					name: `Durable Object ${nsName}`,
 					'do.namespace': nsName,
 					'do.id': target.id.toString(),
 					'do.id.name': target.id.name,
@@ -97,7 +97,7 @@ export function executeDOFetch(fetchFn: FetchFn, request: Request, id: DurableOb
 	}
 
 	const name = id.name || ''
-	const promise = tracer.startActiveSpan(`do.fetchHandler:${name}`, options, spanContext, async (span) => {
+	const promise = tracer.startActiveSpan(`Durable Object Fetch ${name}`, options, spanContext, async (span) => {
 		try {
 			const response: Response = await fetchFn(request)
 			if (response.ok) {
@@ -121,7 +121,7 @@ export function executeDOAlarm(alarmFn: NonNullable<AlarmFn>, id: DurableObjectI
 	const tracer = trace.getTracer('DO alarmHandler')
 
 	const name = id.name || ''
-	const promise = tracer.startActiveSpan(`do.alarmHandler:${name}`, async (span) => {
+	const promise = tracer.startActiveSpan(`Durable Object Alarm ${name}`, async (span) => {
 		span.setAttribute(SemanticAttributes.FAAS_COLDSTART, cold_start)
 		cold_start = false
 		span.setAttribute('do.id', id.toString())

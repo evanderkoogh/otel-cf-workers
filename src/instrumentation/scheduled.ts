@@ -4,6 +4,7 @@ import { Initialiser, setConfig } from '../config.js'
 import { exportSpans, proxyExecutionContext } from './common.js'
 import { instrumentEnv } from './env.js'
 import { wrap } from '../wrap.js'
+import { versionAttributes } from './version.js'
 
 type ScheduledHandler = ExportedHandlerScheduledHandler<unknown>
 export type ScheduledHandlerArgs = Parameters<ScheduledHandler>
@@ -23,12 +24,13 @@ export function executeScheduledHandler(
 		[SemanticAttributes.FAAS_TIME]: new Date(controller.scheduledTime).toISOString(),
 	}
 	cold_start = false
+	Object.assign(attributes, versionAttributes(env))
 	const options: SpanOptions = {
 		attributes,
 		kind: SpanKind.SERVER,
 	}
 
-	const promise = tracer.startActiveSpan('scheduledHandler', options, async (span) => {
+	const promise = tracer.startActiveSpan(`scheduledHandler ${controller.cron}`, options, async (span) => {
 		const traceId = span.spanContext().traceId
 		api_context.active().setValue(traceIdSymbol, traceId)
 		try {

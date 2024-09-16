@@ -15,6 +15,7 @@ import { instrumentEnv } from './env.js'
 import { exportSpans, proxyExecutionContext } from './common.js'
 import { ResolvedTraceConfig } from '../types.js'
 import { ReadableSpan } from '@opentelemetry/sdk-trace-base'
+import { versionAttributes } from './version.js'
 
 export type IncludeTraceContextFn = (request: Request) => boolean
 export interface FetcherConfig {
@@ -112,10 +113,15 @@ export function getParentContextFromHeaders(headers: Headers): Context {
 
 function getParentContextFromRequest(request: Request) {
 	const workerConfig = getActiveConfig()
+
+	if (workerConfig === undefined) {
+		return api_context.active()
+	}
+
 	const acceptTraceContext =
 		typeof workerConfig.handlers.fetch.acceptTraceContext === 'function'
 			? workerConfig.handlers.fetch.acceptTraceContext(request)
-			: workerConfig.handlers.fetch.acceptTraceContext ?? true
+			: (workerConfig.handlers.fetch.acceptTraceContext ?? true)
 	return acceptTraceContext ? getParentContextFromHeaders(request.headers) : api_context.active()
 }
 
@@ -140,31 +146,29 @@ export function executeFetchHandler(fetchFn: FetchHandler, [request, env, ctx]: 
 	cold_start = false
 	Object.assign(attributes, gatherRequestAttributes(request))
 	Object.assign(attributes, gatherIncomingCfAttributes(request))
+	Object.assign(attributes, versionAttributes(env))
 	const options: SpanOptions = {
 		attributes,
 		kind: SpanKind.SERVER,
 	}
 
 	const method = request.method.toUpperCase()
-	const promise = tracer.startActiveSpan(method, options, spanContext, async (span) => {
+	const promise = tracer.startActiveSpan(`fetchHandler ${method}`, options, spanContext, async (span) => {
 		const readable = span as unknown as ReadableSpan
 		try {
-			const response: Response = await fetchFn(request, env, ctx)
+			const response = await fetchFn(request, env, ctx)
 			span.setAttributes(gatherResponseAttributes(response))
-			if (readable.attributes['http.route']) {
-				span.updateName(`${method} ${readable.attributes['http.route']}`)
-			}
-			span.end()
 
 			return response
 		} catch (error) {
-			if (readable.attributes['http.route']) {
-				span.updateName(`${method} ${readable.attributes['http.route']}`)
-			}
 			span.recordException(error as Exception)
 			span.setStatus({ code: SpanStatusCode.ERROR })
-			span.end()
 			throw error
+		} finally {
+			if (readable.attributes['http.route']) {
+				span.updateName(`fetchHandler ${method} ${readable.attributes['http.route']}`)
+			}
+			span.end()
 		}
 	})
 	return promise
@@ -198,14 +202,17 @@ export function instrumentClientFetch(
 	configFn: getFetchConfig,
 	attrs?: Attributes,
 ): Fetcher['fetch'] {
-	const handler: ProxyHandler<typeof fetch> = {
-		apply: (target, thisArg, argArray): ReturnType<typeof fetch> => {
+	const handler: ProxyHandler<Fetcher['fetch']> = {
+		apply: (target, thisArg, argArray): Response | Promise<Response> => {
 			const request = new Request(argArray[0], argArray[1])
 			if (!request.url.startsWith('http')) {
 				return Reflect.apply(target, thisArg, argArray)
 			}
 
 			const workerConfig = getActiveConfig()
+			if (!workerConfig) {
+				return Reflect.apply(target, thisArg, [request])
+			}
 			const config = configFn(workerConfig)
 
 			const tracer = trace.getTracer('fetcher')
@@ -213,7 +220,7 @@ export function instrumentClientFetch(
 
 			const host = new URL(request.url).host
 			const method = request.method.toUpperCase()
-			const spanName = typeof attrs?.['name'] === 'string' ? attrs?.['name'] : `${method}: ${host}`
+			const spanName = typeof attrs?.['name'] === 'string' ? attrs?.['name'] : `fetch ${method} ${host}`
 			const promise = tracer.startActiveSpan(spanName, options, async (span) => {
 				const includeTraceContext =
 					typeof config.includeTraceContext === 'function'
@@ -226,7 +233,7 @@ export function instrumentClientFetch(
 				}
 				span.setAttributes(gatherRequestAttributes(request))
 				if (request.cf) span.setAttributes(gatherOutgoingCfAttributes(request.cf))
-				const response: Response = await Reflect.apply(target, thisArg, [request])
+				const response = await Reflect.apply(target, thisArg, [request])
 				span.setAttributes(gatherResponseAttributes(response))
 				span.end()
 				return response
@@ -238,5 +245,6 @@ export function instrumentClientFetch(
 }
 
 export function instrumentGlobalFetch(): void {
+	//@ts-ignore For some reason the node types are imported and complain.
 	globalThis.fetch = instrumentClientFetch(globalThis.fetch, (config) => config.fetch)
 }

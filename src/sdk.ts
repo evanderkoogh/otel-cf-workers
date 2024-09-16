@@ -29,12 +29,13 @@ import { instrumentGlobalCache } from './instrumentation/cache.js'
 import { createQueueHandler } from './instrumentation/queue.js'
 import { DOClass, instrumentDOClass } from './instrumentation/do.js'
 import { createScheduledHandler } from './instrumentation/scheduled.js'
+import * as versions from '../versions.json'
 
 type FetchHandler = ExportedHandlerFetchHandler<unknown, unknown>
 type ScheduledHandler = ExportedHandlerScheduledHandler<unknown>
 type QueueHandler = ExportedHandlerQueueHandler
 
-export type ResolveConfigFn = (env: any, trigger: Trigger) => TraceConfig
+export type ResolveConfigFn<Env = any> = (env: Env, trigger: Trigger) => TraceConfig
 export type ConfigurationOption = TraceConfig | ResolveConfigFn
 
 export function isRequest(trigger: Trigger): trigger is Request {
@@ -56,7 +57,9 @@ const createResource = (config: ResolvedTraceConfig): Resource => {
 		'cloud.region': 'earth',
 		'faas.max_memory': 134217728,
 		'telemetry.sdk.language': 'js',
-		'telemetry.sdk.name': '@microlabs/otel-workers-sdk',
+		'telemetry.sdk.name': '@microlabs/otel-cf-workers',
+		'telemetry.sdk.version': versions['@microlabs/otel-cf-workers'],
+		'telemetry.sdk.build.node_version': versions['node'],
 	}
 	const serviceResource = new Resource({
 		'service.name': config.service.name,
@@ -74,8 +77,12 @@ function isSpanExporter(exporterConfig: ExporterConfig): exporterConfig is SpanE
 let initialised = false
 function init(config: ResolvedTraceConfig): void {
 	if (!initialised) {
-		instrumentGlobalCache()
-		instrumentGlobalFetch()
+		if (config.instrumentation.instrumentGlobalCache) {
+			instrumentGlobalCache()
+		}
+		if (config.instrumentation.instrumentGlobalFetch) {
+			instrumentGlobalFetch()
+		}
 		propagation.setGlobalPropagator(config.propagator)
 		const resource = createResource(config)
 
@@ -133,6 +140,10 @@ function parseConfig(supplied: TraceConfig): ResolvedTraceConfig {
 			service: supplied.service,
 			spanProcessors,
 			propagator: supplied.propagator || new W3CTraceContextPropagator(),
+			instrumentation: {
+				instrumentGlobalCache: supplied.instrumentation?.instrumentGlobalCache ?? true,
+				instrumentGlobalFetch: supplied.instrumentation?.instrumentGlobalFetch ?? true,
+			},
 		}
 	} else {
 		const exporter = isSpanExporter(supplied.exporter) ? supplied.exporter : new OTLPExporter(supplied.exporter)
@@ -188,3 +199,5 @@ export function instrumentDO(doClass: DOClass, config: ConfigurationOption) {
 }
 
 export { waitUntilTrace } from './instrumentation/fetch.js'
+
+export const __unwrappedFetch = unwrap(fetch)

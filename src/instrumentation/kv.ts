@@ -22,7 +22,15 @@ const KVAttributes: Record<string | symbol, ExtraAttributeFn> = {
 		return attrs
 	},
 	getWithMetadata(argArray, result) {
-		const attrs = this['get']!(argArray, result)
+		const attrs: Attributes = {}
+		const opts = argArray[1]
+		if (typeof opts === 'string') {
+			attrs['db.cf.kv.type'] = opts
+		} else if (typeof opts === 'object') {
+			attrs['db.cf.kv.type'] = opts.type
+			attrs['db.cf.kv.cache_ttl'] = opts.cacheTtl
+		}
+
 		attrs['db.cf.kv.metadata'] = true
 		const { cacheStatus } = result as KVNamespaceGetWithMetadataResult<any, any>
 		if (typeof cacheStatus === 'string') {
@@ -72,7 +80,7 @@ function instrumentKVFn(fn: Function, name: string, operation: string) {
 				kind: SpanKind.CLIENT,
 				attributes,
 			}
-			return tracer.startActiveSpan(`${name} ${operation}`, options, async (span) => {
+			return tracer.startActiveSpan(`KV ${name} ${operation}`, options, async (span) => {
 				const result = await Reflect.apply(target, thisArg, argArray)
 				const extraAttrsFn = KVAttributes[operation]
 				const extraAttrs = extraAttrsFn ? extraAttrsFn(argArray, result) : {}
@@ -85,7 +93,12 @@ function instrumentKVFn(fn: Function, name: string, operation: string) {
 					span.setAttribute(SemanticAttributes.DB_STATEMENT, `${operation} ${argArray[0]}`)
 					span.setAttribute('db.cf.kv.key', argArray[0])
 				}
-				span.setAttribute('db.cf.kv.has_result', !!result)
+				if (operation === 'getWithMetadata') {
+					const hasResults = !!result && !!(result as KVNamespaceGetWithMetadataResult<string, unknown>).value
+					span.setAttribute('db.cf.kv.has_result', hasResults)
+				} else {
+					span.setAttribute('db.cf.kv.has_result', !!result)
+				}
 				span.end()
 				return result
 			})

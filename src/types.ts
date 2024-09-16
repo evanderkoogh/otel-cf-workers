@@ -29,6 +29,11 @@ export interface SamplingConfig<HS extends HeadSamplerConf = HeadSamplerConf> {
 	tailSampler?: TailSampleFn
 }
 
+export interface InstrumentationOptions {
+	instrumentGlobalFetch?: boolean
+	instrumentGlobalCache?: boolean
+}
+
 interface TraceConfigBase {
 	service: ServiceConfig
 	handlers?: HandlerConfig
@@ -36,6 +41,7 @@ interface TraceConfigBase {
 	postProcessor?: PostProcessorFn
 	sampling?: SamplingConfig
 	propagator?: TextMapPropagator
+	instrumentation?: InstrumentationOptions
 }
 
 interface TraceConfigExporter extends TraceConfigBase {
@@ -59,6 +65,7 @@ export interface ResolvedTraceConfig extends TraceConfigBase {
 	sampling: Required<SamplingConfig<Sampler>>
 	spanProcessors: SpanProcessor[]
 	propagator: TextMapPropagator
+	instrumentation: InstrumentationOptions
 }
 
 export interface DOConstructorTrigger {
