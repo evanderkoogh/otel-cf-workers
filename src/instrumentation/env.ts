@@ -4,6 +4,7 @@ import { instrumentKV } from './kv.js'
 import { instrumentQueueSender } from './queue.js'
 import { instrumentServiceBinding } from './service.js'
 import { instrumentAnalyticsEngineDataset } from './analytics-engine.js'
+import { instrumentDispatchNamespace } from './dispatch-namespace.js'
 
 const isJSRPC = (item?: unknown): item is Service => {
 	// @ts-expect-error The point of RPC types is to block non-existent properties, but that's the goal here
@@ -34,6 +35,14 @@ const isAnalyticsEngineDataset = (item?: unknown): item is AnalyticsEngineDatase
 	return !isJSRPC(item) && !!(item as AnalyticsEngineDataset)?.writeDataPoint
 }
 
+const isDispatchNamespace = (item?: unknown): item is DispatchNamespace => {
+	// KV Namespaces and R2 buckets also have .get, but also .put
+	return (
+		!!(item as DispatchNamespace)?.get &&
+		!(item as KVNamespace & R2Bucket & DurableObjectState & DurableObjectNamespace)?.put
+	)
+}
+
 const instrumentEnv = (env: Record<string, unknown>): Record<string, unknown> => {
 	const envHandler: ProxyHandler<Record<string, unknown>> = {
 		get: (target, prop, receiver) => {
@@ -54,6 +63,8 @@ const instrumentEnv = (env: Record<string, unknown>): Record<string, unknown> =>
 				return item
 			} else if (isAnalyticsEngineDataset(item)) {
 				return instrumentAnalyticsEngineDataset(item, String(prop))
+			} else if (isDispatchNamespace(item)) {
+				return instrumentDispatchNamespace(item, String(prop))
 			} else {
 				return item
 			}
