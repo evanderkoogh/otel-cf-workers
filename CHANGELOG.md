@@ -1,5 +1,11 @@
 # @microlabs/otel-cf-workers
 
+## 1.0.0-rc.48
+
+### Minor Changes
+
+- 150efef: Add initial support for D1 (experimental)
+
 ## 1.0.0-rc.47
 
 ### Minor Changes
