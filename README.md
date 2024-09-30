@@ -266,7 +266,7 @@ One of the advantages of using Open Telemetry is that it makes it easier to do d
 
 Triggers:
 
-- [ ] Email (`handler.email`)
+- [x] Email (`handler.email`)
 - [x] HTTP (`handler.fetch`)
 - [x] Queue (`handler.queue`)
 - [x] Cron (`handler.scheduled`)

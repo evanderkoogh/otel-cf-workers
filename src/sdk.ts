@@ -12,10 +12,13 @@ import { DOClass, instrumentDOClass } from './instrumentation/do.js'
 import { createScheduledHandler } from './instrumentation/scheduled.js'
 //@ts-ignore
 import * as versions from '../versions.json'
+import { createEmailHandler } from './instrumentation/email.js'
+import { EmailMessage } from 'cloudflare:email'
 
 type FetchHandler = ExportedHandlerFetchHandler<unknown, unknown>
 type ScheduledHandler = ExportedHandlerScheduledHandler<unknown>
 type QueueHandler = ExportedHandlerQueueHandler
+type EmailHandler = EmailExportedHandler
 
 export type ResolveConfigFn<Env = any> = (env: Env, trigger: Trigger) => TraceConfig
 export type ConfigurationOption = TraceConfig | ResolveConfigFn
@@ -30,6 +33,10 @@ export function isMessageBatch(trigger: Trigger): trigger is MessageBatch {
 
 export function isAlarm(trigger: Trigger): trigger is 'do-alarm' {
 	return trigger === 'do-alarm'
+}
+
+export function isEmailMessage(trigger: Trigger): trigger is ForwardableEmailMessage {
+	return !!(trigger instanceof EmailMessage && trigger.headers && trigger.forward)
 }
 
 const createResource = (config: ResolvedTraceConfig): Resource => {
@@ -106,6 +113,12 @@ export function instrument<E, Q, C>(
 		const queuer = unwrap(handler.queue) as QueueHandler
 		handler.queue = createQueueHandler(queuer, initialiser)
 	}
+
+	if (handler.email) {
+		const emailer = unwrap(handler.email) as EmailHandler
+		handler.email = createEmailHandler(emailer, initialiser)
+	}
+
 	return handler
 }
 
