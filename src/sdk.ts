@@ -13,7 +13,6 @@ import { createScheduledHandler } from './instrumentation/scheduled.js'
 //@ts-ignore
 import * as versions from '../versions.json'
 import { createEmailHandler } from './instrumentation/email.js'
-import { EmailMessage } from 'cloudflare:email'
 
 type FetchHandler = ExportedHandlerFetchHandler<unknown, unknown>
 type ScheduledHandler = ExportedHandlerScheduledHandler<unknown>
@@ -33,10 +32,6 @@ export function isMessageBatch(trigger: Trigger): trigger is MessageBatch {
 
 export function isAlarm(trigger: Trigger): trigger is 'do-alarm' {
 	return trigger === 'do-alarm'
-}
-
-export function isEmailMessage(trigger: Trigger): trigger is ForwardableEmailMessage {
-	return !!(trigger instanceof EmailMessage && trigger.headers && trigger.forward)
 }
 
 const createResource = (config: ResolvedTraceConfig): Resource => {
