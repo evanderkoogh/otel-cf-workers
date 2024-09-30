@@ -19,7 +19,7 @@
 	"scripts": {
 		"clean": "rimraf ./dist versions.json",
 		"format": "prettier --ignore-unknown --write .",
-		"build:src": "tsup src/index.ts --format cjs,esm --dts --clean --sourcemap",
+		"build:src": "tsup",
 		"build:versions": "pnpm version --json > versions.json",
 		"build": "run-s -l build:versions build:src",
 		"cs-version": "changeset version",
