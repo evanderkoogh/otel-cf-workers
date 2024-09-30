@@ -7,6 +7,8 @@ import { getActiveConfig } from './config.js'
 import { TailSampleFn } from './sampling.js'
 import { PostProcessorFn } from './types.js'
 
+export type TraceFlushableSpanProcessor = SpanProcessor & { forceFlush: (traceId?: string) => Promise<void> }
+
 type CompletedTrace = {
 	traceId: string
 	localRootSpan: ReadableSpan

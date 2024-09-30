@@ -16,6 +16,7 @@ import { SpanProcessor, RandomIdGenerator, ReadableSpan, SamplingDecision } from
 
 import { SpanImpl } from './span.js'
 import { getActiveConfig } from './config.js'
+import { TraceFlushableSpanProcessor } from './spanprocessor.js'
 
 enum NewTraceFlags {
 	RANDOM_TRACE_ID_SET = 2,
@@ -33,15 +34,18 @@ function getFlagAt(flagSequence: number, position: number): number {
 }
 
 export class WorkerTracer implements Tracer {
-	private readonly _spanProcessors: SpanProcessor[]
+	private readonly spanProcessors: TraceFlushableSpanProcessor[]
 	private readonly resource: Resource
 	constructor(spanProcessors: SpanProcessor[], resource: Resource) {
-		this._spanProcessors = spanProcessors
+		this.spanProcessors = spanProcessors
 		this.resource = resource
 	}
 
-	get spanProcessors() {
-		return this._spanProcessors
+	async forceFlush(traceId?: string) {
+		const promises = this.spanProcessors.map(async (spanProcessor) => {
+			spanProcessor.forceFlush(traceId)
+		})
+		await Promise.allSettled(promises)
 	}
 
 	addToResource(extra: Resource) {
@@ -61,7 +65,6 @@ export class WorkerTracer implements Tracer {
 
 		const spanKind = options.kind || SpanKind.INTERNAL
 		const sanitisedAttrs = sanitizeAttributes(options.attributes)
-
 		const sampler = config.sampling.headSampler
 		const samplingDecision = sampler.shouldSample(context, traceId, name, spanKind, sanitisedAttrs, [])
 		const { decision, traceState, attributes: attrs } = samplingDecision
