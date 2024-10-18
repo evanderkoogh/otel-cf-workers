@@ -12,7 +12,7 @@ npm install @microlabs/otel-cf-workers @opentelemetry/api
 npx wrangler secret put HONEYCOMB_API_KEY
 ```
 
-And set the Node Compatibility flag by adding `compatibility_flags = [ "nodejs_compat" ]`
+And set the Node Compatibility flag by adding `compatibility_flags = [ "nodejs_compat", "nodejs_zlib ]`
 in your `wrangler.toml`
 
 ## Example
@@ -52,6 +52,7 @@ const config: ResolveConfigFn = (env: Env, _trigger: any) => {
 		exporter: {
 			url: 'https://api.honeycomb.io/v1/traces',
 			headers: { 'x-honeycomb-team': env.HONEYCOMB_API_KEY },
+			compression: 'gzip',
 		},
 		service: { name: 'my-service-name' },
 	}

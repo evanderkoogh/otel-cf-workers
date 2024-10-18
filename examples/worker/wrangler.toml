@@ -1,7 +1,7 @@
 name = "otel-test"
 main = "src/index.ts"
 compatibility_date = "2023-03-27"
-compatibility_flags = [ "nodejs_compat" ]
+compatibility_flags = [ "nodejs_compat", "nodejs_zlib ]
 
 kv_namespaces = [
   { binding = "OTEL_TEST", id = "f124c9696873443da0a277ddb75000ca", preview_id = "3569aab8617645d9b8ed4bd1d45c8d96" }
