@@ -12,6 +12,13 @@ npm install @microlabs/otel-cf-workers @opentelemetry/api
 > To be able to use the Open Telemetry library you have to add the NodeJS compatibility flag in your `wrangler.toml` file.
 
 ```
+compatibility_flags = [ "nodejs_compat", "nodejs_zlib" ]
+```
+
+alternatively, in recent version nodejs_zlib is enabled by default by nodejs_compat
+
+```
+compatibility_date = "2024-09-23"
 compatibility_flags = [ "nodejs_compat" ]
 ```
 
@@ -44,6 +51,7 @@ const config: ResolveConfigFn = (env: Env, _trigger) => {
 		exporter: {
 			url: 'https://api.honeycomb.io/v1/traces',
 			headers: { 'x-honeycomb-team': env.HONEYCOMB_API_KEY },
+			compression: 'gzip',
 		},
 		service: { name: 'greetings' },
 	}
@@ -263,6 +271,7 @@ One of the advantages of using Open Telemetry is that it makes it easier to do d
 
 - The worker runtime does not expose accurate timing information to protect against side-channel attacks such as Spectre and will only update the clock on IO, so any CPU heavy processing will look like it takes 0 milliseconds.
 - Not everything is auto-instrumented yet. See the lists below for what is and isn't.
+- Exporter protocol support is currently limited to http/json.
 
 Triggers:
 
