@@ -222,21 +222,24 @@ export function instrumentClientFetch(
 			const method = request.method.toUpperCase()
 			const spanName = typeof attrs?.['name'] === 'string' ? attrs?.['name'] : `fetch ${method} ${host}`
 			const promise = tracer.startActiveSpan(spanName, options, async (span) => {
-				const includeTraceContext =
-					typeof config.includeTraceContext === 'function'
-						? config.includeTraceContext(request)
-						: config.includeTraceContext
-				if (includeTraceContext ?? true) {
-					propagation.inject(api_context.active(), request.headers, {
-						set: (h, k, v) => h.set(k, typeof v === 'string' ? v : String(v)),
-					})
+				try {
+					const includeTraceContext =
+						typeof config.includeTraceContext === 'function'
+							? config.includeTraceContext(request)
+							: config.includeTraceContext
+					if (includeTraceContext ?? true) {
+						propagation.inject(api_context.active(), request.headers, {
+							set: (h, k, v) => h.set(k, typeof v === 'string' ? v : String(v)),
+						})
+					}
+					span.setAttributes(gatherRequestAttributes(request))
+					if (request.cf) span.setAttributes(gatherOutgoingCfAttributes(request.cf))
+					const response = await Reflect.apply(target, thisArg, [request])
+					span.setAttributes(gatherResponseAttributes(response))
+					return response
+				} finally {
+					span.end()
 				}
-				span.setAttributes(gatherRequestAttributes(request))
-				if (request.cf) span.setAttributes(gatherOutgoingCfAttributes(request.cf))
-				const response = await Reflect.apply(target, thisArg, [request])
-				span.setAttributes(gatherResponseAttributes(response))
-				span.end()
-				return response
 			})
 			return promise
 		},
