@@ -237,7 +237,12 @@ export function instrumentClientFetch(
 					const response = await Reflect.apply(target, thisArg, [request])
 					span.setAttributes(gatherResponseAttributes(response))
 					return response
-				} finally {
+				} catch (error) {
+					span.recordException(error as Exception)
+					span.setStatus({ code: SpanStatusCode.ERROR })
+					throw error
+				}
+				finally {
 					span.end()
 				}
 			})
