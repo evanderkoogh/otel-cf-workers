@@ -1,12 +1,28 @@
-import { TextMapPropagator } from '@opentelemetry/api'
-import { ReadableSpan, Sampler, SpanExporter, SpanProcessor } from '@opentelemetry/sdk-trace-base'
+import { Attributes, Context, SpanOptions, TextMapPropagator } from '@opentelemetry/api'
+import { ReadableSpan, Sampler, Span, SpanExporter, SpanProcessor } from '@opentelemetry/sdk-trace-base'
 import { OTLPExporterConfig } from './exporter.js'
 import { FetchHandlerConfig, FetcherConfig } from './instrumentation/fetch.js'
 import { TailSampleFn } from './sampling.js'
 
+export type OrPromise<T extends any> = T | Promise<T>
+
 export type PostProcessorFn = (spans: ReadableSpan[]) => ReadableSpan[]
 
 export type ExporterConfig = OTLPExporterConfig | SpanExporter
+
+export interface InitialSpanInfo {
+	name: string
+	options: SpanOptions
+	context?: Context
+}
+
+export interface HandlerInstrumentation<T extends Trigger, R extends any> {
+	getInitialSpanInfo: (trigger: T) => InitialSpanInfo
+	getAttributesFromResult: (result: Awaited<R>) => Attributes
+	runFinally?: (span: Span, trigger: T, result: R) => Span
+}
+
+export type TraceFlushableSpanProcessor = SpanProcessor & { forceFlush: (traceId?: string) => Promise<void> }
 
 export interface HandlerConfig {
 	fetch?: FetchHandlerConfig
