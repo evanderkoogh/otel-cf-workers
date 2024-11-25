@@ -16,7 +16,7 @@ import { SpanProcessor, RandomIdGenerator, ReadableSpan, SamplingDecision } from
 
 import { SpanImpl } from './span.js'
 import { getActiveConfig } from './config.js'
-import { TraceFlushableSpanProcessor } from './spanprocessor.js'
+import { TraceFlushableSpanProcessor } from './types.js'
 
 enum NewTraceFlags {
 	RANDOM_TRACE_ID_SET = 2,
@@ -43,7 +43,7 @@ export class WorkerTracer implements Tracer {
 
 	async forceFlush(traceId?: string) {
 		const promises = this.spanProcessors.map(async (spanProcessor) => {
-			spanProcessor.forceFlush(traceId)
+			await spanProcessor.forceFlush(traceId)
 		})
 		await Promise.allSettled(promises)
 	}
