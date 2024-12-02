@@ -123,6 +123,8 @@ function createHandlerFlowFn<T extends Trigger, E extends Env, R extends any>(
 		const proxiedEnv = instrumentEnv(env)
 		const { ctx: proxiedCtx, tracker } = proxyExecutionContext(context)
 
+		const instrumentedTrigger = instrumentation.instrumentTrigger ? instrumentation.instrumentTrigger(trigger) : trigger
+
 		const tracer = trace.getTracer('handler') as WorkerTracer
 
 		const { name, options, context: spanContext } = instrumentation.getInitialSpanInfo(trigger)
@@ -135,13 +137,23 @@ function createHandlerFlowFn<T extends Trigger, E extends Env, R extends any>(
 		const parentContext = spanContext || api_context.active()
 		const result = tracer.startActiveSpan(name, options, parentContext, async (span) => {
 			try {
-				const result = await handlerFn(trigger, proxiedEnv, proxiedCtx)
-				const attributes = instrumentation.getAttributesFromResult(result)
-				span.setAttributes(attributes)
+				const result = await handlerFn(instrumentedTrigger, proxiedEnv, proxiedCtx)
+
+				if (instrumentation.getAttributesFromResult) {
+					const attributes = instrumentation.getAttributesFromResult(result)
+					span.setAttributes(attributes)
+				}
+
+				if (instrumentation.executionSucces) {
+					instrumentation.executionSucces(span, trigger, result)
+				}
 				return result
 			} catch (error) {
 				span.recordException(error as Exception)
 				span.setStatus({ code: SpanStatusCode.ERROR })
+				if (instrumentation.executionFailed) {
+					instrumentation.executionFailed(span, trigger, error)
+				}
 				throw error
 			} finally {
 				span.end()

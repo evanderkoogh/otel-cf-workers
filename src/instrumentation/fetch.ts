@@ -6,11 +6,14 @@ import {
 	context as api_context,
 	Attributes,
 	Context,
+	Span,
 } from '@opentelemetry/api'
 import { getActiveConfig } from '../config.js'
 import { wrap } from '../wrap.js'
 import { HandlerInstrumentation, OrPromise, ResolvedTraceConfig } from '../types.js'
 import { ReadableSpan } from '@opentelemetry/sdk-trace-base'
+
+type IncomingRequest = Parameters<ExportedHandlerFetchHandler>[0]
 
 export type IncludeTraceContextFn = (request: Request) => boolean
 export interface FetcherConfig {
@@ -117,7 +120,15 @@ function getParentContextFromRequest(request: Request) {
 	return acceptTraceContext ? getParentContextFromHeaders(request.headers) : api_context.active()
 }
 
-export const fetchInstrumentation: HandlerInstrumentation<Request, OrPromise<Response>> = {
+function updateSpanNameOnRoute(span: Span, request: IncomingRequest) {
+	const readable = span as unknown as ReadableSpan
+	if (readable.attributes['http.route']) {
+		const method = request.method.toUpperCase()
+		span.updateName(`${method} ${readable.attributes['http.route']}`)
+	}
+}
+
+export const fetchInstrumentation: HandlerInstrumentation<IncomingRequest, OrPromise<Response>> = {
 	getInitialSpanInfo: (request) => {
 		const spanContext = getParentContextFromRequest(request)
 		const attributes = {
@@ -139,14 +150,8 @@ export const fetchInstrumentation: HandlerInstrumentation<Request, OrPromise<Res
 	getAttributesFromResult: (response) => {
 		return gatherResponseAttributes(response)
 	},
-	runFinally: (span, request) => {
-		const readable = span as unknown as ReadableSpan
-		if (readable.attributes['http.route']) {
-			const method = request.method.toUpperCase()
-			span.updateName(`${method} ${readable.attributes['http.route']}`)
-		}
-		return span
-	},
+	executionSucces: updateSpanNameOnRoute,
+	executionFailed: updateSpanNameOnRoute,
 }
 
 type getFetchConfig = (config: ResolvedTraceConfig) => FetcherConfig
