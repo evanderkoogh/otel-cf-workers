@@ -13,11 +13,11 @@ import { DOClass, instrumentDOClass } from './instrumentation/do.js'
 import { scheduledInstrumentation } from './instrumentation/scheduled.js'
 //@ts-ignore
 import * as versions from '../versions.json'
-import { createEmailHandler } from './instrumentation/email.js'
 import { instrumentEnv } from './instrumentation/env.js'
 import { versionAttributes } from './instrumentation/version.js'
 import { WorkerTracer } from './tracer.js'
 import { PromiseTracker, proxyExecutionContext } from './instrumentation/common.js'
+import { emailInstrumentation } from './instrumentation/email.js'
 
 type FetchHandler = ExportedHandlerFetchHandler<unknown, unknown>
 type ScheduledHandler = ExportedHandlerScheduledHandler<unknown>
@@ -203,7 +203,7 @@ export function instrument<E extends Env, Q, C>(
 
 	if (handler.email) {
 		const emailer = unwrap(handler.email) as EmailHandler
-		handler.email = createEmailHandler(emailer, initialiser)
+		handler.email = createHandlerProxy(handler, emailer, initialiser, emailInstrumentation)
 	}
 
 	return handler
