@@ -1,20 +1,18 @@
-import { trace, SpanOptions, SpanKind, Attributes, Exception, context as api_context } from '@opentelemetry/api'
-import { SemanticAttributes } from '@opentelemetry/semantic-conventions'
-import { Initialiser, setConfig } from '../config.js'
-import { exportSpans, proxyExecutionContext } from './common.js'
-import { instrumentEnv } from './env.js'
+import { trace, SpanKind, Attributes, Span } from '@opentelemetry/api'
 import { unwrap, wrap } from '../wrap.js'
-import { versionAttributes } from './version.js'
+import { HandlerInstrumentation, InitialSpanInfo, OrPromise } from '../types.js'
+import { ATTR_FAAS_TRIGGER, FAAS_TRIGGER_VALUE_PUBSUB } from '@opentelemetry/semantic-conventions/incubating'
 
 type QueueHandler = ExportedHandlerQueueHandler<unknown, unknown>
 export type QueueHandlerArgs = Parameters<QueueHandler>
 
-const traceIdSymbol = Symbol('traceId')
-
 class MessageStatusCount {
 	succeeded = 0
 	failed = 0
+	implicitly_acked = 0
+	implicitly_retried = 0
 	readonly total: number
+
 	constructor(total: number) {
 		this.total = total
 	}
@@ -24,6 +22,7 @@ class MessageStatusCount {
 	}
 
 	ackRemaining() {
+		this.implicitly_acked = this.total - this.succeeded - this.failed
 		this.succeeded = this.total - this.failed
 	}
 
@@ -32,6 +31,7 @@ class MessageStatusCount {
 	}
 
 	retryRemaining() {
+		this.implicitly_retried = this.total - this.succeeded - this.failed
 		this.failed = this.total - this.succeeded
 	}
 
@@ -41,6 +41,8 @@ class MessageStatusCount {
 			'queue.messages_success': this.succeeded,
 			'queue.messages_failed': this.failed,
 			'queue.batch_success': this.succeeded === this.total,
+			'queue.implicitly_acked': this.implicitly_acked,
+			'queue.implicitly_retried': this.implicitly_retried,
 		}
 	}
 }
@@ -131,60 +133,40 @@ const proxyMessageBatch = (batch: MessageBatch, count: MessageStatusCount) => {
 	return wrap(batch, batchHandler)
 }
 
-export function executeQueueHandler(queueFn: QueueHandler, [batch, env, ctx]: QueueHandlerArgs): Promise<void> {
-	const count = new MessageStatusCount(batch.messages.length)
-	batch = proxyMessageBatch(batch, count)
-	const tracer = trace.getTracer('queueHandler')
-	const options: SpanOptions = {
-		attributes: {
-			[SemanticAttributes.FAAS_TRIGGER]: 'pubsub',
-			'queue.name': batch.queue,
-		},
-		kind: SpanKind.CONSUMER,
-	}
-	Object.assign(options.attributes!, versionAttributes(env))
-	const promise = tracer.startActiveSpan(`queueHandler ${batch.queue}`, options, async (span) => {
-		const traceId = span.spanContext().traceId
-		api_context.active().setValue(traceIdSymbol, traceId)
-		try {
-			const result = await queueFn(batch, env, ctx)
-			span.setAttribute('queue.implicitly_acked', count.total - count.succeeded - count.failed)
-			count.ackRemaining()
-			span.setAttributes(count.toAttributes())
-			span.end()
-			return result
-		} catch (error) {
-			span.recordException(error as Exception)
-			span.setAttribute('queue.implicitly_retried', count.total - count.succeeded - count.failed)
-			count.retryRemaining()
-			span.end()
-			throw error
+export class QueueInstrumentation implements HandlerInstrumentation<MessageBatch, OrPromise<void>> {
+	private count?: MessageStatusCount
+
+	getInitialSpanInfo(batch: MessageBatch): InitialSpanInfo {
+		return {
+			name: `queueHandler ${batch.queue}`,
+			options: {
+				attributes: {
+					[ATTR_FAAS_TRIGGER]: FAAS_TRIGGER_VALUE_PUBSUB,
+					'queue.name': batch.queue,
+				},
+				kind: SpanKind.CONSUMER,
+			},
 		}
-	})
-	return promise
-}
-
-export function createQueueHandler(queueFn: QueueHandler, initialiser: Initialiser) {
-	const queueHandler: ProxyHandler<QueueHandler> = {
-		async apply(target, _thisArg, argArray: Parameters<QueueHandler>): Promise<void> {
-			const [batch, orig_env, orig_ctx] = argArray
-			const config = initialiser(orig_env as Record<string, unknown>, batch)
-			const env = instrumentEnv(orig_env as Record<string, unknown>)
-			const { ctx, tracker } = proxyExecutionContext(orig_ctx)
-			const context = setConfig(config)
-
-			try {
-				const args: QueueHandlerArgs = [batch, env, ctx]
-
-				return await api_context.with(context, executeQueueHandler, undefined, target, args)
-			} catch (error) {
-				throw error
-			} finally {
-				orig_ctx.waitUntil(exportSpans(tracker))
-			}
-		},
 	}
-	return wrap(queueFn, queueHandler)
+
+	instrumentTrigger(batch: MessageBatch): MessageBatch {
+		this.count = new MessageStatusCount(batch.messages.length)
+		return proxyMessageBatch(batch, this.count)
+	}
+
+	executionSucces(span: Span) {
+		if (this.count) {
+			this.count.ackRemaining()
+			span.setAttributes(this.count.toAttributes())
+		}
+	}
+
+	executionFailed(span: Span) {
+		if (this.count) {
+			this.count.retryRemaining()
+			span.setAttributes(this.count.toAttributes())
+		}
+	}
 }
 
 function instrumentQueueSend(fn: Queue<unknown>['send'], name: string): Queue<unknown>['send'] {

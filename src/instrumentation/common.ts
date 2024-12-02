@@ -50,13 +50,8 @@ export async function exportSpans(tracker?: PromiseTracker) {
 	const tracer = trace.getTracer('export')
 	if (tracer instanceof WorkerTracer) {
 		await scheduler.wait(1)
-		if (tracker) {
-			await tracker.wait()
-		}
-		const promises = tracer.spanProcessors.map(async (spanProcessor) => {
-			await spanProcessor.forceFlush()
-		})
-		await Promise.allSettled(promises)
+		await tracker?.wait()
+		await tracer.forceFlush()
 	} else {
 		console.error('The global tracer is not of type WorkerTracer and can not export spans')
 	}
