@@ -1,5 +1,22 @@
 # @microlabs/otel-cf-workers
 
+## 1.0.0-rc.49
+
+### Minor Changes
+
+- 83fb993: Add support for email handlers
+- 82a2ff8: add support for `email` handlers
+
+  Example usage:
+
+  ```ts
+  export default {
+  	async email(message, env, ctx) {
+  		// this is running in a trace!
+  	},
+  }
+  ```
+
 ## 1.0.0-rc.48
 
 ### Minor Changes
