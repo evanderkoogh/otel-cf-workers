@@ -8,9 +8,9 @@ import { unwrap } from './wrap.js'
 
 import { fetchInstrumentation, instrumentGlobalFetch } from './instrumentation/fetch.js'
 import { instrumentGlobalCache } from './instrumentation/cache.js'
+import { QueueInstrumentation } from './instrumentation/queue.js'
 import { DOClass, instrumentDOClass } from './instrumentation/do.js'
-import { createQueueHandler } from './instrumentation/queue.js'
-import { createScheduledHandler } from './instrumentation/scheduled.js'
+import { scheduledInstrumentation } from './instrumentation/scheduled.js'
 //@ts-ignore
 import * as versions from '../versions.json'
 import { createEmailHandler } from './instrumentation/email.js'
@@ -193,12 +193,12 @@ export function instrument<E extends Env, Q, C>(
 
 	if (handler.scheduled) {
 		const scheduler = unwrap(handler.scheduled) as ScheduledHandler
-		handler.scheduled = createScheduledHandler(scheduler, initialiser)
+		handler.scheduled = createHandlerProxy(handler, scheduler, initialiser, scheduledInstrumentation)
 	}
 
 	if (handler.queue) {
 		const queuer = unwrap(handler.queue) as QueueHandler
-		handler.queue = createQueueHandler(queuer, initialiser)
+		handler.queue = createHandlerProxy(handler, queuer, initialiser, new QueueInstrumentation())
 	}
 
 	if (handler.email) {
