@@ -293,7 +293,7 @@ Bindings:
 - [x] Queue
 - [x] Durable Objects
 - [ ] R2
-- [ ] D1
+- [x] D1
 - [x] Service Bindings
 - [x] Analytics Engine
 - [ ] Browser Rendering
