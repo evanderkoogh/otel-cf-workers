@@ -39,7 +39,7 @@ const isD1Database = (item?: unknown): item is D1Database => {
 	return !!(item as D1Database)?.exec && !!(item as D1Database)?.prepare
 }
 
-const instrumentEnv = (env: Record<string, unknown>): Record<string, unknown> => {
+const instrumentEnv = <E extends Record<string, unknown>>(env: E): E => {
 	const envHandler: ProxyHandler<Record<string, unknown>> = {
 		get: (target, prop, receiver) => {
 			const item = Reflect.get(target, prop, receiver)
@@ -66,7 +66,7 @@ const instrumentEnv = (env: Record<string, unknown>): Record<string, unknown> =>
 			}
 		},
 	}
-	return wrap(env, envHandler)
+	return wrap(env, envHandler) as E
 }
 
 export { instrumentEnv }
