@@ -1,7 +1,7 @@
 name = "queues-example"
 main = "src/index.ts"
 compatibility_date = "2023-04-02"
-compatibility_flags = [ "nodejs_compat" ]
+compatibility_flags = [ "nodejs_compat", "nodejs_zlib ]
 
 # Worker defines a binding, named "QUEUE", which gives it a capability
 # to send messages to a Queue, named "my-queue".
