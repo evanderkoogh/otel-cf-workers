@@ -9,7 +9,7 @@ import {
 	context as api_context,
 	trace,
 } from '@opentelemetry/api'
-import { sanitizeAttributes } from '@opentelemetry/core'
+import { InstrumentationScope, sanitizeAttributes } from '@opentelemetry/core'
 import { Resource } from '@opentelemetry/resources'
 import { SpanProcessor, RandomIdGenerator, ReadableSpan, SamplingDecision } from '@opentelemetry/sdk-trace-base'
 
@@ -21,10 +21,12 @@ let withNextSpanAttributes: Attributes
 export class WorkerTracer implements Tracer {
 	private readonly _spanProcessors: SpanProcessor[]
 	private readonly resource: Resource
+	private readonly scope: InstrumentationScope
 	private readonly idGenerator: RandomIdGenerator = new RandomIdGenerator()
-	constructor(spanProcessors: SpanProcessor[], resource: Resource) {
+	constructor(spanProcessors: SpanProcessor[], resource: Resource, scope: InstrumentationScope) {
 		this._spanProcessors = spanProcessors
 		this.resource = resource
+		this.scope = scope
 	}
 
 	get spanProcessors() {
@@ -71,6 +73,7 @@ export class WorkerTracer implements Tracer {
 				})
 			},
 			resource: this.resource,
+			scope: this.scope,
 			spanContext,
 			parentSpanId,
 			spanKind,

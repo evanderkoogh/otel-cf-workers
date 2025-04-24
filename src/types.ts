@@ -3,6 +3,7 @@ import { ReadableSpan, Sampler, SpanExporter, SpanProcessor } from '@opentelemet
 import { OTLPExporterConfig } from './exporter.js'
 import { FetchHandlerConfig, FetcherConfig } from './instrumentation/fetch.js'
 import { TailSampleFn } from './sampling.js'
+import { InstrumentationScope } from '@opentelemetry/core'
 
 export type PostProcessorFn = (spans: ReadableSpan[]) => ReadableSpan[]
 
@@ -17,6 +18,8 @@ export interface ServiceConfig {
 	namespace?: string
 	version?: string
 }
+
+export interface ScopeConfig extends InstrumentationScope {}
 
 export interface ParentRatioSamplingConfig {
 	acceptRemote?: boolean
@@ -36,6 +39,7 @@ export interface InstrumentationOptions {
 
 interface TraceConfigBase {
 	service: ServiceConfig
+	scope?: ScopeConfig
 	handlers?: HandlerConfig
 	fetch?: FetcherConfig
 	postProcessor?: PostProcessorFn
@@ -66,6 +70,7 @@ export interface ResolvedTraceConfig extends TraceConfigBase {
 	spanProcessors: SpanProcessor[]
 	propagator: TextMapPropagator
 	instrumentation: InstrumentationOptions
+	scope: InstrumentationScope
 }
 
 export interface DOConstructorTrigger {
