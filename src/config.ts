@@ -8,7 +8,7 @@ import {
 	Trigger,
 } from './types.js'
 import { W3CTraceContextPropagator } from '@opentelemetry/core'
-import { AlwaysOnSampler, ReadableSpan, Sampler, SpanExporter } from '@opentelemetry/sdk-trace-base'
+import { AlwaysOnSampler, RandomIdGenerator, ReadableSpan, Sampler, SpanExporter } from '@opentelemetry/sdk-trace-base'
 
 import { OTLPExporter } from './exporter.js'
 import { multiTailSampler, isHeadSampled, isRootErrorSpan, createSampler } from './sampling.js'
@@ -70,6 +70,7 @@ export function parseConfig(supplied: TraceConfig): ResolvedTraceConfig {
 				instrumentGlobalCache: supplied.instrumentation?.instrumentGlobalCache ?? true,
 				instrumentGlobalFetch: supplied.instrumentation?.instrumentGlobalFetch ?? true,
 			},
+			idGenerator: supplied.idGenerator || new RandomIdGenerator(),
 		}
 	} else {
 		const exporter = isSpanExporter(supplied.exporter) ? supplied.exporter : new OTLPExporter(supplied.exporter)

@@ -1,5 +1,5 @@
 import { TextMapPropagator } from '@opentelemetry/api'
-import { ReadableSpan, Sampler, SpanExporter, SpanProcessor } from '@opentelemetry/sdk-trace-base'
+import { IdGenerator, ReadableSpan, Sampler, SpanExporter, SpanProcessor } from '@opentelemetry/sdk-trace-base'
 import { OTLPExporterConfig } from './exporter.js'
 import { FetchHandlerConfig, FetcherConfig } from './instrumentation/fetch.js'
 import { TailSampleFn } from './sampling.js'
@@ -42,6 +42,7 @@ interface TraceConfigBase {
 	sampling?: SamplingConfig
 	propagator?: TextMapPropagator
 	instrumentation?: InstrumentationOptions
+	idGenerator?: IdGenerator
 }
 
 interface TraceConfigExporter extends TraceConfigBase {
@@ -66,6 +67,7 @@ export interface ResolvedTraceConfig extends TraceConfigBase {
 	spanProcessors: SpanProcessor[]
 	propagator: TextMapPropagator
 	instrumentation: InstrumentationOptions
+	idGenerator: IdGenerator
 }
 
 export interface DOConstructorTrigger {
