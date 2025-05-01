@@ -1,25 +1,24 @@
 import {
-	SpanContext,
-	Link,
-	SpanKind,
-	TimeInput,
-	Exception,
 	Attributes,
+	AttributeValue,
+	Exception,
 	HrTime,
+	Link,
 	Span,
+	SpanContext,
+	SpanKind,
 	SpanStatus,
 	SpanStatusCode,
-	AttributeValue,
+	TimeInput,
 } from '@opentelemetry/api'
 import {
 	hrTimeDuration,
-	InstrumentationLibrary,
-	isAttributeKey,
+	InstrumentationScope,
 	isAttributeValue,
 	isTimeInput,
 	sanitizeAttributes,
 } from '@opentelemetry/core'
-import { IResource } from '@opentelemetry/resources'
+import { Resource } from '@opentelemetry/resources'
 import { ReadableSpan, TimedEvent } from '@opentelemetry/sdk-trace-base'
 import { SemanticAttributes } from '@opentelemetry/semantic-conventions'
 
@@ -29,8 +28,9 @@ interface SpanInit {
 	attributes: unknown
 	name: string
 	onEnd: OnSpanEnd
-	resource: IResource
+	resource: Resource
 	spanContext: SpanContext
+	parentSpanContext?: SpanContext
 	links?: Link[]
 	parentSpanId?: string
 	spanKind?: SpanKind
@@ -78,11 +78,17 @@ function getHrTime(input?: TimeInput): HrTime {
 	throw new Error(`unreachable value: ${JSON.stringify(v)}`)
 }
 
+// previously exported from OTel, now private
+function isAttributeKey(key: unknown): key is string {
+	return typeof key === 'string' && key.length > 0
+}
+
 export class SpanImpl implements Span, ReadableSpan {
 	name: string
 	private readonly _spanContext: SpanContext
 	private readonly onEnd: OnSpanEnd
 	readonly parentSpanId?: string
+	readonly parentSpanContext?: SpanContext | undefined
 	readonly kind: SpanKind
 	readonly attributes: Attributes
 	status: SpanStatus = {
@@ -93,8 +99,8 @@ export class SpanImpl implements Span, ReadableSpan {
 	readonly startTime: HrTime
 	readonly events: TimedEvent[] = []
 	readonly links: Link[]
-	readonly resource: IResource
-	instrumentationLibrary: InstrumentationLibrary = { name: '@microlabs/otel-cf-workers' }
+	readonly resource: Resource
+	instrumentationScope: InstrumentationScope = { name: '@microlabs/otel-cf-workers' }
 	private _ended: boolean = false
 	private _droppedAttributesCount: number = 0
 	private _droppedEventsCount: number = 0
@@ -104,6 +110,7 @@ export class SpanImpl implements Span, ReadableSpan {
 		this.name = init.name
 		this._spanContext = init.spanContext
 		this.parentSpanId = init.parentSpanId
+		this.parentSpanContext = init.parentSpanContext
 		this.kind = init.spanKind || SpanKind.INTERNAL
 		this.attributes = sanitizeAttributes(init.attributes)
 		this.startTime = getHrTime(init.startTime)

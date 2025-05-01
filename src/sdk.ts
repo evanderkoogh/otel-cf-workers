@@ -1,15 +1,15 @@
 import { propagation } from '@opentelemetry/api'
-import { Resource } from '@opentelemetry/resources'
+import { Resource, resourceFromAttributes } from '@opentelemetry/resources'
 
 import { Initialiser, parseConfig } from './config.js'
-import { WorkerTracerProvider } from './provider.js'
-import { Trigger, TraceConfig, ResolvedTraceConfig } from './types.js'
-import { unwrap } from './wrap.js'
-import { createFetchHandler, instrumentGlobalFetch } from './instrumentation/fetch.js'
 import { instrumentGlobalCache } from './instrumentation/cache.js'
-import { createQueueHandler } from './instrumentation/queue.js'
 import { DOClass, instrumentDOClass } from './instrumentation/do.js'
+import { createFetchHandler, instrumentGlobalFetch } from './instrumentation/fetch.js'
+import { createQueueHandler } from './instrumentation/queue.js'
 import { createScheduledHandler } from './instrumentation/scheduled.js'
+import { WorkerTracerProvider } from './provider.js'
+import { ResolvedTraceConfig, TraceConfig, Trigger } from './types.js'
+import { unwrap } from './wrap.js'
 //@ts-ignore
 import * as versions from '../versions.json'
 import { createEmailHandler } from './instrumentation/email.js'
@@ -45,12 +45,12 @@ const createResource = (config: ResolvedTraceConfig): Resource => {
 		'telemetry.sdk.version': versions['@microlabs/otel-cf-workers'],
 		'telemetry.sdk.build.node_version': versions['node'],
 	}
-	const serviceResource = new Resource({
+	const serviceResource = resourceFromAttributes({
 		'service.name': config.service.name,
 		'service.namespace': config.service.namespace,
 		'service.version': config.service.version,
 	})
-	const resource = new Resource(workerResourceAttrs)
+	const resource = resourceFromAttributes(workerResourceAttrs)
 	return resource.merge(serviceResource)
 }
 
