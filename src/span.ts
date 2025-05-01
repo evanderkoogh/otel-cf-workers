@@ -14,6 +14,7 @@ import {
 import {
 	hrTimeDuration,
 	InstrumentationLibrary,
+	InstrumentationScope,
 	isAttributeKey,
 	isAttributeValue,
 	isTimeInput,
@@ -30,6 +31,7 @@ interface SpanInit {
 	name: string
 	onEnd: OnSpanEnd
 	resource: IResource
+	scope: InstrumentationScope
 	spanContext: SpanContext
 	links?: Link[]
 	parentSpanId?: string
@@ -94,7 +96,10 @@ export class SpanImpl implements Span, ReadableSpan {
 	readonly events: TimedEvent[] = []
 	readonly links: Link[]
 	readonly resource: IResource
-	instrumentationLibrary: InstrumentationLibrary = { name: '@microlabs/otel-cf-workers' }
+	readonly instrumentationScope: InstrumentationScope
+	// TODO: remove this when upgrading to the latest packages.
+	// ReadableSpan still asks for it, even though it's deprecated.
+	readonly instrumentationLibrary: InstrumentationLibrary
 	private _ended: boolean = false
 	private _droppedAttributesCount: number = 0
 	private _droppedEventsCount: number = 0
@@ -109,6 +114,10 @@ export class SpanImpl implements Span, ReadableSpan {
 		this.startTime = getHrTime(init.startTime)
 		this.links = init.links || []
 		this.resource = init.resource
+
+		this.instrumentationScope = init.scope
+		// instrumentationLibrary is deprecated in favor of instrumentationScope, it has the same shape
+		this.instrumentationLibrary = init.scope
 		this.onEnd = init.onEnd
 	}
 

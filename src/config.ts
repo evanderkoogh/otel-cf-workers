@@ -70,6 +70,7 @@ export function parseConfig(supplied: TraceConfig): ResolvedTraceConfig {
 				instrumentGlobalCache: supplied.instrumentation?.instrumentGlobalCache ?? true,
 				instrumentGlobalFetch: supplied.instrumentation?.instrumentGlobalFetch ?? true,
 			},
+			scope: supplied.scope || { name: '@microlabs/otel-cf-workers' },
 		}
 	} else {
 		const exporter = isSpanExporter(supplied.exporter) ? supplied.exporter : new OTLPExporter(supplied.exporter)
