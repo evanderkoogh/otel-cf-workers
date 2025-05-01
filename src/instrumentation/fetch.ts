@@ -8,6 +8,7 @@ import {
 	Exception,
 	Context,
 	SpanStatusCode,
+	Span,
 } from '@opentelemetry/api'
 import { Initialiser, getActiveConfig, setConfig } from '../config.js'
 import { wrap } from '../wrap.js'
@@ -23,6 +24,21 @@ export interface FetcherConfig {
 }
 
 export type AcceptTraceContextFn = (request: Request) => boolean
+
+export interface PostProcessParams {
+	/**
+	 * The request object that was passed to the fetch handler.
+	 */
+	request: Request
+	/**
+	 * The generated response object.
+	 */
+	response: Response
+	/**
+	 * A readable version of the span object that can be used to access the span's attributes and events.
+	 */
+	readable: ReadableSpan
+}
 export interface FetchHandlerConfig {
 	/**
 	 * Whether to enable context propagation for incoming requests to `fetch`.
@@ -30,6 +46,10 @@ export interface FetchHandlerConfig {
 	 * @default true
 	 */
 	acceptTraceContext?: boolean | AcceptTraceContextFn
+	/**
+	 * Allows further customization of the generated span, based on the request/response data.
+	 */
+	postProcess?: (span: Span, ctx: PostProcessParams) => void
 }
 
 type FetchHandler = ExportedHandlerFetchHandler
@@ -159,6 +179,7 @@ export function executeFetchHandler(fetchFn: FetchHandler, [request, env, ctx]: 
 			const response = await fetchFn(request, env, ctx)
 			span.setAttributes(gatherResponseAttributes(response))
 
+			getActiveConfig()?.handlers.fetch.postProcess?.(span, { request, response, readable })
 			return response
 		} catch (error) {
 			span.recordException(error as Exception)
