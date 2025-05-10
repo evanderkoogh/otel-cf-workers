@@ -2,13 +2,16 @@ import { BasicTracerProvider, InMemorySpanExporter, SimpleSpanProcessor } from '
 import { beforeEach, describe, expect, test, vitest } from 'vitest'
 import { AsyncLocalStorageContextManager } from '../../src/context'
 import { instrumentStorage } from '../../src/instrumentation/do-storage'
+import { context, trace } from '@opentelemetry/api'
 
 const exporter = new InMemorySpanExporter()
-const provider = new BasicTracerProvider()
-provider.addSpanProcessor(new SimpleSpanProcessor(exporter))
-provider.register({
-	contextManager: new AsyncLocalStorageContextManager(),
+
+const provider = new BasicTracerProvider({
+	spanProcessors: [new SimpleSpanProcessor(exporter)],
 })
+
+trace.setGlobalTracerProvider(provider)
+context.setGlobalContextManager(new AsyncLocalStorageContextManager())
 
 // not entirely accurate, but enough to satisfy types
 const sqlMock = {

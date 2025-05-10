@@ -1,6 +1,6 @@
-import { createExportTraceServiceRequest } from '@opentelemetry/otlp-transformer'
-import { ExportServiceError, OTLPExporterError } from '@opentelemetry/otlp-exporter-base'
 import { ExportResult, ExportResultCode } from '@opentelemetry/core'
+import { OTLPExporterError } from '@opentelemetry/otlp-exporter-base'
+import { JsonTraceSerializer } from '@opentelemetry/otlp-transformer'
 import { SpanExporter } from '@opentelemetry/sdk-trace-base'
 import { unwrap } from './wrap.js'
 
@@ -27,7 +27,7 @@ export class OTLPExporter implements SpanExporter {
 			.then(() => {
 				resultCallback({ code: ExportResultCode.SUCCESS })
 			})
-			.catch((error: ExportServiceError) => {
+			.catch((error) => {
 				resultCallback({ code: ExportResultCode.FAILED, error })
 			})
 	}
@@ -43,11 +43,10 @@ export class OTLPExporter implements SpanExporter {
 	}
 
 	send(items: any[], onSuccess: () => void, onError: (error: OTLPExporterError) => void): void {
-		const exportMessage = createExportTraceServiceRequest(items, {
-			useHex: true,
-			useLongBits: false,
-		})
-		const body = JSON.stringify(exportMessage)
+		const decoder = new TextDecoder()
+		const exportMessage = JsonTraceSerializer.serializeRequest(items)
+
+		const body = decoder.decode(exportMessage)
 		const params: RequestInit = {
 			method: 'POST',
 			headers: this.headers,
