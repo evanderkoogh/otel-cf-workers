@@ -21,7 +21,7 @@
 		"format": "prettier --ignore-unknown --write .",
 		"build:src": "tsup",
 		"build:versions": "pnpm version --json > versions.json",
-		"build": "run-s -l build:versions build:src",
+		"build": "run-s -l build:versions build:src test",
 		"cs-version": "changeset version",
 		"cs-publish": "changeset publish",
 		"release": "run-s -l clean cs-version build check cs-publish",
@@ -32,7 +32,7 @@
 		"prepare": "husky",
 		"test": "vitest run",
 		"test:dev": "vitest",
-		"ci": "run-s -l clean build check && pnpm test"
+		"ci": "run-s -l clean build check"
 	},
 	"files": [
 		"dist"
@@ -45,19 +45,19 @@
 		"@opentelemetry/otlp-transformer": "^0.200.0",
 		"@opentelemetry/resources": "^2.0.0",
 		"@opentelemetry/sdk-trace-base": "^2.0.0",
-		"@opentelemetry/semantic-conventions": "^1.32.0"
+		"@opentelemetry/semantic-conventions": "^1.33.0"
 	},
 	"devDependencies": {
-		"@changesets/cli": "^2.27.8",
-		"@cloudflare/workers-types": "^4.20240909.0",
-		"husky": "^9.1.6",
-		"lint-staged": "^15.2.10",
+		"@changesets/cli": "^2.29.3",
+		"@cloudflare/workers-types": "^4.20250510.0",
+		"husky": "^9.1.7",
+		"lint-staged": "^15.5.2",
 		"npm-run-all": "^4.1.5",
-		"prettier": "^3.3.3",
+		"prettier": "^3.5.3",
 		"rimraf": "^6.0.1",
-		"tsup": "^8.2.4",
-		"typescript": "^5.6.2",
-		"vitest": "^2.1.1"
+		"tsup": "^8.4.0",
+		"typescript": "^5.8.3",
+		"vitest": "^2.1.9"
 	},
 	"peerDependencies": {
 		"@opentelemetry/api": "~1.9.0"

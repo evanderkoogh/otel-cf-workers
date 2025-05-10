@@ -19,7 +19,7 @@ const sqlMock = {
 	prepare: vitest.fn().mockReturnValue(undefined),
 	ingest: vitest.fn().mockReturnValue(undefined),
 	databaseSize: 0,
-	Cursor: null as unknown as SqlStorageCursor,
+	Cursor: null as unknown as SqlStorageCursor<any>,
 	Statement: null as unknown as SqlStorageStatement,
 } as unknown as SqlStorage
 
@@ -39,6 +39,9 @@ const storage = {
 	getBookmarkForTime: vitest.fn().mockResolvedValue(''),
 	onNextSessionRestoreBookmark: vitest.fn().mockResolvedValue(''),
 	sql: sqlMock,
+	waitForBookmark: vitest.fn().mockResolvedValue(null),
+	ensureReplicas: vitest.fn().mockResolvedValue(null),
+	disableReplicas: vitest.fn().mockResolvedValue(null),
 } satisfies DurableObjectStorage
 
 beforeEach(() => {
