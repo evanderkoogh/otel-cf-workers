@@ -5,19 +5,20 @@ import { Initialiser, parseConfig, setConfig } from './config.js'
 import { WorkerTracerProvider } from './provider.js'
 import { Trigger, TraceConfig, ResolvedTraceConfig, OrPromise, HandlerInstrumentation } from './types.js'
 import { unwrap } from './wrap.js'
+import { WorkerTracer } from './tracer.js'
 
 import { fetchInstrumentation, instrumentGlobalFetch } from './instrumentation/fetch.js'
 import { instrumentGlobalCache } from './instrumentation/cache.js'
 import { QueueInstrumentation } from './instrumentation/queue.js'
 import { DOClass, instrumentDOClass } from './instrumentation/do.js'
 import { scheduledInstrumentation } from './instrumentation/scheduled.js'
-//@ts-ignore
-import * as versions from '../versions.json'
 import { instrumentEnv } from './instrumentation/env.js'
 import { versionAttributes } from './instrumentation/version.js'
-import { WorkerTracer } from './tracer.js'
 import { PromiseTracker, proxyExecutionContext } from './instrumentation/common.js'
 import { emailInstrumentation } from './instrumentation/email.js'
+
+//@ts-ignore
+import * as versions from '../versions.json'
 
 type FetchHandler = ExportedHandlerFetchHandler<unknown, unknown>
 type ScheduledHandler = ExportedHandlerScheduledHandler<unknown>
