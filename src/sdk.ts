@@ -3,7 +3,7 @@ import { Resource, resourceFromAttributes } from '@opentelemetry/resources'
 
 import { Initialiser, parseConfig, setConfig } from './config.js'
 import { WorkerTracerProvider } from './provider.js'
-import { Trigger, TraceConfig, ResolvedTraceConfig, OrPromise, HandlerInstrumentation } from './types.js'
+import { Trigger, ResolvedTraceConfig, OrPromise, HandlerInstrumentation, ConfigurationOption } from './types.js'
 import { unwrap } from './wrap.js'
 import { WorkerTracer } from './tracer.js'
 
@@ -31,9 +31,6 @@ type HandlerFn<T extends Trigger, E extends Env, R extends any> = (
 	env: E,
 	ctx: ExecutionContext,
 ) => R | Promise<R>
-
-type ResolveConfigFn<Env = any> = (env: Env, trigger: Trigger) => TraceConfig
-type ConfigurationOption = TraceConfig | ResolveConfigFn
 
 export function isRequest(trigger: Trigger): trigger is Request {
 	return trigger instanceof Request

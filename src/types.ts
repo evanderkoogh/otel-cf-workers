@@ -6,6 +6,9 @@ import { TailSampleFn } from './sampling.js'
 
 export type OrPromise<T extends any> = T | Promise<T>
 
+export type ResolveConfigFn<Env = any> = (env: Env, trigger: Trigger) => TraceConfig
+export type ConfigurationOption = TraceConfig | ResolveConfigFn
+
 export type PostProcessorFn = (spans: ReadableSpan[]) => ReadableSpan[]
 
 export type ExporterConfig = OTLPExporterConfig | SpanExporter
