@@ -1,8 +1,12 @@
-import { Context, Span } from '@opentelemetry/api'
+import { Context, Span, TraceFlags } from '@opentelemetry/api'
 import { ReadableSpan, SpanExporter } from '@opentelemetry/sdk-trace-base'
 import { ExportResultCode } from '@opentelemetry/core'
 //import { getActiveConfig } from './config'
 import { TraceFlushableSpanProcessor } from './types'
+
+function isSpanSampled(span: ReadableSpan) {
+	return (span.spanContext().traceFlags & TraceFlags.SAMPLED) === TraceFlags.SAMPLED
+}
 
 class TraceState {
 	private unexportedSpans: ReadableSpan[] = []
@@ -28,7 +32,7 @@ class TraceState {
 	}
 
 	async flush(): Promise<void> {
-		//Check/do sampling
+		this.unexportedSpans = this.unexportedSpans.filter(isSpanSampled)
 		if (this.unexportedSpans.length > 0) {
 			const finishedSpans = this.unexportedSpans.filter((span) => !this.inprogressSpans.has(span.spanContext().spanId))
 			this.unexportedSpans = this.unexportedSpans.filter((span) => this.inprogressSpans.has(span.spanContext().spanId))
@@ -36,7 +40,9 @@ class TraceState {
 				this.exportPromises.push(this.exportSpans(finishedSpans))
 			}
 		}
-		await Promise.allSettled(this.exportPromises)
+		if (this.exportPromises.length > 0) {
+			await Promise.allSettled(this.exportPromises)
+		}
 	}
 
 	private async exportSpans(spans: ReadableSpan[]): Promise<void> {
