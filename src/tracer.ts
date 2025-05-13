@@ -1,30 +1,31 @@
 import {
 	Attributes,
-	Tracer,
-	TraceFlags,
+	Context,
 	Span,
 	SpanKind,
 	SpanOptions,
-	Context,
+	TraceFlags,
+	Tracer,
 	context as api_context,
 	trace,
 } from '@opentelemetry/api'
 import { sanitizeAttributes } from '@opentelemetry/core'
 import { Resource } from '@opentelemetry/resources'
-import { SpanProcessor, RandomIdGenerator, ReadableSpan, SamplingDecision } from '@opentelemetry/sdk-trace-base'
+import { IdGenerator, ReadableSpan, SamplingDecision, SpanProcessor } from '@opentelemetry/sdk-trace-base'
 
-import { SpanImpl } from './span.js'
 import { getActiveConfig } from './config.js'
+import { SpanImpl } from './span.js'
 
 let withNextSpanAttributes: Attributes
 
 export class WorkerTracer implements Tracer {
 	private readonly _spanProcessors: SpanProcessor[]
 	private readonly resource: Resource
-	private readonly idGenerator: RandomIdGenerator = new RandomIdGenerator()
-	constructor(spanProcessors: SpanProcessor[], resource: Resource) {
+	private readonly idGenerator: IdGenerator
+	constructor(spanProcessors: SpanProcessor[], resource: Resource, idGenerator: IdGenerator) {
 		this._spanProcessors = spanProcessors
 		this.resource = resource
+		this.idGenerator = idGenerator
 	}
 
 	get spanProcessors() {
