@@ -56,6 +56,7 @@ export function parseConfig(supplied: TraceConfig): ResolvedTraceConfig {
 			handlers: {
 				fetch: {
 					acceptTraceContext: supplied.handlers?.fetch?.acceptTraceContext ?? true,
+					postProcess: supplied.handlers?.fetch?.postProcess,
 				},
 			},
 			postProcessor: supplied.postProcessor || ((spans: ReadableSpan[]) => spans),
