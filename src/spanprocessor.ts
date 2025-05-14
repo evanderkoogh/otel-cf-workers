@@ -1,11 +1,16 @@
-import { Context, Span, TraceFlags } from '@opentelemetry/api'
+import { Context, Span } from '@opentelemetry/api'
 import { ReadableSpan, SpanExporter } from '@opentelemetry/sdk-trace-base'
 import { ExportResultCode } from '@opentelemetry/core'
-//import { getActiveConfig } from './config'
+import { getActiveConfig } from './config'
 import { TraceFlushableSpanProcessor } from './types'
+import { TailSampleFn } from './sampling'
 
-function isSpanSampled(span: ReadableSpan) {
-	return (span.spanContext().traceFlags & TraceFlags.SAMPLED) === TraceFlags.SAMPLED
+function getSampler(): TailSampleFn {
+	const conf = getActiveConfig()
+	if (!conf) {
+		console.log('Could not find config for sampling, sending everything by default')
+	}
+	return conf ? conf.sampling.tailSampler : () => true
 }
 
 class TraceState {
@@ -13,14 +18,17 @@ class TraceState {
 	private inprogressSpans = new Set<string>()
 	private exporter: SpanExporter
 	private exportPromises: Promise<void>[] = []
-	// private traceDecision?: boolean
+	private localRootSpan?: ReadableSpan
+	private traceDecision?: boolean
 
 	constructor(exporter: SpanExporter) {
 		this.exporter = exporter
 	}
 
 	addSpan(span: Span): void {
-		this.unexportedSpans.push(span as unknown as ReadableSpan)
+		const readableSpan = span as unknown as ReadableSpan
+		this.localRootSpan = this.localRootSpan || readableSpan
+		this.unexportedSpans.push(readableSpan)
 		this.inprogressSpans.add(span.spanContext().spanId)
 	}
 
@@ -31,11 +39,23 @@ class TraceState {
 		}
 	}
 
+	sample() {
+		if (this.traceDecision === undefined && this.unexportedSpans.length > 0) {
+			const sampler = getSampler()
+			this.traceDecision = sampler({
+				traceId: this.localRootSpan!.spanContext().traceId,
+				localRootSpan: this.localRootSpan!,
+				spans: this.unexportedSpans,
+			})
+		}
+		this.unexportedSpans = this.traceDecision ? this.unexportedSpans : []
+	}
+
 	async flush(): Promise<void> {
-		this.unexportedSpans = this.unexportedSpans.filter(isSpanSampled)
 		if (this.unexportedSpans.length > 0) {
-			const finishedSpans = this.unexportedSpans.filter((span) => !this.inprogressSpans.has(span.spanContext().spanId))
-			this.unexportedSpans = this.unexportedSpans.filter((span) => this.inprogressSpans.has(span.spanContext().spanId))
+			this.sample()
+			const finishedSpans = this.unexportedSpans.filter((span) => !this.isSpanInProgress(span))
+			this.unexportedSpans = this.unexportedSpans.filter((span) => this.isSpanInProgress(span))
 			if (finishedSpans.length > 0) {
 				this.exportPromises.push(this.exportSpans(finishedSpans))
 			}
@@ -45,12 +65,15 @@ class TraceState {
 		}
 	}
 
+	private isSpanInProgress(span: ReadableSpan) {
+		return this.inprogressSpans.has(span.spanContext().spanId)
+	}
+
 	private async exportSpans(spans: ReadableSpan[]): Promise<void> {
 		await scheduler.wait(1)
 		const promise = new Promise<void>((resolve, reject) => {
 			this.exporter.export(spans, (result) => {
 				if (result.code === ExportResultCode.SUCCESS) {
-					console.log('Done exporting.')
 					resolve()
 				} else {
 					console.log('exporting spans failed! ' + result.error)

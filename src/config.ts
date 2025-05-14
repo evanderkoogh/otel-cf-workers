@@ -8,7 +8,7 @@ import {
 	Trigger,
 } from './types.js'
 import { W3CTraceContextPropagator } from '@opentelemetry/core'
-import { AlwaysOnSampler, ReadableSpan, Sampler, SpanExporter } from '@opentelemetry/sdk-trace-base'
+import { ReadableSpan, Sampler, SpanExporter } from '@opentelemetry/sdk-trace-base'
 
 import { OTLPExporter } from './exporter.js'
 import { multiTailSampler, isHeadSampled, isRootErrorSpan, createSampler } from './sampling.js'
@@ -37,12 +37,8 @@ function isSampler(sampler: Sampler | ParentRatioSamplingConfig): sampler is Sam
 
 export function parseConfig(supplied: TraceConfig): ResolvedTraceConfig {
 	if (isSpanProcessorConfig(supplied)) {
-		const headSampleConf = supplied.sampling?.headSampler
-		const headSampler = headSampleConf
-			? isSampler(headSampleConf)
-				? headSampleConf
-				: createSampler(headSampleConf)
-			: new AlwaysOnSampler()
+		const headSampleConf = supplied.sampling?.headSampler || { ratio: 1 }
+		const headSampler = isSampler(headSampleConf) ? headSampleConf : createSampler(headSampleConf)
 		const spanProcessors = Array.isArray(supplied.spanProcessors) ? supplied.spanProcessors : [supplied.spanProcessors]
 		if (spanProcessors.length === 0) {
 			console.log(
