@@ -15,6 +15,10 @@ const handleDO = async (request: Request, env: Env): Promise<Response> => {
 	return await stub.fetch('https://does-not-exist.com/blah')
 }
 
+const handleNoAsync = (request: Request): Response => {
+	return new Response('Very quick hello!')
+}
+
 const handleRest = async (request: Request, env: Env, ctx: ExecutionContext): Promise<Response> => {
 	trace.getActiveSpan()?.setAttribute('http.route', '/*')
 	withNextSpan({ destination: 'cloudflare' })
@@ -38,6 +42,8 @@ export default {
 			return handleDO(request, env)
 		} else if (pathname === '/error') {
 			throw new Error('You asked for it!')
+		} else if (pathname === '/noasync') {
+			return handleNoAsync(request)
 		} else {
 			return handleRest(request, env, ctx)
 		}

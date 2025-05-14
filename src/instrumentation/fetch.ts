@@ -5,17 +5,15 @@ import {
 	propagation,
 	context as api_context,
 	Attributes,
-	Exception,
 	Context,
-	SpanStatusCode,
+	Span,
 } from '@opentelemetry/api'
-import { Initialiser, getActiveConfig, setConfig } from '../config.js'
+import { getActiveConfig } from '../config.js'
 import { wrap } from '../wrap.js'
-import { instrumentEnv } from './env.js'
-import { exportSpans, proxyExecutionContext } from './common.js'
-import { ResolvedTraceConfig } from '../types.js'
+import { HandlerInstrumentation, OrPromise, ResolvedTraceConfig } from '../types.js'
 import { ReadableSpan } from '@opentelemetry/sdk-trace-base'
-import { versionAttributes } from './version.js'
+
+type IncomingRequest = Parameters<ExportedHandlerFetchHandler>[0]
 
 export type IncludeTraceContextFn = (request: Request) => boolean
 export interface FetcherConfig {
@@ -31,9 +29,6 @@ export interface FetchHandlerConfig {
 	 */
 	acceptTraceContext?: boolean | AcceptTraceContextFn
 }
-
-type FetchHandler = ExportedHandlerFetchHandler
-type FetchHandlerArgs = Parameters<FetchHandler>
 
 const netKeysFromCF = new Set(['colo', 'country', 'request_priority', 'tls_cipher', 'tls_version', 'asn', 'tcp_rtt'])
 
@@ -125,75 +120,38 @@ function getParentContextFromRequest(request: Request) {
 	return acceptTraceContext ? getParentContextFromHeaders(request.headers) : api_context.active()
 }
 
-export function waitUntilTrace(fn: () => Promise<any>): Promise<void> {
-	const tracer = trace.getTracer('waitUntil')
-	return tracer.startActiveSpan('waitUntil', async (span) => {
-		await fn()
-		span.end()
-	})
+function updateSpanNameOnRoute(span: Span, request: IncomingRequest) {
+	const readable = span as unknown as ReadableSpan
+	if (readable.attributes['http.route']) {
+		const method = request.method.toUpperCase()
+		span.updateName(`${method} ${readable.attributes['http.route']}`)
+	}
 }
 
-let cold_start = true
-export function executeFetchHandler(fetchFn: FetchHandler, [request, env, ctx]: FetchHandlerArgs): Promise<Response> {
-	const spanContext = getParentContextFromRequest(request)
-
-	const tracer = trace.getTracer('fetchHandler')
-	const attributes = {
-		['faas.trigger']: 'http',
-		['faas.coldstart']: cold_start,
-		['faas.invocation_id']: request.headers.get('cf-ray') ?? undefined,
-	}
-	cold_start = false
-	Object.assign(attributes, gatherRequestAttributes(request))
-	Object.assign(attributes, gatherIncomingCfAttributes(request))
-	Object.assign(attributes, versionAttributes(env))
-	const options: SpanOptions = {
-		attributes,
-		kind: SpanKind.SERVER,
-	}
-
-	const method = request.method.toUpperCase()
-	const promise = tracer.startActiveSpan(`fetchHandler ${method}`, options, spanContext, async (span) => {
-		const readable = span as unknown as ReadableSpan
-		try {
-			const response = await fetchFn(request, env, ctx)
-			span.setAttributes(gatherResponseAttributes(response))
-
-			return response
-		} catch (error) {
-			span.recordException(error as Exception)
-			span.setStatus({ code: SpanStatusCode.ERROR })
-			throw error
-		} finally {
-			if (readable.attributes['http.route']) {
-				span.updateName(`fetchHandler ${method} ${readable.attributes['http.route']}`)
-			}
-			span.end()
+export const fetchInstrumentation: HandlerInstrumentation<IncomingRequest, OrPromise<Response>> = {
+	getInitialSpanInfo: (request) => {
+		const spanContext = getParentContextFromRequest(request)
+		const attributes = {
+			['faas.trigger']: 'http',
+			['faas.invocation_id']: request.headers.get('cf-ray') ?? undefined,
 		}
-	})
-	return promise
-}
-
-export function createFetchHandler(fetchFn: FetchHandler, initialiser: Initialiser) {
-	const fetchHandler: ProxyHandler<FetchHandler> = {
-		apply: async (target, _thisArg, argArray: Parameters<FetchHandler>): Promise<Response> => {
-			const [request, orig_env, orig_ctx] = argArray
-			const config = initialiser(orig_env as Record<string, unknown>, request)
-			const env = instrumentEnv(orig_env as Record<string, unknown>)
-			const { ctx, tracker } = proxyExecutionContext(orig_ctx)
-			const context = setConfig(config)
-
-			try {
-				const args: FetchHandlerArgs = [request, env, ctx]
-				return await api_context.with(context, executeFetchHandler, undefined, target, args)
-			} catch (error) {
-				throw error
-			} finally {
-				orig_ctx.waitUntil(exportSpans(tracker))
-			}
-		},
-	}
-	return wrap(fetchFn, fetchHandler)
+		Object.assign(attributes, gatherRequestAttributes(request))
+		Object.assign(attributes, gatherIncomingCfAttributes(request))
+		const method = request.method.toUpperCase()
+		return {
+			name: `fetchHandler ${method}`,
+			options: {
+				attributes,
+				kind: SpanKind.SERVER,
+			},
+			context: spanContext,
+		}
+	},
+	getAttributesFromResult: (response) => {
+		return gatherResponseAttributes(response)
+	},
+	executionSucces: updateSpanNameOnRoute,
+	executionFailed: updateSpanNameOnRoute,
 }
 
 type getFetchConfig = (config: ResolvedTraceConfig) => FetcherConfig

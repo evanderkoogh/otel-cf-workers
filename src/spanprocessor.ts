@@ -1,182 +1,122 @@
-import { Context, Span, trace } from '@opentelemetry/api'
-import { ReadableSpan, SpanExporter, SpanProcessor } from '@opentelemetry/sdk-trace-base'
-import { ExportResult, ExportResultCode } from '@opentelemetry/core'
-import { Action, State, stateMachine } from './vendor/ts-checked-fsm/StateMachine.js'
+import { Context, Span } from '@opentelemetry/api'
+import { ReadableSpan, SpanExporter } from '@opentelemetry/sdk-trace-base'
+import { ExportResultCode } from '@opentelemetry/core'
+import { getActiveConfig } from './config'
+import { TraceFlushableSpanProcessor } from './types'
+import { TailSampleFn } from './sampling'
 
-import { getActiveConfig } from './config.js'
-import { TailSampleFn } from './sampling.js'
-import { PostProcessorFn } from './types.js'
-
-type CompletedTrace = {
-	traceId: string
-	localRootSpan: ReadableSpan
-	completedSpans: ReadableSpan[]
-}
-
-type InProgressTrace = {
-	inProgressSpanIds: Set<string>
-} & CompletedTrace
-
-type InitialState = State<'not_started'>
-type InProgressTraceState = State<'in_progress', InProgressTrace>
-type TraceCompleteState = State<'trace_complete', CompletedTrace>
-type ExportingState = State<'exporting', { promise: Promise<ExportResult> }>
-type DoneState = State<'done'>
-
-type StartExportArguments = {
-	exporter: SpanExporter
-	tailSampler: TailSampleFn
-	postProcessor: PostProcessorFn
-}
-
-type StartSpanAction = Action<'startSpan', { span: Span }>
-type EndSpanAction = Action<'endSpan', { span: ReadableSpan }>
-type StartExportAction = Action<'startExport', { args: StartExportArguments }>
-
-function newTrace(currentState: InitialState, { span }: StartSpanAction): InProgressTraceState {
-	const spanId = span.spanContext().spanId
-	return {
-		...currentState,
-		stateName: 'in_progress',
-		traceId: span.spanContext().traceId,
-		localRootSpan: span as unknown as ReadableSpan,
-		completedSpans: [] as ReadableSpan[],
-		inProgressSpanIds: new Set([spanId]),
-	} as const
-}
-
-function newSpan(currentState: InProgressTraceState, { span }: StartSpanAction): InProgressTraceState {
-	const spanId = span.spanContext().spanId
-	currentState.inProgressSpanIds.add(spanId)
-	return { ...currentState }
-}
-
-function endSpan(
-	currentState: InProgressTraceState,
-	{ span }: EndSpanAction,
-): InProgressTraceState | TraceCompleteState {
-	currentState.completedSpans.push(span)
-	currentState.inProgressSpanIds.delete(span.spanContext().spanId)
-	if (currentState.inProgressSpanIds.size === 0) {
-		return {
-			stateName: 'trace_complete',
-			traceId: currentState.traceId,
-			localRootSpan: currentState.localRootSpan,
-			completedSpans: currentState.completedSpans,
-		} as const
-	} else {
-		return { ...currentState }
+function getSampler(): TailSampleFn {
+	const conf = getActiveConfig()
+	if (!conf) {
+		console.log('Could not find config for sampling, sending everything by default')
 	}
+	return conf ? conf.sampling.tailSampler : () => true
 }
 
-function startExport(currentState: TraceCompleteState, { args }: StartExportAction): ExportingState | DoneState {
-	const { exporter, tailSampler, postProcessor } = args
-	const { traceId, localRootSpan, completedSpans: spans } = currentState
-	const shouldExport = tailSampler({ traceId, localRootSpan, spans })
-	if (shouldExport) {
-		const exportSpans = postProcessor(spans)
-		const promise = new Promise<ExportResult>((resolve) => {
-			exporter.export(exportSpans, resolve)
+class TraceState {
+	private unexportedSpans: ReadableSpan[] = []
+	private inprogressSpans = new Set<string>()
+	private exporter: SpanExporter
+	private exportPromises: Promise<void>[] = []
+	private localRootSpan?: ReadableSpan
+	private traceDecision?: boolean
+
+	constructor(exporter: SpanExporter) {
+		this.exporter = exporter
+	}
+
+	addSpan(span: Span): void {
+		const readableSpan = span as unknown as ReadableSpan
+		this.localRootSpan = this.localRootSpan || readableSpan
+		this.unexportedSpans.push(readableSpan)
+		this.inprogressSpans.add(span.spanContext().spanId)
+	}
+
+	endSpan(span: ReadableSpan): void {
+		this.inprogressSpans.delete(span.spanContext().spanId)
+		if (this.inprogressSpans.size === 0) {
+			this.flush()
+		}
+	}
+
+	sample() {
+		if (this.traceDecision === undefined && this.unexportedSpans.length > 0) {
+			const sampler = getSampler()
+			this.traceDecision = sampler({
+				traceId: this.localRootSpan!.spanContext().traceId,
+				localRootSpan: this.localRootSpan!,
+				spans: this.unexportedSpans,
+			})
+		}
+		this.unexportedSpans = this.traceDecision ? this.unexportedSpans : []
+	}
+
+	async flush(): Promise<void> {
+		if (this.unexportedSpans.length > 0) {
+			this.sample()
+			const finishedSpans = this.unexportedSpans.filter((span) => !this.isSpanInProgress(span))
+			this.unexportedSpans = this.unexportedSpans.filter((span) => this.isSpanInProgress(span))
+			if (finishedSpans.length > 0) {
+				this.exportPromises.push(this.exportSpans(finishedSpans))
+			}
+		}
+		if (this.exportPromises.length > 0) {
+			await Promise.allSettled(this.exportPromises)
+		}
+	}
+
+	private isSpanInProgress(span: ReadableSpan) {
+		return this.inprogressSpans.has(span.spanContext().spanId)
+	}
+
+	private async exportSpans(spans: ReadableSpan[]): Promise<void> {
+		await scheduler.wait(1)
+		const promise = new Promise<void>((resolve, reject) => {
+			this.exporter.export(spans, (result) => {
+				if (result.code === ExportResultCode.SUCCESS) {
+					resolve()
+				} else {
+					console.log('exporting spans failed! ' + result.error)
+					reject(result.error)
+				}
+			})
 		})
-		return { stateName: 'exporting', promise }
-	} else {
-		return { stateName: 'done' }
+		await promise
 	}
 }
 
-const { nextState } = stateMachine()
-	.state('not_started')
-	.state<'in_progress', InProgressTraceState>('in_progress')
-	.state<'trace_complete', TraceCompleteState>('trace_complete')
-	.state<'exporting', ExportingState>('exporting')
-	.state('done')
-	.transition('not_started', 'in_progress')
-	.transition('in_progress', 'in_progress')
-	.transition('in_progress', 'trace_complete')
-	.transition('trace_complete', 'exporting')
-	.transition('trace_complete', 'done')
-	.transition('exporting', 'done')
-	.action<'startSpan', StartSpanAction>('startSpan')
-	.action<'endSpan', EndSpanAction>('endSpan')
-	.action<'startExport', StartExportAction>('startExport')
-	.action('exportDone')
-	.actionHandler('not_started', 'startSpan', newTrace)
-	.actionHandler('in_progress', 'startSpan', newSpan)
-	.actionHandler('in_progress', 'endSpan', endSpan)
-	.actionHandler('trace_complete', 'startExport', startExport)
-	.actionHandler('exporting', 'exportDone', (_c, _a) => {
-		return { stateName: 'done' } as const
-	})
-	.done()
-
-type AnyTraceState = Parameters<typeof nextState>[0]
-type AnyTraceAction = Parameters<typeof nextState>[1]
-
-export class BatchTraceSpanProcessor implements SpanProcessor {
-	private traceLookup: Map<string, AnyTraceState> = new Map()
-	private localRootSpanLookup: Map<string, string> = new Map()
-	private inprogressExports: Map<string, Promise<ExportResult>> = new Map()
+type traceId = string
+export class BatchTraceSpanProcessor implements TraceFlushableSpanProcessor {
+	private traces: Record<traceId, TraceState> = {}
 
 	constructor(private exporter: SpanExporter) {}
 
-	private action(localRootSpanId: string, action: AnyTraceAction): AnyTraceState {
-		const state = this.traceLookup.get(localRootSpanId) || { stateName: 'not_started' }
-		const newState = nextState(state, action)
-		if (newState.stateName === 'done') {
-			this.traceLookup.delete(localRootSpanId)
-		} else {
-			this.traceLookup.set(localRootSpanId, newState)
-		}
-		return newState
+	getTraceState(traceId: string): TraceState {
+		const traceState = this.traces[traceId] || new TraceState(this.exporter)
+		this.traces[traceId] = traceState
+		return traceState
 	}
 
-	private export(localRootSpanId: string) {
-		const config = getActiveConfig()
-		if (!config) throw new Error('Config is undefined. This is a bug in the instrumentation logic')
-
-		const { sampling, postProcessor } = config
-		const exportArgs = { exporter: this.exporter, tailSampler: sampling.tailSampler, postProcessor }
-		const newState = this.action(localRootSpanId, { actionName: 'startExport', args: exportArgs })
-		if (newState.stateName === 'exporting') {
-			const promise = newState.promise
-			this.inprogressExports.set(localRootSpanId, promise)
-			promise.then((result) => {
-				if (result.code === ExportResultCode.FAILED) {
-					console.log('Error sending spans to exporter:', result.error)
-				}
-				this.action(localRootSpanId, { actionName: 'exportDone' })
-				this.inprogressExports.delete(localRootSpanId)
-			})
-		}
-	}
-
-	onStart(span: Span, parentContext: Context): void {
-		const spanId = span.spanContext().spanId
-		const parentSpanId = trace.getSpan(parentContext)?.spanContext()?.spanId
-		const parentRootSpanId = parentSpanId ? this.localRootSpanLookup.get(parentSpanId) : undefined
-		const localRootSpanId = parentRootSpanId || spanId
-		this.localRootSpanLookup.set(spanId, localRootSpanId)
-
-		this.action(localRootSpanId, { actionName: 'startSpan', span })
+	onStart(span: Span, _parentContext: Context): void {
+		const traceId = span.spanContext().traceId
+		this.getTraceState(traceId).addSpan(span)
 	}
 
 	onEnd(span: ReadableSpan): void {
-		const spanId = span.spanContext().spanId
-		const localRootSpanId = this.localRootSpanLookup.get(spanId)
-		if (localRootSpanId) {
-			const state = this.action(localRootSpanId, { actionName: 'endSpan', span })
-			if (state.stateName === 'trace_complete') {
-				state.completedSpans.forEach((span) => {
-					this.localRootSpanLookup.delete(span.spanContext().spanId)
-				})
-				this.export(localRootSpanId)
-			}
+		const traceId = span.spanContext().traceId
+		this.getTraceState(traceId).endSpan(span)
+	}
+
+	async forceFlush(traceId?: traceId): Promise<void> {
+		if (traceId) {
+			await this.getTraceState(traceId).flush()
+		} else {
+			const promises = Object.values(this.traces).map((traceState: TraceState) => traceState.flush)
+			await Promise.allSettled(promises)
 		}
 	}
 
-	async forceFlush(): Promise<void> {
-		await Promise.allSettled(this.inprogressExports.values())
+	async shutdown(): Promise<void> {
+		await this.forceFlush()
 	}
-
-	async shutdown(): Promise<void> {}
 }
