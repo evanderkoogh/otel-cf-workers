@@ -53,12 +53,14 @@ class TraceState {
 
 	async flush(): Promise<void> {
 		if (this.unexportedSpans.length > 0) {
-			this.sample()
-			const finishedSpans = this.unexportedSpans.filter((span) => !this.isSpanInProgress(span))
-			this.unexportedSpans = this.unexportedSpans.filter((span) => this.isSpanInProgress(span))
-			if (finishedSpans.length > 0) {
-				this.exportPromises.push(this.exportSpans(finishedSpans))
+			const unfinishedSpans = this.unexportedSpans.filter((span) => this.isSpanInProgress(span)) as unknown as Span[]
+			for (const span of unfinishedSpans) {
+				console.log(`Span ${span.spanContext().spanId} was not ended properly`)
+				span.end()
 			}
+			this.sample()
+			this.exportPromises.push(this.exportSpans(this.unexportedSpans))
+			this.unexportedSpans = []
 		}
 		if (this.exportPromises.length > 0) {
 			await Promise.allSettled(this.exportPromises)
