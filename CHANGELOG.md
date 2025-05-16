@@ -1,5 +1,15 @@
 # @microlabs/otel-cf-workers
 
+## 1.0.0-rc.50
+
+### Minor Changes
+
+- 19af336: Implement a complete rework of the internals to be more predictable and make it easier to implement more instrumentation on top of it.
+
+### Patch Changes
+
+- fcab308: Upgrade dependencies
+
 ## 1.0.0-rc.49
 
 ### Minor Changes
