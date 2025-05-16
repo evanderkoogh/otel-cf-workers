@@ -1,5 +1,13 @@
 # @microlabs/otel-cf-workers
 
+## 1.0.0-rc.51
+
+### Patch Changes
+
+- d20322d: Make sure spans are ended on network errors
+- 4b89506: Forcefully end spans that aren't ended by custom instrumentation when flushing
+- 169d92a: Add user-agent header to the SpanExporter
+
 ## 1.0.0-rc.50
 
 ### Minor Changes
