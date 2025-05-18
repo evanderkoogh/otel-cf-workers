@@ -6,6 +6,7 @@ export class MyDurableObject extends DurableObject<Env> {
 	}
 
 	async sayHello(name: string): Promise<string> {
+		await this.ctx.storage.get('something');
 		return `Hello, ${name}!`;
 	}
 }
