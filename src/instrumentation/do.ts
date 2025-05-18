@@ -22,7 +22,7 @@ type Env = Record<string, unknown>
 
 function instrumentBindingStub(stub: DurableObjectStub, nsName: string): DurableObjectStub {
 	const stubHandler: ProxyHandler<typeof stub> = {
-		get(target, prop) {
+		get(target, prop, receiver) {
 			if (prop === 'fetch') {
 				const fetcher = Reflect.get(target, prop)
 				const attrs = {
@@ -33,7 +33,7 @@ function instrumentBindingStub(stub: DurableObjectStub, nsName: string): Durable
 				}
 				return instrumentClientFetch(fetcher, () => ({ includeTraceContext: true }), attrs)
 			} else {
-				return passthroughGet(target, prop)
+				return passthroughGet(target, prop, receiver)
 			}
 		},
 	}
@@ -52,12 +52,12 @@ function instrumentBindingGet(getFn: DurableObjectNamespace['get'], nsName: stri
 
 export function instrumentDOBinding(ns: DurableObjectNamespace, nsName: string) {
 	const nsHandler: ProxyHandler<typeof ns> = {
-		get(target, prop) {
+		get(target, prop, receiver) {
 			if (prop === 'get') {
-				const fn = Reflect.get(ns, prop)
+				const fn = Reflect.get(ns, prop, receiver)
 				return instrumentBindingGet(fn, nsName)
 			} else {
-				return passthroughGet(target, prop)
+				return passthroughGet(target, prop, receiver)
 			}
 		},
 	}
@@ -176,22 +176,23 @@ function instrumentAlarmFn(alarmFn: AlarmFn, initialiser: Initialiser, env: Env,
 	return wrap(alarmFn, alarmHandler)
 }
 
-function instrumentAnyFn(fn: () => any, initialiser: Initialiser, env: Env, id: DurableObjectId) {
+function instrumentAnyFn(fn: () => any, initialiser: Initialiser, env: Env, _id: DurableObjectId) {
 	if (!fn) return undefined
 
-	const alarmHandler: ProxyHandler<() => any> = {
-		async apply(target, thisArg) {
+	const fnHandler: ProxyHandler<() => any> = {
+		async apply(target, thisArg, argArray: []) {
+			thisArg = unwrap(thisArg)
 			const config = initialiser(env, 'do-alarm')
 			const context = setConfig(config)
 			try {
 				const bound = target.bind(unwrap(thisArg))
-				return await api_context.with(context, executeDOAlarm, undefined, bound, id)
+				return await api_context.with(context, () => bound.apply(thisArg, argArray), undefined)
 			} catch (error) {
 				throw error
 			}
 		},
 	}
-	return wrap(fn, alarmHandler)
+	return wrap(fn, fnHandler)
 }
 
 function instrumentDurableObject(
