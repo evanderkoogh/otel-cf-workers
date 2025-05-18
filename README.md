@@ -11,9 +11,12 @@ npm install @microlabs/otel-cf-workers @opentelemetry/api
 > [!IMPORTANT]
 > To be able to use the Open Telemetry library you have to add the NodeJS compatibility flag in your `wrangler.toml` file.
 
-```
+```json
 compatibility_flags = [ "nodejs_compat" ]
 ```
+
+> [!IMPORTANT]
+> As of version 1.0.0-rc.52, we are no longer providing a CommonJS build. It is already hard enough trying to write a library that deals with all of Cloudflare's functionality over every single combination of compatibility flags and dates. Combining that with two different build is just too much. If you really need CommonJS support, please create a ticket (if there isn't already) and describe your use-case.
 
 For a simple setup example with configuration examples, have a look at the [Quickstart Example](https://github.com/evanderkoogh/otel-cf-workers/tree/main/examples/worker)
 

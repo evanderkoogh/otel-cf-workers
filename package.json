@@ -1,21 +1,10 @@
 {
 	"name": "@microlabs/otel-cf-workers",
 	"version": "1.0.0-rc.49",
-	"main": "dist/index.js",
-	"module": "dist/index.mjs",
-	"types": "dist/index.d.mts",
-	"exports": {
-		".": {
-			"import": {
-				"types": "./dist/index.d.mts",
-				"default": "./dist/index.mjs"
-			},
-			"require": {
-				"types": "./dist/index.d.ts",
-				"default": "./dist/index.js"
-			}
-		}
-	},
+	"module": "./dist/index.js",
+	"type": "module",
+	"types": "./dist/index.d.ts",
+	"exports": "./dist/index.js",
 	"scripts": {
 		"clean": "rimraf ./dist versions.json",
 		"format": "prettier --ignore-unknown --write .",
@@ -49,6 +38,7 @@
 	},
 	"devDependencies": {
 		"@changesets/cli": "^2.29.3",
+		"@cloudflare/vitest-pool-workers": "^0.8.30",
 		"@cloudflare/workers-types": "^4.20250510.0",
 		"husky": "^9.1.7",
 		"lint-staged": "^15.5.2",
