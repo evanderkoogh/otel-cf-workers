@@ -5,7 +5,6 @@
 	"type": "module",
 	"types": "./dist/index.d.ts",
 	"exports": "./dist/index.js",
-
 	"scripts": {
 		"clean": "rimraf ./dist versions.json",
 		"format": "prettier --ignore-unknown --write .",
