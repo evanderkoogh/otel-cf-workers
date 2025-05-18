@@ -10,10 +10,12 @@ import {
 } from './fetch.js'
 import { instrumentEnv } from './env.js'
 import { Initialiser, setConfig } from '../config.js'
-import { exportSpans } from './common.js'
 import { instrumentStorage } from './do-storage.js'
 import { DOConstructorTrigger } from '../types.js'
 
+import { DurableObject as DurableObjectClass } from 'cloudflare:workers'
+
+type DO = DurableObject | DurableObjectClass
 type FetchFn = DurableObject['fetch']
 type AlarmFn = DurableObject['alarm']
 type Env = Record<string, unknown>
@@ -79,7 +81,6 @@ export function instrumentState(state: DurableObjectState) {
 }
 
 let cold_start = true
-export type DOClass = { new (state: DurableObjectState, env: any): DurableObject }
 export function executeDOFetch(fetchFn: FetchFn, request: Request, id: DurableObjectId): Promise<Response> {
 	const spanContext = getParentContextFromHeaders(request.headers)
 
@@ -151,8 +152,6 @@ function instrumentFetchFn(fetchFn: FetchFn, initialiser: Initialiser, env: Env,
 				return await api_context.with(context, executeDOFetch, undefined, bound, request, id)
 			} catch (error) {
 				throw error
-			} finally {
-				exportSpans()
 			}
 		},
 	}
@@ -171,18 +170,44 @@ function instrumentAlarmFn(alarmFn: AlarmFn, initialiser: Initialiser, env: Env,
 				return await api_context.with(context, executeDOAlarm, undefined, bound, id)
 			} catch (error) {
 				throw error
-			} finally {
-				exportSpans()
 			}
 		},
 	}
 	return wrap(alarmFn, alarmHandler)
 }
 
-function instrumentDurableObject(doObj: DurableObject, initialiser: Initialiser, env: Env, state: DurableObjectState) {
+function instrumentAnyFn(fn: () => any, initialiser: Initialiser, env: Env, id: DurableObjectId) {
+	if (!fn) return undefined
+
+	const alarmHandler: ProxyHandler<() => any> = {
+		async apply(target, thisArg) {
+			const config = initialiser(env, 'do-alarm')
+			const context = setConfig(config)
+			try {
+				const bound = target.bind(unwrap(thisArg))
+				return await api_context.with(context, executeDOAlarm, undefined, bound, id)
+			} catch (error) {
+				throw error
+			}
+		},
+	}
+	return wrap(fn, alarmHandler)
+}
+
+function instrumentDurableObject(
+	doObj: DO,
+	initialiser: Initialiser,
+	env: Env,
+	state: DurableObjectState,
+	classStyle: boolean,
+) {
 	const objHandler: ProxyHandler<DurableObject> = {
 		get(target, prop) {
-			if (prop === 'fetch') {
+			if (classStyle && prop === 'ctx') {
+				return state
+			} else if (classStyle && prop === 'env') {
+				return env
+			} else if (prop === 'fetch') {
 				const fetchFn = Reflect.get(target, prop)
 				return instrumentFetchFn(fetchFn, initialiser, env, state.id)
 			} else if (prop === 'alarm') {
@@ -192,6 +217,7 @@ function instrumentDurableObject(doObj: DurableObject, initialiser: Initialiser,
 				const result = Reflect.get(target, prop)
 				if (typeof result === 'function') {
 					result.bind(doObj)
+					return instrumentAnyFn(result, initialiser, env, state.id)
 				}
 				return result
 			}
@@ -200,8 +226,10 @@ function instrumentDurableObject(doObj: DurableObject, initialiser: Initialiser,
 	return wrap(doObj, objHandler)
 }
 
-export function instrumentDOClass(doClass: DOClass, initialiser: Initialiser): DOClass {
-	const classHandler: ProxyHandler<DOClass> = {
+export type DOClass = { new (state: DurableObjectState, env: any): DO }
+
+export function instrumentDOClass<C extends DOClass>(doClass: C, initialiser: Initialiser): C {
+	const classHandler: ProxyHandler<C> = {
 		construct(target, [orig_state, orig_env]: ConstructorParameters<DOClass>) {
 			const trigger: DOConstructorTrigger = {
 				id: orig_state.id.toString(),
@@ -211,12 +239,17 @@ export function instrumentDOClass(doClass: DOClass, initialiser: Initialiser): D
 			const context = setConfig(constructorConfig)
 			const state = instrumentState(orig_state)
 			const env = instrumentEnv(orig_env)
+			const classStyle = doClass.prototype instanceof DurableObjectClass
 			const createDO = () => {
-				return new target(state, env)
+				if (classStyle) {
+					return new target(orig_state, orig_env)
+				} else {
+					return new target(state, env)
+				}
 			}
 			const doObj = api_context.with(context, createDO)
 
-			return instrumentDurableObject(doObj, initialiser, env, state)
+			return instrumentDurableObject(doObj, initialiser, env, state, classStyle)
 		},
 	}
 	return wrap(doClass, classHandler)
