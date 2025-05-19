@@ -1,6 +1,6 @@
 {
 	"name": "@microlabs/otel-cf-workers",
-	"version": "1.0.0-rc.51",
+	"version": "1.0.0-rc.52",
 	"module": "./dist/index.js",
 	"type": "module",
 	"types": "./dist/index.d.ts",

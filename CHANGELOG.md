@@ -1,5 +1,15 @@
 # @microlabs/otel-cf-workers
 
+## 1.0.0-rc.52
+
+### Minor Changes
+
+- 0f24200: Remove CommonJS support
+
+### Patch Changes
+
+- 5e008a8: Properly deal with the new Class style Durable Objects. Note: RPC style calls are not auto-instrumented yet.
+
 ## 1.0.0-rc.51
 
 ### Patch Changes
