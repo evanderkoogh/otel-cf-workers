@@ -44,7 +44,18 @@ export function isAlarm(trigger: Trigger): trigger is 'do-alarm' {
 	return trigger === 'do-alarm'
 }
 
-const createResource = (config: ResolvedTraceConfig): Resource => {
+function findVersionMeta(): WorkerVersionMetadata | undefined {
+	return Object.values(env).find((binding: any) => {
+		return (
+			Object.getPrototypeOf(binding).constructor.name === 'Object' &&
+			binding.id !== undefined &&
+			binding.tag !== undefined
+		)
+	})
+}
+
+const createResource = (config: ResolvedTraceConfig, versionMeta?: WorkerVersionMetadata): Resource => {
+	console.log({ versionMeta })
 	const workerResourceAttrs = {
 		'cloud.provider': 'cloudflare',
 		'cloud.platform': 'cloudflare.workers',
@@ -54,6 +65,9 @@ const createResource = (config: ResolvedTraceConfig): Resource => {
 		'telemetry.sdk.name': '@microlabs/otel-cf-workers',
 		'telemetry.sdk.version': versions['@microlabs/otel-cf-workers'],
 		'telemetry.sdk.build.node_version': versions['node'],
+		'cf.worker.version.id': versionMeta?.id,
+		'cf.worker.version.tag': versionMeta?.tag,
+		'cf.worker.version.timestamp': versionMeta?.timestamp,
 	}
 	const serviceResource = resourceFromAttributes({
 		'service.name': config.service.name,
@@ -75,6 +89,7 @@ function init(config: ResolvedTraceConfig): void {
 		}
 		propagation.setGlobalPropagator(config.propagator)
 		const resource = createResource(config)
+		const resource = createResource(config, findVersionMeta())
 
 		const provider = new WorkerTracerProvider(config.spanProcessors, resource)
 		provider.register()
