@@ -19,6 +19,8 @@ import { emailInstrumentation } from './instrumentation/email.js'
 
 //@ts-ignore
 import * as versions from '../versions.json'
+//@ts-ignore
+import { env } from 'cloudflare:workers'
 
 type FetchHandler = ExportedHandlerFetchHandler<unknown, unknown>
 type ScheduledHandler = ExportedHandlerScheduledHandler<unknown>
