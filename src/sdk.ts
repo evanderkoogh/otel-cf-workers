@@ -88,7 +88,6 @@ function init(config: ResolvedTraceConfig): void {
 			instrumentGlobalFetch()
 		}
 		propagation.setGlobalPropagator(config.propagator)
-		const resource = createResource(config)
 		const resource = createResource(config, findVersionMeta())
 
 		const provider = new WorkerTracerProvider(config.spanProcessors, resource)
