@@ -47,11 +47,15 @@ class MessageStatusCount {
 	}
 }
 
-const addEvent = (name: string, msg?: Message) => {
+const addEvent = (name: string, msg?: Message | undefined, delaySeconds?: number) => {
 	const attrs: Attributes = {}
 	if (msg) {
 		attrs['queue.message_id'] = msg.id
 		attrs['queue.message_timestamp'] = msg.timestamp.toISOString()
+		attrs['queue.message_attempts'] = msg.attempts
+	}
+	if (delaySeconds) {
+		attrs['queue.retry_delay_seconds'] = delaySeconds
 	}
 	trace.getActiveSpan()?.addEvent(name, attrs)
 }
@@ -73,8 +77,9 @@ const proxyQueueMessage = <Q>(msg: Message<Q>, count: MessageStatusCount): Messa
 			} else if (prop === 'retry') {
 				const retryFn = Reflect.get(target, prop)
 				return new Proxy(retryFn, {
-					apply: (fnTarget) => {
-						addEvent('messageRetry', msg)
+					apply: (fnTarget, _thisArg, argArray) => {
+						const delay: number | undefined = argArray[0]?.delaySeconds
+						addEvent('messageRetry', msg, delay)
 						count.retry()
 						//TODO: handle errors
 						const result = Reflect.apply(fnTarget, msg, [])
@@ -118,8 +123,9 @@ const proxyMessageBatch = (batch: MessageBatch, count: MessageStatusCount) => {
 			} else if (prop === 'retryAll') {
 				const retryFn = Reflect.get(target, prop)
 				return new Proxy(retryFn, {
-					apply: (fnTarget) => {
-						addEvent('retryAll')
+					apply: (fnTarget, _thisArg, argArray) => {
+						const delay: number | undefined = argArray[0]?.delaySeconds
+						addEvent('retryAll', undefined, delay)
 						count.retryRemaining()
 						//TODO: handle errors
 						Reflect.apply(fnTarget, batch, [])
@@ -175,6 +181,12 @@ function instrumentQueueSend(fn: Queue<unknown>['send'], name: string): Queue<un
 		apply: (target, thisArg, argArray) => {
 			return tracer.startActiveSpan(`Queues ${name} send`, async (span) => {
 				span.setAttribute('queue.operation', 'send')
+				if (argArray[1] && typeof argArray[1].contentType === 'string') {
+					span.setAttribute('queue.message.content_type', argArray[1].contentType)
+				}
+				if (argArray[1] && typeof argArray[1].delaySeconds === 'number') {
+					span.setAttribute('queue.message.delay_seconds', argArray[1].delaySeconds)
+				}
 				await Reflect.apply(target, unwrap(thisArg), argArray)
 				span.end()
 			})
@@ -189,6 +201,19 @@ function instrumentQueueSendBatch(fn: Queue<unknown>['sendBatch'], name: string)
 		apply: (target, thisArg, argArray) => {
 			return tracer.startActiveSpan(`Queues ${name} sendBatch`, async (span) => {
 				span.setAttribute('queue.operation', 'sendBatch')
+				// Technically messages were an Iterable, and here we convert it into an array
+				const messages = [...argArray[0]]
+				span.setAttribute('queue.batch.size', messages.length)
+				const options = argArray[1]
+				if (typeof options == 'object' && typeof options.delaySeconds === 'number') {
+					span.setAttribute('queue.batch.delay_seconds', options.delaySeconds)
+				}
+				if (messages[0] && typeof messages[0].contentType === 'string') {
+					span.setAttribute('queue.message.content_type', argArray[1].contentType)
+				}
+				if (messages[0] && typeof messages[0].delaySeconds === 'number') {
+					span.setAttribute('queue.message.delay_seconds', argArray[1].delaySeconds)
+				}
 				await Reflect.apply(target, unwrap(thisArg), argArray)
 				span.end()
 			})
