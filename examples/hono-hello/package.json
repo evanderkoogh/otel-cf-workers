@@ -1,0 +1,19 @@
+{
+	"name": "hono-hello-example",
+	"version": "0.0.0",
+	"private": true,
+	"scripts": {
+		"start": "wrangler dev",
+		"deploy": "wrangler publish"
+	},
+	"dependencies": {
+		"@microlabs/otel-cf-workers": "1.0.0-rc.52",
+		"@opentelemetry/api": "^1.9.0",
+		"hono": "^4.7.11"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-types": "^4.20250603.0",
+		"typescript": "^5.8.3",
+		"wrangler": "^4.18.0"
+	}
+}
