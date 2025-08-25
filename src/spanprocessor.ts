@@ -72,6 +72,12 @@ class TraceState {
 	}
 
 	private async exportSpans(spans: ReadableSpan[]): Promise<void> {
+		const config = getActiveConfig()
+		if (!config) {
+			console.log('Could not find config for exporting, skipping export')
+			return
+		}
+		config.postProcessor(spans)
 		await scheduler.wait(1)
 		const promise = new Promise<void>((resolve, reject) => {
 			this.exporter.export(spans, (result) => {
