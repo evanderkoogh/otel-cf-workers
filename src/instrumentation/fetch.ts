@@ -196,13 +196,26 @@ export function instrumentClientFetch(
 					if (request.cf) span.setAttributes(gatherOutgoingCfAttributes(request.cf))
 					const response = await Reflect.apply(target, thisArg, [request])
 					span.setAttributes(gatherResponseAttributes(response))
-					return response
+
+					if (!response.body) {
+						span.end()
+						return response
+					}
+
+					const transformer = new TransformStream({
+						transform(chunk, controller) {
+							controller.enqueue(chunk)
+						},
+						flush() {
+							span.end()
+						},
+					})
+					return new Response(response.body.pipeThrough(transformer), response)
 				} catch (error: unknown) {
 					span.recordException(error as Exception)
 					span.setStatus({ code: SpanStatusCode.ERROR })
-					throw error
-				} finally {
 					span.end()
+					throw error
 				}
 			})
 			return promise
