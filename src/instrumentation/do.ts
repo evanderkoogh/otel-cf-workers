@@ -1,17 +1,17 @@
-import { context as api_context, trace, SpanOptions, SpanKind, Exception, SpanStatusCode } from '@opentelemetry/api'
+import { context as api_context, Exception, SpanKind, SpanOptions, SpanStatusCode, trace } from '@opentelemetry/api'
 import { SemanticAttributes } from '@opentelemetry/semantic-conventions'
+import { Initialiser, setConfig } from '../config.js'
+import { DOConstructorTrigger } from '../types.js'
 import { passthroughGet, unwrap, wrap } from '../wrap.js'
+import { instrumentStorage } from './do-storage.js'
+import { instrumentEnv } from './env.js'
 import {
-	getParentContextFromHeaders,
 	gatherIncomingCfAttributes,
 	gatherRequestAttributes,
 	gatherResponseAttributes,
+	getParentContextFromHeaders,
 	instrumentClientFetch,
 } from './fetch.js'
-import { instrumentEnv } from './env.js'
-import { Initialiser, setConfig } from '../config.js'
-import { instrumentStorage } from './do-storage.js'
-import { DOConstructorTrigger } from '../types.js'
 
 import { DurableObject as DurableObjectClass } from 'cloudflare:workers'
 
@@ -217,8 +217,8 @@ function instrumentDurableObject(
 			} else {
 				const result = Reflect.get(target, prop)
 				if (typeof result === 'function') {
-					result.bind(doObj)
-					return instrumentAnyFn(result, initialiser, env, state.id)
+					const boundResult = result.bind(doObj)
+					return instrumentAnyFn(boundResult, initialiser, env, state.id)
 				}
 				return result
 			}
