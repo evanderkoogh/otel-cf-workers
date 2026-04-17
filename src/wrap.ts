@@ -22,7 +22,16 @@ export function wrap<T extends object>(item: T, handler: ProxyHandler<T>, autoPa
 			if (handler.get) {
 				return handler.get(target, prop, receiver)
 			} else if (prop === 'bind') {
-				return () => receiver
+				// Honor Function.prototype.bind semantics. SDKs bind fetch to
+				// globalThis (e.g. WorkOS, Stripe) to satisfy Cloudflare's
+				// this-strict native fetch. Returning `() => receiver` silently
+				// drops the thisArg, so later invocations with `this.fn(...)`
+				// forward the caller's `this` to native fetch and it throws
+				// "Illegal invocation". Return a proper bound call that forwards
+				// to the proxy's apply trap with the requested thisArg.
+				return (thisArg: unknown, ...boundArgs: unknown[]) =>
+					(...callArgs: unknown[]) =>
+						Reflect.apply(receiver as (...args: unknown[]) => unknown, thisArg, [...boundArgs, ...callArgs])
 			} else if (autoPassthrough) {
 				return passthroughGet(target, prop)
 			}
