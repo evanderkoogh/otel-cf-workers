@@ -27,6 +27,13 @@
 		"dist"
 	],
 	"homepage": "https://github.com/evanderkoogh/otel-cf-workers#readme",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/evanderkoogh/otel-cf-workers.git"
+	},
+	"bugs": {
+		"url": "https://github.com/evanderkoogh/otel-cf-workers/issues"
+	},
 	"dependencies": {
 		"@opentelemetry/core": "^2.0.0",
 		"@opentelemetry/exporter-trace-otlp-http": "^0.200.0",
