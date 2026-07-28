@@ -2,6 +2,10 @@
 
 An OpenTelemetry compatible library for instrumenting and exporting traces from Cloudflare Workers.
 
+> [!IMPORTANT]
+> You should almost always instead use [Workers Tracing](https://developers.cloudflare.com/workers/observability/traces/) — the OTEL tracing that is built into the Cloudflare Workers runtime, which automatically instruments your code and [provides APIs to write custom spans](https://developers.cloudflare.com/workers/observability/traces/custom-spans/), and [export traces to external destinations](https://developers.cloudflare.com/workers/observability/exporting-opentelemetry-data/), with or without persisting data to Cloudflare.
+```
+
 ## Getting started
 
 ```bash
