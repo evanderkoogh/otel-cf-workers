@@ -1,5 +1,11 @@
 # @microlabs/otel-cf-workers
 
+## 1.0.0-rc.53
+
+### Patch Changes
+
+- f9faadf: Add support to automatically extract version information from the VersionMeta binding
+
 ## 1.0.0-rc.52
 
 ### Minor Changes
